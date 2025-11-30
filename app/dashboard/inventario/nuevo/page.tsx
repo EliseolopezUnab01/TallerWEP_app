@@ -118,21 +118,58 @@ export default function NuevoProductoPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nuevo Producto</h1>
-          <p className="text-gray-600">Complete la información del producto</p>
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold text-slate-50 tracking-tight">Nuevo Producto</h1>
+          <p className="text-sm text-slate-400">Complete la información del producto para registrarlo en el inventario</p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Columna 1: Información del producto */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Información del Producto</CardTitle>
-                  <CardDescription>Ingrese los datos básicos del producto</CardDescription>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            {/* Columna 1: Imágenes / ficha visual como en Figma */}
+            <div className="space-y-6 lg:order-1">
+              <Card className="bg-slate-900/80 border-slate-800 shadow-xl overflow-hidden">
+                <CardHeader className="border-b border-slate-800 pb-4">
+                  <CardTitle className="text-slate-200">Vista previa del producto</CardTitle>
+                  <CardDescription className="text-slate-400">Suba las imágenes principales del producto</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                    <ImageUpload onImagesChange={handleImagesChange} />
+                  </div>
+                  <p className="text-xs text-slate-500 text-center">
+                    Máximo 10 imágenes. Use fotos claras del producto y su empaque.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Botón de envío tipo barra inferior de panel */}
+              <Card className="bg-slate-900/80 border-slate-800 shadow-lg">
+                <CardContent className="p-6 space-y-2">
+                  <Button 
+                    type="submit" 
+                    disabled={loading} 
+                    className="w-full bg-cyan-500 hover:bg-cyan-600 text-slate-950"
+                    size="lg"
+                  >
+                    {loading ? 'Guardando Producto...' : 'Guardar Producto'}
+                  </Button>
+                  <p className="text-xs text-slate-400 mt-1 text-center">
+                    {images.length > 0 
+                      ? `Se guardarán ${images.length} imágenes con el producto`
+                      : 'Producto se guardará sin imágenes por ahora'}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Columna 2-3: Información del producto (formulario principal) */}
+            <div className="lg:col-span-2 space-y-6 lg:order-2">
+              <Card className="bg-slate-900/80 border-slate-800 shadow-xl">
+                <CardHeader>
+                  <CardTitle className="text-slate-200">Información del Producto</CardTitle>
+                  <CardDescription className="text-slate-400">Ingrese los datos básicos y técnicos del producto</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
                   {/* Información Básica */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -143,6 +180,7 @@ export default function NuevoProductoPage() {
                         required 
                         value={formData.nombre}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="space-y-2">
@@ -152,6 +190,7 @@ export default function NuevoProductoPage() {
                         placeholder="Tipo de producto" 
                         value={formData.descripcion}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="space-y-2">
@@ -161,6 +200,7 @@ export default function NuevoProductoPage() {
                         placeholder="Ej: MOOG, BOSCH, etc." 
                         value={formData.marca}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="space-y-2">
@@ -171,6 +211,7 @@ export default function NuevoProductoPage() {
                         required 
                         value={formData.OE}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                   </div>
@@ -184,6 +225,7 @@ export default function NuevoProductoPage() {
                         placeholder="Código según factura" 
                         value={formData.idprodprov}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="space-y-2">
@@ -193,6 +235,7 @@ export default function NuevoProductoPage() {
                         placeholder="Código del embalaje" 
                         value={formData.idprodpaquete}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="space-y-2">
@@ -202,6 +245,7 @@ export default function NuevoProductoPage() {
                         placeholder="Código QR o barras" 
                         value={formData.codigo_barras}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                   </div>
@@ -269,6 +313,7 @@ export default function NuevoProductoPage() {
                         placeholder="0.000" 
                         value={formData.peso}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="space-y-2">
@@ -278,6 +323,7 @@ export default function NuevoProductoPage() {
                         placeholder="8708990000" 
                         value={formData.codarancel}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="space-y-2">
@@ -287,6 +333,7 @@ export default function NuevoProductoPage() {
                         placeholder="Ej: 1 litro, 5 galones" 
                         value={formData.capacidad}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                   </div>
@@ -299,6 +346,7 @@ export default function NuevoProductoPage() {
                       placeholder="frenos, disco, delantero, toyota (separar con comas)" 
                       value={formData.etiquetas}
                       onChange={handleInputChange}
+                      className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                     />
                   </div>
 
@@ -310,6 +358,7 @@ export default function NuevoProductoPage() {
                       rows={2}
                       value={formData.info_referencias_directas}
                       onChange={handleInputChange}
+                      className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                     />
                   </div>
 
@@ -322,6 +371,7 @@ export default function NuevoProductoPage() {
                         rows={3}
                         value={formData.info_publica}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                     <div className="space-y-2">
@@ -332,6 +382,7 @@ export default function NuevoProductoPage() {
                         rows={3}
                         value={formData.info_reservada}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100 placeholder:text-slate-500"
                       />
                     </div>
                   </div>
@@ -345,6 +396,7 @@ export default function NuevoProductoPage() {
                         type="number" 
                         value={formData.stock_contable}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100"
                       />
                     </div>
                     <div className="space-y-2">
@@ -354,42 +406,10 @@ export default function NuevoProductoPage() {
                         type="number" 
                         value={formData.stock_fisico}
                         onChange={handleInputChange}
+                        className="bg-slate-900/80 border-slate-700 text-slate-100"
                       />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Columna 2: Imágenes */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Imágenes del Producto</CardTitle>
-                  <CardDescription>Máximo 10 imágenes</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ImageUpload onImagesChange={handleImagesChange} />
-                </CardContent>
-              </Card>
-
-              {/* Botón de envío */}
-              <Card>
-                <CardContent className="p-6">
-                  <Button 
-                    type="submit" 
-                    disabled={loading} 
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                    size="lg"
-                  >
-                    {loading ? 'Guardando Producto...' : 'Guardar Producto'}
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    {images.length > 0 
-                      ? `Se guardarán ${images.length} imágenes con el producto`
-                      : 'Producto se guardará sin imágenes'
-                    }
-                  </p>
                 </CardContent>
               </Card>
             </div>

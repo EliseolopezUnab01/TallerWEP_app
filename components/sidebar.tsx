@@ -51,10 +51,10 @@ export function Sidebar() {
   ];
 
   return (
-    <div className="w-64 bg-white shadow-lg h-screen flex flex-col">
-      <div className="p-6 border-b">
-        <h1 className="text-xl font-bold text-gray-800">Taller Web</h1>
-        <p className="text-sm text-gray-600">Sistema de Inventario</p>
+    <div className="w-64 bg-slate-900/80 border-r border-slate-800 shadow-xl h-screen flex flex-col backdrop-blur">
+      <div className="p-6 border-b border-slate-800">
+        <h1 className="text-xl font-bold text-slate-50 tracking-tight">Taller Web</h1>
+        <p className="text-sm text-slate-400">Sistema de Inventario</p>
       </div>
       
       <nav className="flex-1 p-4">
@@ -65,7 +65,7 @@ export function Sidebar() {
                 <Link href={item.href}>
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-3 hover:bg-gray-100"
+                    className="w-full justify-start gap-3 hover:bg-slate-800 text-slate-200 hover:text-cyan-300"
                   >
                     <item.icon className="h-4 w-4" />
                     {item.label}
@@ -75,7 +75,7 @@ export function Sidebar() {
                 <div>
                   <Button
                     variant="ghost"
-                    className="w-full justify-between gap-3 hover:bg-gray-100"
+                    className="w-full justify-between gap-3 hover:bg-slate-800 text-slate-200 hover:text-cyan-300"
                     onClick={toggleInventario}
                   >
                     <div className="flex items-center gap-3">
@@ -95,7 +95,7 @@ export function Sidebar() {
                         <Link key={child.href} href={child.href}>
                           <Button
                             variant="ghost"
-                            className="w-full justify-start gap-3 text-sm hover:bg-gray-50"
+                            className="w-full justify-start gap-3 text-sm hover:bg-slate-800 text-slate-300 hover:text-cyan-300"
                             size="sm"
                           >
                             <child.icon className="h-3 w-3" />
@@ -112,10 +112,10 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="p-4 border-t">
+      <div className="p-4 border-t border-slate-800">
         <Button
           variant="outline"
-          className="w-full justify-start gap-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="w-full justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/40"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />

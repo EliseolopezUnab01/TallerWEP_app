@@ -18,10 +18,31 @@ export async function GET() {
       LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
       ORDER BY p.created_at DESC
     `);
+    
+    // Obtener todas las imágenes de todos los productos para construir el arreglo `imagenes`
+    const [imagesRows]: any = await connection.execute(`
+      SELECT idprod, imagen_url, orden, es_principal
+      FROM producto_imagenes
+      ORDER BY idprod ASC, es_principal DESC, orden ASC
+    `);
 
     await connection.end();
 
-    return NextResponse.json({ products });
+    const imagesByProduct: Record<number, string[]> = {};
+    for (const row of imagesRows) {
+      const id = Number(row.idprod);
+      if (!imagesByProduct[id]) {
+        imagesByProduct[id] = [];
+      }
+      imagesByProduct[id].push(row.imagen_url as string);
+    }
+
+    const productsWithImages = products.map((p: any) => ({
+      ...p,
+      imagenes: imagesByProduct[Number(p.idprod)] || [],
+    }));
+
+    return NextResponse.json({ products: productsWithImages });
   } catch (error) {
     console.error('Error al obtener productos:', error);
     return NextResponse.json(
