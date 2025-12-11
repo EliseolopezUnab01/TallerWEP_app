@@ -27,10 +27,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-lightBg dark:bg-[#0d1523]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto"></div>
-          <p className="mt-4 text-slate-300">Cargando...</p>
+          <p className="mt-4 text-lightAccent dark:text-[#0e88c9]">Cargando...</p>
         </div>
       </div>
     );
@@ -41,10 +41,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100">
+    <div className="flex h-screen bg-lightBg dark:bg-[#0d1523] text-slate-800 dark:text-slate-100">
       <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="p-6 space-y-6 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 min-h-screen">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="p-6 space-y-6">
           {children}
         </div>
       </main>
