@@ -20,7 +20,7 @@ export async function GET(
 
     console.log('🔍 Buscando historial para producto:', productId);
 
-    // Obtener historial de ajustes de precios con nombre de usuario
+    // Obtener historial de ajustes de precios con nombre de usuario y precios
     const [historial]: any = await connection.execute(
       `SELECT 
         ap.idajuste,
@@ -28,7 +28,21 @@ export async function GET(
         ap.fecha,
         ap.razon_justificacion,
         ap.created_at,
-        COALESCE(u.nombre, CONCAT('Usuario ', ap.idusuario)) as nombre_usuario
+        COALESCE(u.nombre, CONCAT('Usuario ', ap.idusuario)) as nombre_usuario,
+        ap.precio1_anterior,
+        ap.precio2_anterior,
+        ap.precio3_anterior,
+        ap.precio4_anterior,
+        ap.precio5_anterior,
+        ap.precio6_anterior,
+        ap.precio7_anterior,
+        ap.precio1_nuevo,
+        ap.precio2_nuevo,
+        ap.precio3_nuevo,
+        ap.precio4_nuevo,
+        ap.precio5_nuevo,
+        ap.precio6_nuevo,
+        ap.precio7_nuevo
       FROM ajuste_precios ap
       LEFT JOIN usuarios u ON ap.idusuario = u.id
       WHERE ap.idprod = ?
