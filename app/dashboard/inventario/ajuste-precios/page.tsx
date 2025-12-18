@@ -29,6 +29,20 @@ interface HistorialAjuste {
   razon_justificacion: string;
   created_at: string;
   nombre_usuario: string;
+  precio1_anterior: number | null;
+  precio2_anterior: number | null;
+  precio3_anterior: number | null;
+  precio4_anterior: number | null;
+  precio5_anterior: number | null;
+  precio6_anterior: number | null;
+  precio7_anterior: number | null;
+  precio1_nuevo: number | null;
+  precio2_nuevo: number | null;
+  precio3_nuevo: number | null;
+  precio4_nuevo: number | null;
+  precio5_nuevo: number | null;
+  precio6_nuevo: number | null;
+  precio7_nuevo: number | null;
 }
 
 export default function AjustePreciosPage() {
@@ -482,11 +496,11 @@ export default function AjustePreciosPage() {
                   </Button>
 
                   {mostrarHistorial[producto.idprod] && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 space-y-3">
                       {historial[producto.idprod] && historial[producto.idprod].length > 0 ? (
                         historial[producto.idprod].map((ajuste) => (
-                          <div key={ajuste.idajuste} className="bg-[#141e2e] border border-[#1e2a3b] rounded-lg p-3">
-                            <div className="flex items-start justify-between mb-2">
+                          <div key={ajuste.idajuste} className="bg-[#141e2e] border border-[#1e2a3b] rounded-lg p-4">
+                            <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center gap-2 text-xs text-slate-400">
                                 <Calendar className="h-3 w-3" />
                                 <span>{formatFecha(ajuste.fecha)}</span>
@@ -496,7 +510,54 @@ export default function AjustePreciosPage() {
                                 <span>{ajuste.nombre_usuario}</span>
                               </div>
                             </div>
-                            <div className="text-sm text-slate-300">
+                            
+                            {/* Tabla de cambios de precios */}
+                            <div className="mb-3 overflow-x-auto">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="border-b border-[#1e2a3b]">
+                                    <th className="text-left py-2 px-2 text-slate-500 font-medium">Precio</th>
+                                    <th className="text-right py-2 px-2 text-red-400 font-medium">Anterior</th>
+                                    <th className="text-center py-2 px-2 text-slate-500">→</th>
+                                    <th className="text-right py-2 px-2 text-green-400 font-medium">Nuevo</th>
+                                    <th className="text-right py-2 px-2 text-slate-500 font-medium">Diferencia</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {[
+                                    { nombre: 'General', anterior: ajuste.precio1_anterior, nuevo: ajuste.precio1_nuevo },
+                                    { nombre: 'Mayorista', anterior: ajuste.precio2_anterior, nuevo: ajuste.precio2_nuevo },
+                                    { nombre: 'Cliente', anterior: ajuste.precio3_anterior, nuevo: ajuste.precio3_nuevo },
+                                    { nombre: 'Mecánico', anterior: ajuste.precio4_anterior, nuevo: ajuste.precio4_nuevo },
+                                    { nombre: 'Minorista', anterior: ajuste.precio5_anterior, nuevo: ajuste.precio5_nuevo },
+                                    { nombre: 'Inversor', anterior: ajuste.precio6_anterior, nuevo: ajuste.precio6_nuevo },
+                                    { nombre: 'Especial', anterior: ajuste.precio7_anterior, nuevo: ajuste.precio7_nuevo },
+                                  ].filter(p => p.anterior !== null || p.nuevo !== null).map((precio, idx) => {
+                                    const anteriorNum = Number(precio.anterior) || 0;
+                                    const nuevoNum = Number(precio.nuevo) || 0;
+                                    const diff = nuevoNum - anteriorNum;
+                                    const cambio = diff !== 0;
+                                    return (
+                                      <tr key={idx} className={`border-b border-[#1e2a3b]/50 ${cambio ? 'bg-[#0e88c9]/5' : ''}`}>
+                                        <td className="py-1.5 px-2 text-slate-300">{precio.nombre}</td>
+                                        <td className="py-1.5 px-2 text-right font-mono text-red-400/80">
+                                          ${anteriorNum.toFixed(2)}
+                                        </td>
+                                        <td className="py-1.5 px-2 text-center text-slate-600">→</td>
+                                        <td className="py-1.5 px-2 text-right font-mono text-green-400">
+                                          ${nuevoNum.toFixed(2)}
+                                        </td>
+                                        <td className={`py-1.5 px-2 text-right font-mono ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                                          {diff > 0 ? '+' : ''}{diff.toFixed(2)}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            <div className="text-sm text-slate-300 pt-2 border-t border-[#1e2a3b]">
                               <span className="font-medium text-[#0e88c9]">Razón:</span>
                               <p className="mt-1 text-slate-400">{ajuste.razon_justificacion}</p>
                             </div>

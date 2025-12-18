@@ -207,11 +207,16 @@ function PerfilProductoPageContent() {
   const getAllImages = () => {
     if (!producto) return [];
     const images = [];
-    if (producto.imagen_principal) images.push(producto.imagen_principal);
+    
+    // Solo usar el array de imagenes, ya que imagen_principal está incluida ahí
     if (producto.imagenes && producto.imagenes.length > 0) {
       images.push(...producto.imagenes);
     }
-    return images.slice(0, 10); // Máximo 10 imágenes
+    
+    // Eliminar duplicados usando Set
+    const uniqueImages = Array.from(new Set(images));
+    
+    return uniqueImages.slice(0, 10); // Máximo 10 imágenes
   };
 
   const nextImage = () => {

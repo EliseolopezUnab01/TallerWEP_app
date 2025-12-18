@@ -37,7 +37,27 @@ export async function POST(
 
     const connection = await connectDB();
 
-    // Actualizar precios en la tabla precios
+    // PRIMERO: Obtener los precios actuales (antes de modificar)
+    const [preciosActuales]: any = await connection.execute(
+      `SELECT 
+        precio_general as precio1,
+        precio_mayorista as precio2,
+        precio_cliente as precio3,
+        precio_mecanico as precio4,
+        precio_minorista as precio5,
+        precio_especial as precio6,
+        precio_especial as precio7
+      FROM precios WHERE idprod = ?`,
+      [productId]
+    );
+
+    const preciosAnteriores = preciosActuales[0] || {
+      precio1: 0, precio2: 0, precio3: 0, precio4: 0, precio5: 0, precio6: 0, precio7: 0
+    };
+
+    console.log('📊 Precios anteriores:', preciosAnteriores);
+
+    // SEGUNDO: Actualizar precios en la tabla precios
     await connection.execute(
       `UPDATE precios SET 
         precio_general = ?,
@@ -61,20 +81,52 @@ export async function POST(
 
     console.log('✅ Precios actualizados para producto:', productId);
 
-    // Registrar el ajuste en la tabla ajuste_precios
+    // TERCERO: Registrar el ajuste con precios anteriores y nuevos
     // TODO: Obtener idusuario de la sesión actual
     const idusuario = 1; // Por ahora hardcodeado, después implementar autenticación
 
-    console.log('📝 Insertando ajuste:', { idusuario, productId, justificacion });
+    console.log('📝 Insertando ajuste con historial de precios...');
 
     const [result]: any = await connection.execute(
       `INSERT INTO ajuste_precios (
         idusuario,
         idprod,
         fecha,
-        razon_justificacion
-      ) VALUES (?, ?, NOW(), ?)`,
-      [idusuario, productId, justificacion]
+        razon_justificacion,
+        precio1_anterior,
+        precio2_anterior,
+        precio3_anterior,
+        precio4_anterior,
+        precio5_anterior,
+        precio6_anterior,
+        precio7_anterior,
+        precio1_nuevo,
+        precio2_nuevo,
+        precio3_nuevo,
+        precio4_nuevo,
+        precio5_nuevo,
+        precio6_nuevo,
+        precio7_nuevo
+      ) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        idusuario, 
+        productId, 
+        justificacion,
+        preciosAnteriores.precio1 || 0,
+        preciosAnteriores.precio2 || 0,
+        preciosAnteriores.precio3 || 0,
+        preciosAnteriores.precio4 || 0,
+        preciosAnteriores.precio5 || 0,
+        preciosAnteriores.precio6 || 0,
+        preciosAnteriores.precio7 || 0,
+        precio1 || 0,
+        precio2 || 0,
+        precio3 || 0,
+        precio4 || 0,
+        precio5 || 0,
+        precio6 || 0,
+        precio7 || 0
+      ]
     );
 
     console.log('✅ Ajuste registrado con ID:', result.insertId);
