@@ -11,30 +11,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ImageUpload } from '@/components/image-upload';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft, Bell, Plus, UserCircle2, Search, Save } from 'lucide-react';
+import Link from 'next/link';
 
 export default function NuevoProductoPage() {
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<File[]>([]);
   const [formData, setFormData] = useState({
-    nombre: '',
-    descripcion: '',
-    marca: '',
-    OE: '',
+    // 28 campos de la tabla PRODUCTOS
+    tipo: '',
     idprodprov: '',
     idprodpaquete: '',
-    codigo_barras: '',
-    idcategoria: '',
-    lado: '',
-    unimedida: 'UNIDAD',
+    idprodfisico: '',
+    OE: '',
+    nombre: '',
+    descripcion: '',
+    etiquetas: '',
+    marca: '',
     peso: '',
     codarancel: '',
+    lado: '',
+    modelo: '',
+    clase: '',
+    estilo: '',
+    giro: '',
     capacidad: '',
-    etiquetas: '',
-    info_referencias_directas: '',
-    info_publica: '',
+    unimedida: 'UNIDAD',
+    idcategoria: '',
+    codigo_barras: '',
     info_reservada: '',
+    info_publica: '',
+    info_referencias_directas: '',
+    info_referencias_indirectas: '',
+    exento: false,
     stock_contable: '0',
-    stock_fisico: '0'
+    stock_fisico: '0',
+    costo: '0'
   });
   const router = useRouter();
 
@@ -84,7 +96,8 @@ export default function NuevoProductoPage() {
       
       // Agregar datos del producto
       Object.entries(formData).forEach(([key, value]) => {
-        submitData.append(key, value);
+        // Convertir boolean a string para FormData
+        submitData.append(key, typeof value === 'boolean' ? String(value) : value);
       });
       
       // Agregar imágenes
@@ -117,84 +130,214 @@ export default function NuevoProductoPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nuevo Producto</h1>
-          <p className="text-gray-600">Complete la información del producto</p>
-        </div>
+      <div className="min-h-screen bg-[#0a0f1a] p-6">
+        <div className="space-y-6 pb-12">
+          {/* Navbar superior tipo Figma */}
+          <div className="rounded-xl border border-[#0e88c9]/30 bg-[#0d1523] px-5 py-3 flex items-center justify-between gap-4 shadow-[0_0_25px_rgba(15,23,42,0.9)]">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Inventario</span>
+              <span className="h-6 w-px bg-slate-700" />
+              <span className="text-sm tracking-[0.18em] uppercase text-slate-200">Nuevo Producto</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                className="border-slate-700 bg-slate-950/60 text-slate-300 hover:text-slate-50 hover:bg-slate-800"
+              >
+                <Bell className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="border-slate-700 bg-slate-950/60 text-slate-300 hover:text-slate-50 hover:bg-slate-800"
+              >
+                <UserCircle2 className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Columna 1: Información del producto */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Información del Producto</CardTitle>
-                  <CardDescription>Ingrese los datos básicos del producto</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Información Básica */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="nombre">Nombre del Producto *</Label>
-                      <Input 
-                        id="nombre" 
-                        placeholder="Ej: Buje de Suspensión Delantero" 
-                        required 
-                        value={formData.nombre}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="descripcion">Descripción</Label>
-                      <Input 
-                        id="descripcion" 
-                        placeholder="Tipo de producto" 
-                        value={formData.descripcion}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="marca">Marca del Producto</Label>
-                      <Input 
-                        id="marca" 
-                        placeholder="Ej: MOOG, BOSCH, etc." 
-                        value={formData.marca}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="OE">Referencia OE *</Label>
-                      <Input 
-                        id="OE" 
-                        placeholder="Referencia del fabricante" 
-                        required 
-                        value={formData.OE}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Link href="/dashboard/inventario/administrar">
+                <Button variant="ghost" size="icon" className="text-slate-300 hover:text-slate-50">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-50 tracking-tight">
+                  Nuevo Producto
+                </h1>
+                <p className="text-sm text-slate-400">
+                  Complete la información del producto para registrarlo en el inventario
+                </p>
+              </div>
+            </div>
+            <Button 
+              type="submit" 
+              form="product-form"
+              disabled={loading} 
+              className="border-[#0e88c9]/60 bg-[#0e88c9]/10 text-[#0e88c9] hover:bg-[#0e88c9]/20 rounded-full px-5"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? 'Guardando...' : 'Guardar Producto'}
+            </Button>
+          </div>
 
-                  {/* Códigos de Identificación */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="idprodprov">Código Proveedor</Label>
-                      <Input 
-                        id="idprodprov" 
-                        placeholder="Código según factura" 
-                        value={formData.idprodprov}
-                        onChange={handleInputChange}
-                      />
+          <form id="product-form" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              {/* Columna 1: Imágenes / ficha visual como en Figma */}
+              <div className="space-y-6 lg:order-1">
+                <Card className="bg-[#141e2e] border border-[#0e88c9]/30 shadow-[0_0_20px_rgba(14,136,201,0.25)] rounded-xl overflow-hidden">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm text-slate-200 tracking-wide">IMAGE GALLERY</CardTitle>
+                    <span className="text-xs text-emerald-400">{images.length}/10</span>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="relative w-full h-[250px] bg-slate-900 rounded-2xl overflow-hidden">
+                      <div className="flex items-center justify-center h-full w-full p-4">
+                        <div className="rounded-xl border-2 border-dashed border-slate-700/40 bg-slate-950/60 p-4 w-full h-full flex flex-col items-center justify-center">
+                          <ImageUpload onImagesChange={handleImagesChange} />
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="idprodpaquete">Código Paquete</Label>
-                      <Input 
-                        id="idprodpaquete" 
-                        placeholder="Código del embalaje" 
-                        value={formData.idprodpaquete}
-                        onChange={handleInputChange}
-                      />
+                    <div className="flex flex-wrap gap-2 items-center justify-center">
+                      {images.length > 0 ? (
+                        images.map((img, idx) => (
+                          <div key={idx} className="h-14 w-20 flex-shrink-0 rounded-md border border-cyan-700/50 bg-slate-900 overflow-hidden">
+                            <div className="relative h-full w-full">
+                              <img 
+                                src={URL.createObjectURL(img)} 
+                                alt={`Uploaded preview ${idx + 1}`} 
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-slate-500 text-center">
+                          Suba hasta 10 imágenes. Use fotos claras del producto y su empaque.
+                        </p>
+                      )}
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Botón de envío tipo barra inferior de panel */}
+                <Card className="bg-[#141e2e] border border-[#0e88c9]/30 shadow-lg rounded-xl">
+                  <CardContent className="p-6 space-y-2">
+                    <Button 
+                      type="submit" 
+                      disabled={loading} 
+                      className="w-full border border-[#0e88c9]/60 bg-[#0e88c9]/10 text-[#0e88c9] hover:bg-[#0e88c9]/20 rounded-xl transition-all"
+                      size="lg"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {loading ? 'Guardando Producto...' : 'Guardar Producto'}
+                    </Button>
+                    <p className="text-xs text-slate-400 mt-1 text-center">
+                      {images.length > 0 
+                        ? `Se guardarán ${images.length} imágenes con el producto`
+                        : 'Producto se guardará sin imágenes por ahora'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Columna 2-3: Información del producto (formulario principal) */}
+              <div className="lg:col-span-2 space-y-6 lg:order-2">
+                <Card className="bg-[#141e2e] border border-[#0e88c9]/30 shadow-lg rounded-xl">
+                  <CardHeader className="pb-3 flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm text-slate-100 tracking-wide">INFORMACIÓN DEL PRODUCTO</CardTitle>
+                      <CardDescription className="text-xs text-slate-400">Ingrese los datos básicos y técnicos del producto</CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Información Básica */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nombre">Nombre del Producto *</Label>
+                        <Input 
+                          id="nombre" 
+                          placeholder="Ej: Buje de Suspensión Delantero" 
+                          required 
+                          value={formData.nombre}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="descripcion">Descripción</Label>
+                        <Input 
+                          id="descripcion" 
+                          placeholder="Descripción breve del producto" 
+                          value={formData.descripcion}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Códigos de Identificación */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="marca">Marca</Label>
+                        <Input 
+                          id="marca" 
+                          placeholder="Ej: MOOG, BOSCH, etc." 
+                          value={formData.marca}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="OE">Referencia OE *</Label>
+                        <Input 
+                          id="OE" 
+                          placeholder="Referencia del fabricante" 
+                          required 
+                          value={formData.OE}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Códigos Adicionales */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="idprodprov">Código Proveedor</Label>
+                        <Input 
+                          id="idprodprov" 
+                          placeholder="Código según factura" 
+                          value={formData.idprodprov}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="idprodpaquete">Código Paquete</Label>
+                        <Input 
+                          id="idprodpaquete" 
+                          placeholder="Código del embalaje" 
+                          value={formData.idprodpaquete}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="idprodfisico">ID Producto Físico</Label>
+                        <Input 
+                          id="idprodfisico" 
+                          placeholder="ID del producto físico" 
+                          value={formData.idprodfisico}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="codigo_barras">Código de Barras</Label>
                       <Input 
@@ -202,199 +345,274 @@ export default function NuevoProductoPage() {
                         placeholder="Código QR o barras" 
                         value={formData.codigo_barras}
                         onChange={handleInputChange}
+                        className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
                       />
                     </div>
-                  </div>
 
-                  {/* Categorización */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Exento de Impuestos */}
                     <div className="space-y-2">
-                      <Label htmlFor="idcategoria">Categoría *</Label>
-                      <Select onValueChange={(value) => handleSelectChange('idcategoria', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccione categoría" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categorias.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id}>
-                              {cat.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="exento" className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          id="exento"
+                          checked={formData.exento}
+                          onChange={(e) => setFormData(prev => ({ ...prev, exento: e.target.checked }))}
+                          className="w-4 h-4 rounded border-slate-700 bg-slate-950/80 text-[#0e88c9] focus:ring-[#0e88c9] focus:ring-offset-0"
+                        />
+                        <span className="text-sm">Exento de Impuestos</span>
+                      </Label>
+                      <p className="text-xs text-slate-500">Marque si el producto está exento de IVA u otros impuestos</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lado">Lado</Label>
-                      <Select onValueChange={(value) => handleSelectChange('lado', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccione lado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lados.map((lado) => (
-                            <SelectItem key={lado} value={lado}>
-                              {lado}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="unimedida">Unidad de Medida</Label>
-                      <Select 
-                        defaultValue="UNIDAD"
-                        onValueChange={(value) => handleSelectChange('unimedida', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {unidadesMedida.map((unidad) => (
-                            <SelectItem key={unidad} value={unidad}>
-                              {unidad}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
 
-                  {/* Especificaciones Técnicas */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Categorización */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="idcategoria">Categoría *</Label>
+                        <Select onValueChange={(value) => handleSelectChange('idcategoria', value)}>
+                          <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100 focus:border-cyan-700/60 focus:ring-cyan-700/20">
+                            <SelectValue placeholder="Seleccione categoría" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-700 text-slate-100">
+                            {categorias.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                {cat.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lado">Lado</Label>
+                        <Select onValueChange={(value) => handleSelectChange('lado', value)}>
+                          <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100 focus:border-cyan-700/60 focus:ring-cyan-700/20">
+                            <SelectValue placeholder="Seleccione lado" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-700 text-slate-100">
+                            {lados.map((lado) => (
+                              <SelectItem key={lado} value={lado}>
+                                {lado}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="unimedida">Unidad de Medida</Label>
+                        <Select 
+                          defaultValue="UNIDAD"
+                          onValueChange={(value) => handleSelectChange('unimedida', value)}
+                        >
+                          <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100 focus:border-cyan-700/60 focus:ring-cyan-700/20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-700 text-slate-100">
+                            {unidadesMedida.map((unidad) => (
+                              <SelectItem key={unidad} value={unidad}>
+                                {unidad}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Especificaciones Técnicas */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="peso">Peso (libras)</Label>
+                        <Input 
+                          id="peso" 
+                          type="number" 
+                          step="0.001" 
+                          placeholder="0.000" 
+                          value={formData.peso}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="codarancel">Código Arancelario</Label>
+                        <Input 
+                          id="codarancel" 
+                          placeholder="8708990000" 
+                          value={formData.codarancel}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="capacidad">Capacidad</Label>
+                        <Input 
+                          id="capacidad" 
+                          placeholder="Ej: 1 litro, 5 galones" 
+                          value={formData.capacidad}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Información Adicional */}
                     <div className="space-y-2">
-                      <Label htmlFor="peso">Peso (libras)</Label>
+                      <Label htmlFor="etiquetas">Etiquetas de Búsqueda</Label>
                       <Input 
-                        id="peso" 
-                        type="number" 
-                        step="0.001" 
-                        placeholder="0.000" 
-                        value={formData.peso}
+                        id="etiquetas" 
+                        placeholder="frenos, disco, delantero, toyota (separar con comas)" 
+                        value={formData.etiquetas}
                         onChange={handleInputChange}
+                        className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="codarancel">Código Arancelario</Label>
-                      <Input 
-                        id="codarancel" 
-                        placeholder="8708990000" 
-                        value={formData.codarancel}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="capacidad">Capacidad</Label>
-                      <Input 
-                        id="capacidad" 
-                        placeholder="Ej: 1 litro, 5 galones" 
-                        value={formData.capacidad}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
 
-                  {/* Información Adicional */}
-                  <div className="space-y-2">
-                    <Label htmlFor="etiquetas">Etiquetas de Búsqueda</Label>
-                    <Input 
-                      id="etiquetas" 
-                      placeholder="frenos, disco, delantero, toyota (separar con comas)" 
-                      value={formData.etiquetas}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="info_referencias_directas">Referencias Directas (OE, OEM)</Label>
-                    <Textarea 
-                      id="info_referencias_directas" 
-                      placeholder="Lista de números originales del fabricante separados por comas..."
-                      rows={2}
-                      value={formData.info_referencias_directas}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="info_publica">Información Pública</Label>
+                      <Label htmlFor="info_referencias_directas">Referencias Directas (OE, OEM)</Label>
                       <Textarea 
-                        id="info_publica" 
-                        placeholder="Información para mostrar a clientes..."
-                        rows={3}
-                        value={formData.info_publica}
+                        id="info_referencias_directas" 
+                        placeholder="Lista de números originales del fabricante separados por comas..."
+                        rows={2}
+                        value={formData.info_referencias_directas}
                         onChange={handleInputChange}
+                        className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
                       />
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="info_reservada">Información Reservada</Label>
+                      <Label htmlFor="info_referencias_indirectas">Referencias Indirectas</Label>
                       <Textarea 
-                        id="info_reservada" 
-                        placeholder="Información interna y confidencial..."
-                        rows={3}
-                        value={formData.info_reservada}
+                        id="info_referencias_indirectas" 
+                        placeholder="Referencias indirectas o cruzadas..."
+                        rows={2}
+                        value={formData.info_referencias_indirectas}
                         onChange={handleInputChange}
+                        className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
                       />
                     </div>
-                  </div>
 
-                  {/* Stock Inicial */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="stock_contable">Stock Contable</Label>
-                      <Input 
-                        id="stock_contable" 
-                        type="number" 
-                        value={formData.stock_contable}
-                        onChange={handleInputChange}
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="info_publica">Información Pública</Label>
+                        <Textarea 
+                          id="info_publica" 
+                          placeholder="Información para mostrar a clientes..."
+                          rows={3}
+                          value={formData.info_publica}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="info_reservada">Información Reservada</Label>
+                        <Textarea 
+                          id="info_reservada" 
+                          placeholder="Información interna y confidencial..."
+                          rows={3}
+                          value={formData.info_reservada}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="stock_fisico">Stock Físico</Label>
-                      <Input 
-                        id="stock_fisico" 
-                        type="number" 
-                        value={formData.stock_fisico}
-                        onChange={handleInputChange}
-                      />
+
+                    {/* Especificaciones Técnicas Adicionales */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="tipo">Tipo</Label>
+                        <Input 
+                          id="tipo" 
+                          placeholder="Tipo de producto" 
+                          value={formData.tipo}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="modelo">Modelo</Label>
+                        <Input 
+                          id="modelo" 
+                          placeholder="Modelo" 
+                          value={formData.modelo}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="clase">Clase</Label>
+                        <Input 
+                          id="clase" 
+                          placeholder="Clase del producto" 
+                          value={formData.clase}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="estilo">Estilo</Label>
+                        <Input 
+                          id="estilo" 
+                          placeholder="Estilo" 
+                          value={formData.estilo}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="giro">Giro</Label>
+                        <Input 
+                          id="giro" 
+                          placeholder="Giro" 
+                          value={formData.giro}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+
+                    {/* Costo del Producto */}
+                    <div className="border-t pt-4">
+                      <div className="space-y-2 max-w-md">
+                        <Label htmlFor="costo">Costo del Producto</Label>
+                        <Input 
+                          id="costo" 
+                          type="number" 
+                          step="0.01"
+                          placeholder="0.00" 
+                          value={formData.costo}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                        <p className="text-xs text-slate-500">Precio de compra o costo de adquisición del producto</p>
+                      </div>
+                    </div>
+
+                    {/* Stock Inicial */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="stock_contable">Stock Contable</Label>
+                        <Input 
+                          id="stock_contable" 
+                          type="number" 
+                          value={formData.stock_contable}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="stock_fisico">Stock Físico</Label>
+                        <Input 
+                          id="stock_fisico" 
+                          type="number" 
+                          value={formData.stock_fisico}
+                          onChange={handleInputChange}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-
-            {/* Columna 2: Imágenes */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Imágenes del Producto</CardTitle>
-                  <CardDescription>Máximo 10 imágenes</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ImageUpload onImagesChange={handleImagesChange} />
-                </CardContent>
-              </Card>
-
-              {/* Botón de envío */}
-              <Card>
-                <CardContent className="p-6">
-                  <Button 
-                    type="submit" 
-                    disabled={loading} 
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                    size="lg"
-                  >
-                    {loading ? 'Guardando Producto...' : 'Guardar Producto'}
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    {images.length > 0 
-                      ? `Se guardarán ${images.length} imágenes con el producto`
-                      : 'Producto se guardará sin imágenes'
-                    }
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </DashboardLayout>
   );

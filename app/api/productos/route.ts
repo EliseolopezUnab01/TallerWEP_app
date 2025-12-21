@@ -13,15 +13,44 @@ export async function GET() {
       SELECT 
         p.*,
         c.nombre as categoria_nombre,
+        pr.precio_general as precio1,
+        pr.precio_mayorista as precio2,
+        pr.precio_cliente as precio3,
+        pr.precio_mecanico as precio4,
+        pr.precio_minorista as precio5,
+        pr.precio_mayorista as precio6,
+        pr.precio_especial as precio7,
         (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY es_principal DESC, orden ASC LIMIT 1) as imagen_principal
       FROM productos p
       LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
+      LEFT JOIN precios pr ON p.idprod = pr.idprod
       ORDER BY p.created_at DESC
+    `);
+    
+    // Obtener todas las imágenes de todos los productos para construir el arreglo `imagenes`
+    const [imagesRows]: any = await connection.execute(`
+      SELECT idprod, imagen_url, orden, es_principal
+      FROM producto_imagenes
+      ORDER BY idprod ASC, es_principal DESC, orden ASC
     `);
 
     await connection.end();
 
-    return NextResponse.json({ products });
+    const imagesByProduct: Record<number, string[]> = {};
+    for (const row of imagesRows) {
+      const id = Number(row.idprod);
+      if (!imagesByProduct[id]) {
+        imagesByProduct[id] = [];
+      }
+      imagesByProduct[id].push(row.imagen_url as string);
+    }
+
+    const productsWithImages = products.map((p: any) => ({
+      ...p,
+      imagenes: imagesByProduct[Number(p.idprod)] || [],
+    }));
+
+    return NextResponse.json({ products: productsWithImages });
   } catch (error) {
     console.error('Error al obtener productos:', error);
     return NextResponse.json(
@@ -36,27 +65,36 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     
-    // Obtener datos del producto
+    // Obtener datos del producto (28 campos + costo)
     const productoData = {
-      nombre: formData.get('nombre') as string,
-      descripcion: formData.get('descripcion') as string,
-      marca: formData.get('marca') as string,
-      OE: formData.get('OE') as string,
+      tipo: formData.get('tipo') as string,
       idprodprov: formData.get('idprodprov') as string,
       idprodpaquete: formData.get('idprodpaquete') as string,
-      codigo_barras: formData.get('codigo_barras') as string,
-      idcategoria: formData.get('idcategoria') as string,
-      lado: formData.get('lado') as string,
-      unimedida: formData.get('unimedida') as string,
+      idprodfisico: formData.get('idprodfisico') as string,
+      OE: formData.get('OE') as string,
+      nombre: formData.get('nombre') as string,
+      descripcion: formData.get('descripcion') as string,
+      etiquetas: formData.get('etiquetas') as string,
+      marca: formData.get('marca') as string,
       peso: formData.get('peso') ? parseFloat(formData.get('peso') as string) : null,
       codarancel: formData.get('codarancel') as string,
+      lado: formData.get('lado') as string,
+      modelo: formData.get('modelo') as string,
+      clase: formData.get('clase') as string,
+      estilo: formData.get('estilo') as string,
+      giro: formData.get('giro') as string,
       capacidad: formData.get('capacidad') as string,
-      etiquetas: formData.get('etiquetas') as string,
-      info_referencias_directas: formData.get('info_referencias_directas') as string,
-      info_publica: formData.get('info_publica') as string,
+      unimedida: formData.get('unimedida') as string,
+      idcategoria: formData.get('idcategoria') as string,
+      codigo_barras: formData.get('codigo_barras') as string,
       info_reservada: formData.get('info_reservada') as string,
+      info_publica: formData.get('info_publica') as string,
+      info_referencias_directas: formData.get('info_referencias_directas') as string,
+      info_referencias_indirectas: formData.get('info_referencias_indirectas') as string,
+      exento: formData.get('exento') === 'true',
       stock_contable: formData.get('stock_contable') ? parseInt(formData.get('stock_contable') as string) : 0,
       stock_fisico: formData.get('stock_fisico') ? parseInt(formData.get('stock_fisico') as string) : 0,
+      costo: formData.get('costo') ? parseFloat(formData.get('costo') as string) : 0,
     };
 
     // Validaciones básicas
@@ -83,34 +121,44 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insertar producto en la base de datos
+    // Insertar producto en la base de datos (28 campos + costo)
     const [result]: any = await connection.execute(
       `INSERT INTO productos (
-        nombre, descripcion, marca, OE, idprodprov, idprodpaquete, 
-        codigo_barras, idcategoria, lado, unimedida, peso, codarancel,
-        capacidad, etiquetas, info_referencias_directas, info_publica,
-        info_reservada, stock_contable, stock_fisico
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        tipo, idprodprov, idprodpaquete, idprodfisico, OE, nombre, descripcion,
+        etiquetas, marca, peso, codarancel, lado, modelo, clase, estilo, giro,
+        capacidad, unimedida, idcategoria, codigo_barras, info_reservada,
+        info_publica, info_referencias_directas, info_referencias_indirectas,
+        exento, stock_contable, stock_fisico, costo
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        productoData.nombre,
-        productoData.descripcion,
-        productoData.marca,
-        productoData.OE,
+        productoData.tipo,
         productoData.idprodprov,
         productoData.idprodpaquete,
-        productoData.codigo_barras,
-        productoData.idcategoria,
-        productoData.lado,
-        productoData.unimedida,
+        productoData.idprodfisico,
+        productoData.OE,
+        productoData.nombre,
+        productoData.descripcion,
+        productoData.etiquetas,
+        productoData.marca,
         productoData.peso,
         productoData.codarancel,
+        productoData.lado,
+        productoData.modelo,
+        productoData.clase,
+        productoData.estilo,
+        productoData.giro,
         productoData.capacidad,
-        productoData.etiquetas,
-        productoData.info_referencias_directas,
-        productoData.info_publica,
+        productoData.unimedida,
+        productoData.idcategoria,
+        productoData.codigo_barras,
         productoData.info_reservada,
+        productoData.info_publica,
+        productoData.info_referencias_directas,
+        productoData.info_referencias_indirectas,
+        productoData.exento,
         productoData.stock_contable,
-        productoData.stock_fisico
+        productoData.stock_fisico,
+        productoData.costo
       ]
     );
 
