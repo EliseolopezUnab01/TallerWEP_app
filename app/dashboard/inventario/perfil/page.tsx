@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  Search, Bell, UserCircle2, ChevronLeft, ChevronRight, 
-  Package, Wrench, Briefcase, Settings, Edit, Save, X, Plus, Trash2
+  Search, ChevronLeft, ChevronRight, 
+  Package, Wrench, Briefcase, Settings, Edit, Save, X, Plus, Trash2, ExternalLink, Layers, Eye
 } from 'lucide-react';
 import Image from 'next/image';
+import { NotificationDropdown } from '@/components/notification-dropdown';
+import { UserDropdown } from '@/components/user-dropdown';
+import { useFloatingWindows } from '@/contexts/floating-windows-context';
 
 interface Producto {
   idprod: number;
@@ -73,6 +77,13 @@ interface Precio {
   editable: boolean;
 }
 
+// Interface para pestañas de productos
+interface ProductTab {
+  id: number;
+  nombre: string;
+  producto: Producto;
+}
+
 function PerfilProductoPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,10 +95,21 @@ function PerfilProductoPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [producto, setProducto] = useState<Producto | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState('producto');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Producto[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  // Sistema de pestañas dinámicas
+  const [openTabs, setOpenTabs] = useState<ProductTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<number | null>(null);
+  
+  // Lista de todos los productos para el panel izquierdo
+  const [allProductos, setAllProductos] = useState<Producto[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
+  
+  // Ventanas flotantes - usando contexto global
+  const { openFloatingWindow: openGlobalFloatingWindow } = useFloatingWindows();
 
   // Precios múltiples
   const [precios, setPrecios] = useState<Precio[]>([]);
@@ -114,14 +136,131 @@ function PerfilProductoPageContent() {
   ]);
 
   useEffect(() => {
-    if (idParam) {
-      setError(''); // Limpiar error anterior
-      fetchProducto();
-    } else {
+    fetchAllProductos();
+  }, []);
+
+  useEffect(() => {
+    if (idParam && allProductos.length > 0) {
+      const found = allProductos.find(p => p.idprod === Number(idParam));
+      if (found) {
+        setProducto(found);
+        setOpenTabs(prev => {
+          const existingTab = prev.find(tab => tab.id === found.idprod);
+          if (existingTab) return prev;
+          return [...prev, { id: found.idprod, nombre: found.nombre, producto: found }];
+        });
+        setActiveTabId(found.idprod);
+        loadPrecios(found);
+      }
       setLoading(false);
-      setError('');
+    } else if (!idParam) {
+      setLoading(false);
     }
-  }, [idParam]);
+  }, [idParam, allProductos]);
+
+  // Filtrar productos según búsqueda (movido aquí para usar en hooks)
+  const productosFiltrados = allProductos.filter(p => {
+    if (!searchQuery) return true;
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      p.nombre?.toLowerCase().includes(searchLower) ||
+      p.OE?.toLowerCase().includes(searchLower) ||
+      p.codigo_barras?.toLowerCase().includes(searchLower) ||
+      p.idprodprov?.toLowerCase().includes(searchLower) ||
+      p.idprod?.toString().includes(searchLower)
+    );
+  });
+
+  // Producto seleccionado en la lista (para preview)
+  const productoPreview = productosFiltrados[selectedIndex] || null;
+
+  // Función para seleccionar producto (definida antes del useCallback que la usa)
+  const handleSelectProduct = useCallback((productId: number) => {
+    const found = allProductos.find(p => p.idprod === productId);
+    if (found) {
+      setOpenTabs(prev => {
+        const existingTab = prev.find(tab => tab.id === found.idprod);
+        if (existingTab) return prev;
+        return [...prev, { id: found.idprod, nombre: found.nombre, producto: found }];
+      });
+      setActiveTabId(productId);
+      setProducto(found);
+      setCurrentImageIndex(0);
+      
+      const preciosFromDB: Precio[] = [
+        { tipo: 'GENERAL', valor: parseFloat((found as any).precio1 || '0'), editable: false },
+        { tipo: 'MAYORISTA', valor: parseFloat((found as any).precio2 || '0'), editable: false },
+        { tipo: 'CLIENTE', valor: parseFloat((found as any).precio3 || '0'), editable: false },
+        { tipo: 'MECÁNICO', valor: parseFloat((found as any).precio4 || '0'), editable: false },
+        { tipo: 'MINORISTA', valor: parseFloat((found as any).precio5 || '0'), editable: false },
+        { tipo: 'INVERSOR', valor: parseFloat((found as any).precio6 || '0'), editable: false },
+        { tipo: 'ESPECIAL', valor: parseFloat((found as any).precio7 || '0'), editable: false },
+      ];
+      setPrecios(preciosFromDB);
+    }
+  }, [allProductos]);
+
+  // Manejo de teclado para navegación - DEBE estar antes de cualquier return condicional
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (loading) return; // No hacer nada si está cargando
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex(prev => Math.min(prev + 1, productosFiltrados.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && productoPreview) {
+      e.preventDefault();
+      handleSelectProduct(productoPreview.idprod);
+    }
+  }, [productosFiltrados.length, productoPreview, loading, handleSelectProduct]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Auto-scroll al elemento seleccionado
+  useEffect(() => {
+    if (listRef.current && !loading) {
+      const selectedEl = listRef.current.children[selectedIndex] as HTMLElement;
+      if (selectedEl) {
+        selectedEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [selectedIndex, loading]);
+
+  const fetchAllProductos = async () => {
+    try {
+      const response = await fetch('/api/productos');
+      if (response.ok) {
+        const data = await response.json();
+        setAllProductos(data.products || []);
+      }
+    } catch (error) {
+      console.error('Error al cargar productos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadPrecios = (prod: any) => {
+    const preciosFromDB: Precio[] = [
+      { tipo: 'GENERAL', valor: parseFloat(prod.precio1 || '0'), editable: false },
+      { tipo: 'MAYORISTA', valor: parseFloat(prod.precio2 || '0'), editable: false },
+      { tipo: 'CLIENTE', valor: parseFloat(prod.precio3 || '0'), editable: false },
+      { tipo: 'MECÁNICO', valor: parseFloat(prod.precio4 || '0'), editable: false },
+      { tipo: 'MINORISTA', valor: parseFloat(prod.precio5 || '0'), editable: false },
+      { tipo: 'INVERSOR', valor: parseFloat(prod.precio6 || '0'), editable: false },
+      { tipo: 'ESPECIAL', valor: parseFloat(prod.precio7 || '0'), editable: false },
+    ];
+    setPrecios(preciosFromDB);
+  };
+
+  // Función para abrir ventana flotante usando el contexto global
+  const openFloatingWindow = (prod: Producto) => {
+    openGlobalFloatingWindow(prod);
+  };
 
   const fetchProducto = async () => {
     try {
@@ -135,15 +274,30 @@ function PerfilProductoPageContent() {
           console.log('Producto encontrado:', found);
           setProducto(found);
           
+          // Agregar automáticamente como pestaña si viene de URL
+          setOpenTabs(prev => {
+            const existingTab = prev.find(tab => tab.id === found.idprod);
+            if (existingTab) {
+              return prev; // Ya existe, no agregar duplicado
+            }
+            const newTab: ProductTab = {
+              id: found.idprod,
+              nombre: found.nombre,
+              producto: found
+            };
+            return [...prev, newTab];
+          });
+          setActiveTabId(found.idprod);
+          
           // Cargar los 7 tipos de precios desde la base de datos
           const preciosFromDB: Precio[] = [
-            { tipo: 'Precio 1 - GENERAL', valor: parseFloat(found.precio1 || 0), editable: false },
-            { tipo: 'Precio 2 - MAYORISTA', valor: parseFloat(found.precio2 || 0), editable: false },
-            { tipo: 'Precio 3 - CLIENTE', valor: parseFloat(found.precio3 || 0), editable: false },
-            { tipo: 'Precio 4 - MECÁNICO', valor: parseFloat(found.precio4 || 0), editable: false },
-            { tipo: 'Precio 5 - MAYORISTA', valor: parseFloat(found.precio5 || 0), editable: false },
-            { tipo: 'Precio 6 - INVERSOR', valor: parseFloat(found.precio6 || 0), editable: false },
-            { tipo: 'Precio 7 - ESPECIAL', valor: parseFloat(found.precio7 || 0), editable: false },
+            { tipo: 'GENERAL', valor: parseFloat(found.precio1 || '0'), editable: false },
+            { tipo: 'MAYORISTA', valor: parseFloat(found.precio2 || '0'), editable: false },
+            { tipo: 'CLIENTE', valor: parseFloat(found.precio3 || '0'), editable: false },
+            { tipo: 'MECÁNICO', valor: parseFloat(found.precio4 || '0'), editable: false },
+            { tipo: 'MINORISTA', valor: parseFloat(found.precio5 || '0'), editable: false },
+            { tipo: 'INVERSOR', valor: parseFloat(found.precio6 || '0'), editable: false },
+            { tipo: 'ESPECIAL', valor: parseFloat(found.precio7 || '0'), editable: false },
           ];
           setPrecios(preciosFromDB);
           
@@ -198,10 +352,94 @@ function PerfilProductoPageContent() {
     }
   };
 
-  const selectProduct = (productId: number) => {
-    router.push(`/dashboard/inventario/perfil?id=${productId}`);
+  // Función para agregar producto como nueva pestaña
+  const addProductTab = async (productId: number) => {
+    // Buscar el producto en los resultados o cargar
+    try {
+      const response = await fetch('/api/productos');
+      if (response.ok) {
+        const data = await response.json();
+        const found = data.products?.find((p: Producto) => p.idprod === productId);
+        if (found) {
+          // Agregar pestaña verificando duplicados con el estado más reciente
+          setOpenTabs(prev => {
+            const existingTab = prev.find(tab => tab.id === found.idprod);
+            if (existingTab) {
+              return prev; // Ya existe, no agregar duplicado
+            }
+            const newTab: ProductTab = {
+              id: found.idprod,
+              nombre: found.nombre,
+              producto: found
+            };
+            return [...prev, newTab];
+          });
+          setActiveTabId(productId);
+          setProducto(found);
+          setCurrentImageIndex(0);
+          
+          // Cargar precios (usando los nombres que vienen de la API)
+          const preciosFromDB: Precio[] = [
+            { tipo: 'GENERAL', valor: parseFloat(found.precio1 || '0'), editable: false },
+            { tipo: 'MAYORISTA', valor: parseFloat(found.precio2 || '0'), editable: false },
+            { tipo: 'CLIENTE', valor: parseFloat(found.precio3 || '0'), editable: false },
+            { tipo: 'MECÁNICO', valor: parseFloat(found.precio4 || '0'), editable: false },
+            { tipo: 'MINORISTA', valor: parseFloat(found.precio5 || '0'), editable: false },
+            { tipo: 'INVERSOR', valor: parseFloat(found.precio6 || '0'), editable: false },
+            { tipo: 'ESPECIAL', valor: parseFloat(found.precio7 || '0'), editable: false },
+          ];
+          setPrecios(preciosFromDB);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar producto:', error);
+    }
+    
     setShowSearchResults(false);
     setSearchQuery('');
+  };
+
+  // Función para cerrar una pestaña
+  const closeTab = (tabId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpenTabs(prev => {
+      const newTabs = prev.filter(tab => tab.id !== tabId);
+      // Si cerramos la pestaña activa, activar otra
+      if (activeTabId === tabId && newTabs.length > 0) {
+        const lastTab = newTabs[newTabs.length - 1];
+        setActiveTabId(lastTab.id);
+        setProducto(lastTab.producto);
+        setCurrentImageIndex(0);
+      } else if (newTabs.length === 0) {
+        setActiveTabId(null);
+        setProducto(null);
+      }
+      return newTabs;
+    });
+  };
+
+  // Función para cambiar de pestaña
+  const switchTab = (tab: ProductTab) => {
+    setActiveTabId(tab.id);
+    setProducto(tab.producto);
+    setCurrentImageIndex(0);
+    
+    // Cargar precios del producto (usando los nombres que vienen de la API)
+    const p = tab.producto as any;
+    const preciosFromDB: Precio[] = [
+      { tipo: 'GENERAL', valor: parseFloat(p.precio1 || '0'), editable: false },
+      { tipo: 'MAYORISTA', valor: parseFloat(p.precio2 || '0'), editable: false },
+      { tipo: 'CLIENTE', valor: parseFloat(p.precio3 || '0'), editable: false },
+      { tipo: 'MECÁNICO', valor: parseFloat(p.precio4 || '0'), editable: false },
+      { tipo: 'MINORISTA', valor: parseFloat(p.precio5 || '0'), editable: false },
+      { tipo: 'INVERSOR', valor: parseFloat(p.precio6 || '0'), editable: false },
+      { tipo: 'ESPECIAL', valor: parseFloat(p.precio7 || '0'), editable: false },
+    ];
+    setPrecios(preciosFromDB);
+  };
+
+  const selectProduct = (productId: number) => {
+    handleSelectProduct(productId);
   };
 
   const getAllImages = () => {
@@ -255,669 +493,461 @@ function PerfilProductoPageContent() {
     );
   }
 
-  // Si no hay ID, mostrar la misma interfaz pero sin producto cargado
-  if (!idParam) {
-    // Usar un producto vacío para mantener la misma estructura visual
-    const emptyProducto = {
-      idprod: 0,
-      nombre: '',
-      imagen_principal: '',
-      imagenes: []
-    };
-    
-    return (
-      <DashboardLayout>
-        <div className="min-h-screen bg-[#0a0f1a] p-6">
-          {/* Navbar superior tipo Figma */}
-          <div className="rounded-xl border border-[#0e88c9]/30 bg-[#0d1523] px-5 py-3 flex items-center justify-between gap-4 shadow-[0_0_25px_rgba(15,23,42,0.9)] mb-6">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Inventario</span>
-              <span className="h-6 w-px bg-slate-700" />
-              <span className="text-sm tracking-[0.18em] uppercase text-slate-200">Perfil del Producto</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="icon"
-                className="border-slate-700 bg-slate-950/60 text-slate-300 hover:text-slate-50 hover:bg-slate-800"
-              >
-                <Bell className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="border-slate-700 bg-slate-950/60 text-slate-300 hover:text-slate-50 hover:bg-slate-800"
-              >
-                <UserCircle2 className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Título y descripción */}
-          <div className="mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-50 tracking-tight">Perfil del Producto</h1>
-            <p className="text-sm text-slate-400">Visualiza y gestiona la información detallada del producto</p>
-          </div>
-
-          {/* Barra de búsqueda */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 max-w-2xl relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input
-                  type="text"
-                  placeholder="Buscar por código, OEM, referencia, nombre..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10 bg-[#0d1523] border-[#1e2a3b] text-slate-200 placeholder:text-slate-500 h-12 text-base"
-                />
-              </div>
-              
-              {/* Resultados de búsqueda */}
-              {showSearchResults && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-[#0d1523] border border-[#1e2a3b] rounded-lg shadow-xl max-h-96 overflow-y-auto z-50">
-                  {searchResults.map((result) => (
-                    <button
-                      key={result.idprod}
-                      onClick={() => selectProduct(result.idprod)}
-                      className="w-full px-4 py-3 hover:bg-[#1e2a3b] transition-colors text-left border-b border-[#1e2a3b] last:border-b-0"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="text-sm font-semibold text-slate-200">{result.nombre}</div>
-                          <div className="flex gap-4 mt-1 text-xs text-slate-400">
-                            {result.codigo_barras && (
-                              <span>Código: <span className="text-[#0e88c9]">{result.codigo_barras}</span></span>
-                            )}
-                            {result.OE && (
-                              <span>OEM: <span className="text-[#0e88c9]">{result.OE}</span></span>
-                            )}
-                            {result.idprodprov && (
-                              <span>Ref: <span className="text-[#0e88c9]">{result.idprodprov}</span></span>
-                            )}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="bg-[#0e88c9]/10 text-[#0e88c9] border-[#0e88c9]/30">
-                          ID: {result.idprod}
-                        </Badge>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              {showSearchResults && searchResults.length === 0 && searchQuery.length >= 2 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-[#0d1523] border border-[#1e2a3b] rounded-lg shadow-xl p-4 z-50">
-                  <div className="text-center text-slate-400">
-                    <Package className="h-12 w-12 mx-auto mb-2 text-slate-600" />
-                    <p>No se encontraron productos</p>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowSearchResults(false);
-                setSearchQuery('');
-              }}
-              className="border-[#1e2a3b] text-slate-300 hover:bg-[#1e2a3b]"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Contenido principal - Mensaje de búsqueda */}
-          <div className="flex flex-col items-center justify-center mt-20">
-            <Package className="h-32 w-32 text-slate-600 mb-6" />
-            <h2 className="text-xl font-semibold text-slate-300 mb-2">Busca un producto</h2>
-            <p className="text-sm text-slate-500 mb-6">Usa la barra de búsqueda para encontrar y visualizar el perfil del producto</p>
-            <Button
-              onClick={() => router.push('/dashboard/inventario/administrar')}
-              variant="outline"
-              className="border-[#0e88c9]/60 text-[#0e88c9] hover:bg-[#0e88c9]/10"
-            >
-              <Package className="h-4 w-4 mr-2" />
-              Ver todos los productos
-            </Button>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  // Si hay error después de buscar, mostrar mensaje con opción de volver
-  if (error && idParam) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center h-screen bg-[#0a0f1a]">
-          <Package className="h-24 w-24 text-slate-600 mb-4" />
-          <div className="text-lg text-slate-200 mb-2">{error}</div>
-          <div className="text-sm text-slate-400 mb-4">ID solicitado: {idParam}</div>
-          <Button
-            onClick={() => router.push('/dashboard/inventario/perfil')}
-            className="bg-[#0e88c9] hover:bg-[#0e88c9]/90 text-white"
-          >
-            Volver a buscar
-          </Button>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!producto && idParam) {
-    return null;
-  }
-
+  // Vista principal
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-[#0a0f1a] p-6">
-        {/* Navbar superior tipo Figma */}
-        <div className="rounded-xl border border-[#0e88c9]/30 bg-[#0d1523] px-5 py-3 flex items-center justify-between gap-4 shadow-[0_0_25px_rgba(15,23,42,0.9)] mb-6">
+      <div className="min-h-screen bg-[#0a0f1a] p-4">
+        {/* Navbar superior */}
+        <div className="rounded-xl border border-[#0e88c9]/30 bg-[#0d1523] px-5 py-3 flex items-center justify-between gap-4 shadow-[0_0_25px_rgba(15,23,42,0.9)] mb-4">
           <div className="flex items-center gap-3">
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Inventario</span>
             <span className="h-6 w-px bg-slate-700" />
             <span className="text-sm tracking-[0.18em] uppercase text-slate-200">Perfil del Producto</span>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              className="border-slate-700 bg-slate-950/60 text-slate-300 hover:text-slate-50 hover:bg-slate-800"
-            >
-              <Bell className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="border-slate-700 bg-slate-950/60 text-slate-300 hover:text-slate-50 hover:bg-slate-800"
-            >
-              <UserCircle2 className="h-5 w-5" />
-            </Button>
+            <NotificationDropdown />
+            <UserDropdown />
           </div>
         </div>
 
-        {/* Título y descripción */}
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-50 tracking-tight">Perfil del Producto</h1>
-          <p className="text-sm text-slate-400">Visualiza y gestiona la información detallada del producto</p>
-        </div>
-
-        {/* Barra de búsqueda */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex-1 max-w-2xl relative">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Buscar por código, OEM, referencia, nombre..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10 bg-[#0d1523] border-[#1e2a3b] text-slate-200 placeholder:text-slate-500 h-12 text-base"
-              />
-            </div>
-            
-            {/* Resultados de búsqueda */}
-            {showSearchResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-[#0d1523] border border-[#1e2a3b] rounded-lg shadow-xl max-h-96 overflow-y-auto z-50">
-                {searchResults.map((result) => (
-                  <button
-                    key={result.idprod}
-                    onClick={() => selectProduct(result.idprod)}
-                    className="w-full px-4 py-3 hover:bg-[#1e2a3b] transition-colors text-left border-b border-[#1e2a3b] last:border-b-0"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="text-sm font-semibold text-slate-200">{result.nombre}</div>
-                        <div className="flex gap-4 mt-1 text-xs text-slate-400">
-                          {result.codigo_barras && (
-                            <span>Código: <span className="text-[#0e88c9]">{result.codigo_barras}</span></span>
-                          )}
-                          {result.OE && (
-                            <span>OEM: <span className="text-[#0e88c9]">{result.OE}</span></span>
-                          )}
-                          {result.idprodprov && (
-                            <span>Ref: <span className="text-[#0e88c9]">{result.idprodprov}</span></span>
-                          )}
+        {/* Layout principal de 2 columnas */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Columna Izquierda: Lista de productos con buscador */}
+          <div className="lg:col-span-4 space-y-3">
+            <Card className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl overflow-hidden">
+              <CardHeader className="py-2 px-3 border-b border-slate-800">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Input
+                    placeholder="Buscar producto..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 h-8 text-sm bg-slate-950/80 border-slate-700/40 text-slate-100"
+                  />
+                </div>
+              </CardHeader>
+              <div ref={listRef} className="h-[calc(100vh-280px)] overflow-y-auto divide-y divide-slate-800/50">
+                {productosFiltrados.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-500 p-4">
+                    <Package className="h-8 w-8 mb-2" />
+                    <p className="text-sm">No hay productos</p>
+                  </div>
+                ) : (
+                  productosFiltrados.map((prod, idx) => (
+                    <div
+                      key={prod.idprod}
+                      onClick={() => setSelectedIndex(idx)}
+                      onDoubleClick={() => selectProduct(prod.idprod)}
+                      onMouseEnter={() => setSelectedIndex(idx)}
+                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
+                        idx === selectedIndex ? 'bg-[#0e88c9]/20 border-l-2 border-[#0e88c9]' : 'hover:bg-slate-800/50'
+                      } ${producto?.idprod === prod.idprod ? 'bg-emerald-500/10 border-l-2 border-emerald-500' : ''}`}
+                    >
+                      <div className="h-10 w-10 rounded bg-slate-900 flex-shrink-0 overflow-hidden">
+                        {prod.imagen_principal ? (
+                          <Image src={prod.imagen_principal} alt="" width={40} height={40} className="object-cover h-full w-full" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-4 w-4 text-slate-600" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-200 truncate">{prod.nombre}</p>
+                        <p className="text-xs text-slate-500">OE: {prod.OE || '-'}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                            {prod.categoria_nombre || prod.idcategoria || '-'}
+                          </Badge>
+                          <span className={`text-[10px] font-medium ${prod.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            Stock: {prod.stock_contable}
+                          </span>
                         </div>
                       </div>
-                      <Badge variant="outline" className="bg-[#0e88c9]/10 text-[#0e88c9] border-[#0e88c9]/30">
-                        ID: {result.idprod}
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            {/* Info del producto seleccionado (preview) */}
+            {productoPreview && (
+              <Card className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl">
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Producto Seleccionado</span>
+                    <div className="flex gap-1">
+                      {/* Botón para abrir en pestaña */}
+                      <Button 
+                        size="sm" 
+                        onClick={() => selectProduct(productoPreview.idprod)}
+                        className="h-7 text-xs bg-[#0e88c9]/10 text-[#0e88c9] border border-[#0e88c9]/40 hover:bg-[#0e88c9]/20"
+                        title="Abrir en pestaña"
+                      >
+                        <Layers className="h-3 w-3 mr-1" />
+                        Pestaña
+                      </Button>
+                      {/* Botón para abrir en ventana flotante */}
+                      <Button 
+                        size="sm" 
+                        onClick={() => openFloatingWindow(productoPreview)}
+                        className="h-7 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/20"
+                        title="Abrir en ventana flotante"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Flotante
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-slate-500">ID:</span>
+                      <span className="text-slate-300 ml-1">{productoPreview.idprod}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Marca:</span>
+                      <span className="text-slate-300 ml-1">{productoPreview.marca || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Stock:</span>
+                      <span className={`ml-1 ${productoPreview.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {productoPreview.stock_contable}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Costo:</span>
+                      <span className="text-slate-300 ml-1">${productoPreview.costo || '0'}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 italic">Doble click en lista para ver perfil completo</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Columna Derecha: Información del producto */}
+          <div className="lg:col-span-8">
+            {/* Pestañas dinámicas */}
+            {openTabs.length > 0 && (
+              <div className="mb-3">
+                <div className="bg-[#0d1523] border border-[#1e2a3b] p-1 rounded-lg flex gap-1 flex-wrap">
+                  {openTabs.map((tab) => (
+                    <div
+                      key={`tab-${tab.id}`}
+                      className={`inline-flex items-center px-3 py-1.5 rounded text-sm font-medium transition-colors cursor-pointer ${
+                        activeTabId === tab.id 
+                          ? 'bg-[#0e88c9] text-white' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-[#1e2a3b]'
+                      }`}
+                      onClick={() => switchTab(tab)}
+                    >
+                      <Package className="h-3 w-3 mr-1.5" />
+                      <span className="max-w-[120px] truncate text-xs">{tab.nombre}</span>
+                      <button
+                        onClick={(e) => closeTab(tab.id, e)}
+                        className="ml-2 p-0.5 rounded hover:bg-red-500/20"
+                        title="Cerrar pestaña"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Contenido del producto - Diseño como imagen de referencia */}
+            {producto ? (
+              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg overflow-hidden">
+                {/* Header con nombre y botón editar */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-[#1e2a3b]">
+                  <div>
+                    <div className="text-xl font-bold text-slate-200">{producto.nombre}</div>
+                    <div className="text-sm text-slate-500">{producto.descripcion || ''}</div>
+                  </div>
+                  <Button
+                    onClick={() => router.push(`/dashboard/inventario/editar-producto?id=${producto.idprod}`)}
+                    className="bg-[#0e88c9] hover:bg-[#0e88c9]/80 text-white"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar Producto
+                  </Button>
+                </div>
+
+                {/* Contenido principal: Imagen + Info */}
+                <div className="grid grid-cols-12">
+                  {/* Imagen grande a la izquierda */}
+                  <div className="col-span-5 p-4 border-r border-[#1e2a3b]">
+                    <div className="relative aspect-square bg-slate-900/50 rounded-lg overflow-hidden">
+                      {getAllImages()[currentImageIndex] ? (
+                        <Image
+                          src={getAllImages()[currentImageIndex]}
+                          alt={producto.nombre}
+                          fill
+                          className="object-contain"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <Package className="h-24 w-24 text-slate-600" />
+                        </div>
+                      )}
+                      {getAllImages().length > 1 && (
+                        <>
+                          <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full">
+                            <ChevronLeft className="h-5 w-5" />
+                          </button>
+                          <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full">
+                            <ChevronRight className="h-5 w-5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {getAllImages().length > 1 && (
+                      <div className="flex gap-2 justify-center mt-3">
+                        {getAllImages().map((img, idx) => (
+                          <button
+                            key={`img-${idx}`}
+                            onClick={() => setCurrentImageIndex(idx)}
+                            className={`w-12 h-12 rounded overflow-hidden border-2 ${idx === currentImageIndex ? 'border-[#0e88c9]' : 'border-slate-700'}`}
+                          >
+                            <Image src={img} alt="" width={48} height={48} className="object-cover w-full h-full" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info apilada a la derecha */}
+                  <div className="col-span-7">
+                    {/* ID Producto y Stock */}
+                    <div className="grid grid-cols-2 border-b border-[#1e2a3b]">
+                      <div className="p-4 border-r border-[#1e2a3b]">
+                        <div className="text-xs text-slate-500 uppercase">ID Producto</div>
+                        <div className="text-2xl font-bold text-slate-200">{producto.idprod}</div>
+                      </div>
+                      <div className="p-4">
+                        <div className="text-xs text-slate-500 uppercase">Stock</div>
+                        <div className={`text-2xl font-bold ${producto.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {producto.stock_contable}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Referencia OE */}
+                    <div className="p-4 border-b border-[#1e2a3b]">
+                      <div className="text-xs text-slate-500 uppercase">Referencia OE</div>
+                      <div className="text-lg font-semibold text-slate-200">{producto.OE || '-'}</div>
+                    </div>
+
+                    {/* Marca */}
+                    <div className="p-4 border-b border-[#1e2a3b]">
+                      <div className="text-xs text-slate-500 uppercase">Marca</div>
+                      <div className="text-lg font-semibold text-slate-200">{producto.marca || '-'}</div>
+                    </div>
+
+                    {/* Categoría */}
+                    <div className="p-4 border-b border-[#1e2a3b]">
+                      <div className="text-xs text-slate-500 uppercase">Categoría</div>
+                      <Badge variant="outline" className="mt-1">{producto.categoria_nombre || '-'}</Badge>
+                    </div>
+
+                    {/* Costo */}
+                    <div className="p-4">
+                      <div className="text-xs text-slate-500 uppercase">Costo</div>
+                      <div className="text-2xl font-bold text-emerald-400">${producto.costo || '0.00'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fila inferior: Códigos */}
+                <div className="grid grid-cols-3 border-t border-[#1e2a3b]">
+                  <div className="p-4 border-r border-[#1e2a3b]">
+                    <div className="text-xs text-slate-500">Cód. Proveedor</div>
+                    <div className="text-sm font-medium text-slate-200">{producto.idprodprov || '-'}</div>
+                  </div>
+                  <div className="p-4 border-r border-[#1e2a3b]">
+                    <div className="text-xs text-slate-500">Cód. Paquete</div>
+                    <div className="text-sm font-medium text-slate-200">{producto.idprodpaquete || '-'}</div>
+                  </div>
+                  <div className="p-4">
+                    <div className="text-xs text-slate-500">Código Barras</div>
+                    <div className="text-sm font-medium text-slate-200">{producto.codigo_barras || '-'}</div>
+                  </div>
+                </div>
+
+                {/* Precios de Venta */}
+                <div className="border-t border-[#1e2a3b] p-4">
+                  <div className="text-xs text-slate-500 uppercase mb-3">Precios de Venta</div>
+                  <div className="grid grid-cols-4 gap-4">
+                    {precios.map((precio, idx) => (
+                      <div key={`precio-${idx}`}>
+                        <div className="text-xs text-slate-500">{precio.tipo}</div>
+                        <div className="text-lg font-bold text-[#0e88c9]">${precio.valor.toFixed(2)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Información Adicional */}
+                <div className="border-t border-[#1e2a3b] p-4">
+                  <div className="text-xs text-slate-500 uppercase mb-3">Información Adicional</div>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-xs text-slate-500">Tipo</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.tipo || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Grupo</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.grupo || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Subgrupo</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.subgrupo || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Clase</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.clase || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Lado</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.lado || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Modelo</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.modelo || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Peso</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.peso || '-'} {producto.unimedida || ''}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Exento IVA</div>
+                      <div className={`text-sm font-medium ${producto.exento ? 'text-yellow-400' : 'text-slate-400'}`}>{producto.exento ? 'Sí' : 'No'}</div>
+                    </div>
+                  </div>
+                  {producto.etiquetas && (
+                    <div className="mt-3">
+                      <div className="text-xs text-slate-500">Etiquetas</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.etiquetas}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : productoPreview ? (
+              /* Preview del producto seleccionado con hover/flechas */
+              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg overflow-hidden">
+                {/* Header con nombre y botón editar */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-[#1e2a3b]">
+                  <div>
+                    <div className="text-xl font-bold text-slate-200">{productoPreview.nombre}</div>
+                    <div className="text-sm text-slate-500">{productoPreview.descripcion || ''}</div>
+                  </div>
+                  <Button
+                    onClick={() => router.push(`/dashboard/inventario/editar-producto?id=${productoPreview.idprod}`)}
+                    className="bg-[#0e88c9] hover:bg-[#0e88c9]/80 text-white"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar Producto
+                  </Button>
+                </div>
+
+                {/* Contenido principal: Imagen + Info */}
+                <div className="grid grid-cols-12">
+                  {/* Imagen grande a la izquierda */}
+                  <div className="col-span-5 p-4 border-r border-[#1e2a3b]">
+                    <div className="relative aspect-square bg-slate-900/50 rounded-lg overflow-hidden">
+                      {productoPreview.imagen_principal ? (
+                        <Image
+                          src={productoPreview.imagen_principal}
+                          alt={productoPreview.nombre}
+                          fill
+                          className="object-contain"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <Package className="h-24 w-24 text-slate-600" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Info apilada a la derecha */}
+                  <div className="col-span-7">
+                    {/* ID Producto y Stock */}
+                    <div className="grid grid-cols-2 border-b border-[#1e2a3b]">
+                      <div className="p-4 border-r border-[#1e2a3b]">
+                        <div className="text-xs text-slate-500 uppercase">ID Producto</div>
+                        <div className="text-2xl font-bold text-slate-200">{productoPreview.idprod}</div>
+                      </div>
+                      <div className="p-4">
+                        <div className="text-xs text-slate-500 uppercase">Stock</div>
+                        <div className={`text-2xl font-bold ${productoPreview.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {productoPreview.stock_contable}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Referencia OE */}
+                    <div className="p-4 border-b border-[#1e2a3b]">
+                      <div className="text-xs text-slate-500 uppercase">Referencia OE</div>
+                      <div className="text-lg font-semibold text-slate-200">{productoPreview.OE || '-'}</div>
+                    </div>
+
+                    {/* Marca */}
+                    <div className="p-4 border-b border-[#1e2a3b]">
+                      <div className="text-xs text-slate-500 uppercase">Marca</div>
+                      <div className="text-lg font-semibold text-slate-200">{productoPreview.marca || '-'}</div>
+                    </div>
+
+                    {/* Categoría */}
+                    <div className="p-4 border-b border-[#1e2a3b]">
+                      <div className="text-xs text-slate-500 uppercase">Categoría</div>
+                      <Badge className="mt-1 bg-[#0e88c9]/20 text-[#0e88c9] border-[#0e88c9]/40">
+                        {productoPreview.categoria_nombre || productoPreview.idcategoria || '-'}
                       </Badge>
                     </div>
-                  </button>
-                ))}
+
+                    {/* Costo */}
+                    <div className="p-4">
+                      <div className="text-xs text-slate-500 uppercase">Costo</div>
+                      <div className="text-2xl font-bold text-emerald-400">${productoPreview.costo || '0.00'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Códigos */}
+                <div className="grid grid-cols-3 border-t border-[#1e2a3b]">
+                  <div className="p-3 border-r border-[#1e2a3b]">
+                    <div className="text-xs text-slate-500">Cód. Proveedor</div>
+                    <div className="text-sm font-medium text-slate-300">{productoPreview.idprodprov || '-'}</div>
+                  </div>
+                  <div className="p-3 border-r border-[#1e2a3b]">
+                    <div className="text-xs text-slate-500">Cód. Paquete</div>
+                    <div className="text-sm font-medium text-slate-300">{productoPreview.idprodpaquete || '-'}</div>
+                  </div>
+                  <div className="p-3">
+                    <div className="text-xs text-slate-500">Código Barras</div>
+                    <div className="text-sm font-medium text-slate-300">{productoPreview.codigo_barras || '-'}</div>
+                  </div>
+                </div>
+
+                {/* Mensaje de ayuda */}
+                <div className="px-4 py-2 bg-[#141e2e] border-t border-[#1e2a3b]">
+                  <p className="text-xs text-slate-500 text-center">
+                    Presiona <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-400">Enter</kbd> o haz doble click para ver el perfil completo
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[500px] bg-[#0d1523] border border-[#1e2a3b] rounded-lg">
+                <Package className="h-20 w-20 text-slate-600 mb-4" />
+                <h2 className="text-lg font-semibold text-slate-300 mb-2">Selecciona un producto de la lista</h2>
+                <p className="text-sm text-slate-500 text-center px-4">Usa las flechas ↑↓ o pasa el mouse</p>
               </div>
             )}
-            
-            {showSearchResults && searchResults.length === 0 && searchQuery.length >= 2 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-[#0d1523] border border-[#1e2a3b] rounded-lg shadow-xl p-4 z-50">
-                <div className="text-center text-slate-400">
-                  <Package className="h-12 w-12 mx-auto mb-2 text-slate-600" />
-                  <p>No se encontraron productos</p>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <Button
-            variant="outline"
-            onClick={() => {
-              setShowSearchResults(false);
-              setSearchQuery('');
-            }}
-            className="border-[#1e2a3b] text-slate-300 hover:bg-[#1e2a3b]"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Contenido principal */}
-        <div>
-          {/* Header con código y acciones */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.back()}
-                className="text-slate-400 hover:text-slate-200"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center gap-4">
-                <div>
-                  <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">CÓDIGO</div>
-                  <div className="text-2xl font-bold text-[#0e88c9]">{producto.idprod}</div>
-                </div>
-                <div className="border-l border-[#1e2a3b] pl-4 h-12 flex items-center">
-                  <div className="text-xl font-semibold text-slate-200">{producto.nombre}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs de tipo de producto */}
-          <div className="mb-6">
-            <div className="bg-[#0d1523] border border-[#1e2a3b] p-1 rounded-lg inline-flex gap-1">
-              <button
-                onClick={() => setActiveTab('producto')}
-                className={`inline-flex items-center px-4 py-2 rounded text-sm font-medium transition-colors ${
-                  activeTab === 'producto' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Package className="h-4 w-4 mr-2" />
-                PRODUCTO
-              </button>
-              <button
-                onClick={() => setActiveTab('insumo')}
-                className={`inline-flex items-center px-4 py-2 rounded text-sm font-medium transition-colors ${
-                  activeTab === 'insumo' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Wrench className="h-4 w-4 mr-2" />
-                INSUMO
-              </button>
-              <button
-                onClick={() => setActiveTab('servicio')}
-                className={`inline-flex items-center px-4 py-2 rounded text-sm font-medium transition-colors ${
-                  activeTab === 'servicio' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Briefcase className="h-4 w-4 mr-2" />
-                SERVICIO
-              </button>
-              <button
-                onClick={() => setActiveTab('herramienta')}
-                className={`inline-flex items-center px-4 py-2 rounded text-sm font-medium transition-colors ${
-                  activeTab === 'herramienta' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                HERRAMIENTA
-              </button>
-            </div>
-          </div>
-
-          {/* Layout de 2 columnas */}
-          <div className="grid grid-cols-12 gap-6">
-            {/* Columna izquierda - Galería e información */}
-            <div className="col-span-5 space-y-6">
-              {/* Galería de imágenes */}
-              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
-                    Modo Inventario
-                  </h3>
-                  <Badge variant="outline" className="bg-[#0e88c9]/10 text-[#0e88c9] border-[#0e88c9]/30">
-                    PRINCIPAL
-                  </Badge>
-                </div>
-                
-                <div className="relative aspect-square bg-[#141e2e] rounded-lg overflow-hidden mb-4">
-                  {getAllImages()[currentImageIndex] ? (
-                    <Image
-                      src={getAllImages()[currentImageIndex]}
-                      alt={producto.nombre}
-                      fill
-                      className="object-contain"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <Package className="h-24 w-24 text-slate-600" />
-                    </div>
-                  )}
-                  
-                  {/* Controles de navegación */}
-                  {getAllImages().length > 1 && (
-                    <>
-                      <button
-                        onClick={prevImage}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-[#0e88c9] hover:bg-[#0e88c9]/90 text-white rounded-full p-2 transition-all hover:scale-110"
-                      >
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={nextImage}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#0e88c9] hover:bg-[#0e88c9]/90 text-white rounded-full p-2 transition-all hover:scale-110"
-                      >
-                        <ChevronRight className="h-5 w-5" />
-                      </button>
-                    </>
-                  )}
-                  
-                  {/* Indicador de posición */}
-                  {getAllImages().length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 px-3 py-1 rounded-full">
-                      <span className="text-xs text-white font-medium">
-                        {currentImageIndex + 1} / {getAllImages().length}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Thumbnails */}
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {getAllImages().map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`relative flex-shrink-0 w-20 h-20 bg-[#141e2e] rounded border-2 transition-all ${
-                        currentImageIndex === idx ? 'border-[#0e88c9] scale-105' : 'border-[#1e2a3b] hover:border-[#0e88c9]/50'
-                      }`}
-                    >
-                      {img ? (
-                        <Image src={img} alt="" fill className="object-contain" />
-                      ) : (
-                        <Package className="h-8 w-8 text-slate-600 m-auto" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="text-xs text-slate-500 mt-4 text-center">
-                  ARGUETA REPUESTOS
-                </div>
-              </div>
-
-              {/* Precios */}
-              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg p-6">
-                <h3 className="text-sm font-semibold text-[#ff6b35] uppercase tracking-wide mb-4">
-                  Tipos de Precios
-                </h3>
-                <div className="space-y-3">
-                  {precios.map((precio, idx) => (
-                    <div key={idx} className="flex items-center justify-between py-2.5 px-3 bg-[#141e2e] border border-[#1e2a3b] rounded-lg hover:border-[#0e88c9]/50 transition-colors">
-                      <span className="text-xs font-medium text-slate-400">
-                        {precio.tipo}
-                      </span>
-                      <span className="text-base font-mono font-semibold text-[#0e88c9]">
-                        ${precio.valor.toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* OEM / Cruces */}
-              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg p-6">
-                <h3 className="text-sm font-semibold text-[#ff6b35] uppercase tracking-wide mb-4">
-                  OEM / Cruces
-                </h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {referencias.map((ref, idx) => (
-                    <div key={idx} className="flex items-center justify-between py-2 border-b border-[#1e2a3b] last:border-0">
-                      <span className="text-xs font-medium text-slate-400">{ref.fabricante}</span>
-                      <span className="text-sm font-mono text-slate-200">{ref.codigo}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Columna derecha - Detalles del producto */}
-            <div className="col-span-7 space-y-6">
-              {/* Referencias */}
-              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg p-6">
-                <h3 className="text-sm font-semibold text-[#ff6b35] uppercase tracking-wide mb-4">
-                  Referencias
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase block mb-2">REF. PROVEEDOR</label>
-                    <Input
-                      value={producto.idprodprov || ''}
-                      readOnly
-                      className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase block mb-2">REF. FABRICANTE</label>
-                    <Input
-                      value={producto.idprodpaquete || ''}
-                      readOnly
-                      className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase block mb-2">REF. PRODUCTO</label>
-                    <Input
-                      value={producto.idprod.toString()}
-                      readOnly
-                      className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase block mb-2">OEM</label>
-                    <Input
-                      value={producto.OE || ''}
-                      readOnly
-                      className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Información del producto */}
-              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg p-6">
-                <h3 className="text-sm font-semibold text-[#ff6b35] uppercase tracking-wide mb-4">
-                  Información
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase block mb-2">NOMBRE</label>
-                    <Input
-                      value={producto.nombre}
-                      readOnly
-                      className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase block mb-2">ALIAS</label>
-                    <Input
-                      value={producto.descripcion || ''}
-                      readOnly
-                      className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-slate-500 uppercase block mb-2">Grupo</label>
-                      <Input
-                        value={producto.idcategoria || ''}
-                        readOnly
-                        className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 uppercase block mb-2">Sub-Grupo</label>
-                      <Input
-                        value={producto.categoria_nombre || ''}
-                        readOnly
-                        className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs text-slate-500 uppercase block mb-2">Marca</label>
-                      <Input
-                        value={producto.marca || ''}
-                        readOnly
-                        className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 uppercase block mb-2">Modelo</label>
-                      <Input
-                        value={producto.modelo || ''}
-                        readOnly
-                        className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 uppercase block mb-2">Serie</label>
-                      <Input
-                        value=""
-                        readOnly
-                        className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-slate-500 uppercase block mb-2">Tipo</label>
-                      <Input
-                        value=""
-                        readOnly
-                        className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 uppercase block mb-2">Clase</label>
-                      <Input
-                        value=""
-                        readOnly
-                        className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-slate-500 uppercase block mb-2">Peso</label>
-                      <div className="flex gap-2">
-                        <Input
-                          value={producto.peso || ''}
-                          readOnly
-                          className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                        />
-                        <Badge variant="outline" className="bg-[#0e88c9]/10 text-[#0e88c9] border-[#0e88c9]/30">
-                          Lb
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Aplicación */}
-              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg p-6">
-                <h3 className="text-sm font-semibold text-[#ff6b35] uppercase tracking-wide mb-4">
-                  Aplicación
-                </h3>
-                <div>
-                  <label className="text-xs text-slate-500 uppercase block mb-2">Marca / Modelo</label>
-                  <Input
-                    value={producto.aplicacion_marcas || 'No especificado'}
-                    readOnly
-                    className="bg-[#141e2e] border-[#1e2a3b] text-slate-200 mb-3"
-                  />
-                  <Input
-                    value={producto.aplicacion_modelos || 'No especificado'}
-                    readOnly
-                    className="bg-[#141e2e] border-[#1e2a3b] text-slate-200"
-                  />
-                </div>
-              </div>
-
-              {/* Aplicación / Detalles */}
-              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg p-6">
-                <h3 className="text-sm font-semibold text-[#ff6b35] uppercase tracking-wide mb-4">
-                  Aplicación / Detalles
-                </h3>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {aplicaciones.map((app, idx) => (
-                    <p key={idx} className="text-sm text-slate-400 leading-relaxed">
-                      {app}
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              {/* Ubicaciones */}
-              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg p-6">
-                <h3 className="text-sm font-semibold text-[#ff6b35] uppercase tracking-wide mb-4">
-                  Ubicaciones
-                </h3>
-                <div className="flex items-center gap-4">
-                  {ubicaciones.map((ub, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className="bg-[#141e2e] border border-[#1e2a3b] rounded px-4 py-2">
-                        <span className="text-sm font-mono text-slate-200">{ub.codigo}</span>
-                      </div>
-                      <div className="bg-[#141e2e] border border-[#1e2a3b] rounded px-4 py-2">
-                        <span className="text-sm font-mono text-slate-200">{ub.codigo}</span>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex items-center gap-4 ml-auto">
-                    <div>
-                      <span className="text-xs text-slate-500 uppercase block mb-1">STOCK CONTABLE</span>
-                      <div className="bg-[#0e88c9]/10 border border-[#0e88c9]/30 rounded px-4 py-2">
-                        <span className="text-lg font-bold text-[#0e88c9]">{producto.stock_contable}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-xs text-slate-500 uppercase block mb-1">STOCK FÍSICO</span>
-                      <div className="bg-green-500/10 border border-green-500/30 rounded px-4 py-2">
-                        <span className="text-lg font-bold text-green-500">{producto.stock_fisico}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
+
       </div>
     </DashboardLayout>
   );

@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Edit, Trash2, Eye, Package, Filter, Plus, X, Bell, UserCircle2, LayoutGrid, List } from 'lucide-react';
+import { Search, Edit, Trash2, Eye, Package, Filter, Plus, X, LayoutGrid, List } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { NotificationDropdown } from '@/components/notification-dropdown';
+import { UserDropdown } from '@/components/user-dropdown';
 
 interface Producto {
   idprod: number;
@@ -178,12 +180,8 @@ export default function AdministrarProductoPage() {
               <span className="text-sm tracking-[0.18em] uppercase text-slate-200">Administrar Productos</span>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" className="border-slate-700 bg-slate-950/60 text-slate-300">
-                <Bell className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="border-slate-700 bg-slate-950/60 text-slate-300">
-                <UserCircle2 className="h-5 w-5" />
-              </Button>
+              <NotificationDropdown />
+              <UserDropdown />
             </div>
           </div>
 

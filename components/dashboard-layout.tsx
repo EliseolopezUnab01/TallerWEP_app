@@ -41,10 +41,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-lightBg dark:bg-[#0d1523] text-slate-800 dark:text-slate-100">
+    <div className="flex min-h-screen bg-lightBg dark:bg-[#0d1523] text-slate-800 dark:text-slate-100">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="p-6 space-y-6">
+      <main className="flex-1 overflow-x-hidden">
+        <div className="p-6 space-y-6 min-h-full">
           {children}
         </div>
       </main>

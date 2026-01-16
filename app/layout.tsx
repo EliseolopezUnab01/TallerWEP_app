@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./theme-provider";
 import { ThemeScript } from "./theme-script";
+import { NotificationProvider } from "@/contexts/notification-context";
+import { FloatingWindowsProvider } from "@/contexts/floating-windows-context";
+import { FloatingWindowsRenderer } from "@/components/floating-windows-renderer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,8 +33,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <ThemeScript />
-          {children}
+          <NotificationProvider>
+            <FloatingWindowsProvider>
+              <ThemeScript />
+              {children}
+              <FloatingWindowsRenderer />
+            </FloatingWindowsProvider>
+          </NotificationProvider>
         </ThemeProvider>
       </body>
     </html>

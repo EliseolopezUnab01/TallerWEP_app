@@ -11,9 +11,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Search, Bell, UserCircle2, ChevronLeft, ChevronRight, X, Package, Save, Trash2, ArrowLeft, Upload, Edit, Eye, Lock, Unlock, History, Calendar, User
+  Search, ChevronLeft, ChevronRight, X, Package, Save, Trash2, ArrowLeft, Upload, Edit, Eye, Lock, Unlock, History, Calendar, User, AlertTriangle
 } from 'lucide-react';
 import Image from 'next/image';
+import { NotificationDropdown } from '@/components/notification-dropdown';
+import { UserDropdown } from '@/components/user-dropdown';
+import { useNotifications } from '@/contexts/notification-context';
 
 interface Producto {
   idprod: number;
@@ -88,6 +91,7 @@ function EditarProductoContent() {
   const searchParams = useSearchParams();
   const idParam = searchParams?.get('id');
   const listRef = useRef<HTMLDivElement>(null);
+  const { addNotification } = useNotifications();
 
   const [allProductos, setAllProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +103,7 @@ function EditarProductoContent() {
   const [newImages, setNewImages] = useState<File[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   // Estados para precios
   const [precios, setPrecios] = useState<Precios>({ precio1: 0, precio2: 0, precio3: 0, precio4: 0, precio5: 0, precio6: 0, precio7: 0 });
@@ -332,9 +337,15 @@ function EditarProductoContent() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
     if (!producto) return;
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmSave = async () => {
+    if (!producto) return;
+    setShowConfirmDialog(false);
     setSaving(true);
 
     try {
@@ -353,16 +364,28 @@ function EditarProductoContent() {
       });
 
       if (response.ok) {
-        alert('✅ Producto actualizado correctamente');
+        addNotification({
+          type: 'success',
+          title: 'Producto Actualizado',
+          message: `El producto "${producto.nombre}" ha sido actualizado correctamente.`
+        });
         await fetchAllProductos();
         handleCancelEdit();
       } else {
         const data = await response.json();
-        alert(`❌ Error: ${data.error || 'No se pudo actualizar'}`);
+        addNotification({
+          type: 'error',
+          title: 'Error al actualizar',
+          message: data.error || 'No se pudo actualizar el producto'
+        });
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('❌ Error al conectar con el servidor');
+      addNotification({
+        type: 'error',
+        title: 'Error de conexión',
+        message: 'No se pudo conectar con el servidor'
+      });
     } finally {
       setSaving(false);
     }
@@ -380,9 +403,9 @@ function EditarProductoContent() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-[#0a0f1a] p-4">
+      <div className="space-y-4">
         {/* Navbar */}
-        <div className="rounded-xl border border-[#0e88c9]/30 bg-[#0d1523] px-5 py-3 flex items-center justify-between gap-4 shadow-[0_0_25px_rgba(15,23,42,0.9)] mb-4">
+        <div className="rounded-xl border border-[#0e88c9]/30 bg-[#0d1523] px-5 py-3 flex items-center justify-between gap-4 shadow-[0_0_25px_rgba(15,23,42,0.9)]">
           <div className="flex items-center gap-3">
             {isEditing && (
               <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="text-slate-400 hover:text-slate-200">
@@ -412,14 +435,46 @@ function EditarProductoContent() {
                 </Button>
               </>
             )}
-            <Button variant="outline" size="icon" className="border-slate-700 bg-slate-950/60 text-slate-300 hover:text-slate-50 hover:bg-slate-800">
-              <Bell className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="border-slate-700 bg-slate-950/60 text-slate-300 hover:text-slate-50 hover:bg-slate-800">
-              <UserCircle2 className="h-5 w-5" />
-            </Button>
+            <NotificationDropdown />
+            <UserDropdown />
           </div>
         </div>
+
+        {/* Diálogo de confirmación */}
+        {showConfirmDialog && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl p-6 max-w-md w-full mx-4 shadow-[0_0_30px_rgba(14,136,201,0.3)]">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-12 w-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-100">Confirmar Edición</h3>
+                  <p className="text-sm text-slate-400">Esta acción modificará el producto</p>
+                </div>
+              </div>
+              <p className="text-slate-300 mb-6">
+                ¿Está seguro que desea guardar los cambios realizados al producto <span className="font-semibold text-[#0e88c9]">"{producto?.nombre}"</span>?
+              </p>
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmSave}
+                  className="bg-[#0e88c9] hover:bg-[#0e88c9]/90 text-white"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Sí, Guardar Cambios
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Columna Izquierda: Lista de productos */}
@@ -527,110 +582,84 @@ function EditarProductoContent() {
           {/* Columna Central y Derecha: Formulario de Edición o Preview */}
           <div className="lg:col-span-8">
             {isEditing && producto ? (
-              <form id="product-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Columna Izquierda: Galería + Info Adicional */}
-                <div className="space-y-4">
-                  {/* Galería de Imágenes - Más compacta */}
-                  <Card className="bg-[#141e2e] border border-[#0e88c9]/30 shadow-[0_0_20px_rgba(14,136,201,0.25)] rounded-xl overflow-hidden">
-                    <CardHeader className="py-2 px-3 flex flex-row items-center justify-between">
-                      <CardTitle className="text-sm text-slate-200 tracking-wide">IMAGE GALLERY</CardTitle>
-                      <span className="text-xs text-emerald-400">{allImages.length + newImages.length}/10</span>
-                    </CardHeader>
-                    <CardContent className="p-3 space-y-3">
-                      <div className="relative w-full h-[180px] bg-slate-900 rounded-xl overflow-hidden">
-                      {allImages.length > 0 ? (
-                        <>
-                          <div className="relative h-full w-full">
-                            <Image src={allImages[currentImageIndex]} alt="Producto" fill className="object-contain" />
-                          </div>
-                          <button type="button" onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
-                            <ChevronLeft className="h-6 w-6" />
-                          </button>
-                          <button type="button" onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
-                            <ChevronRight className="h-6 w-6" />
-                          </button>
-                          <button type="button" onClick={deleteCurrentImage} className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 text-white p-2 rounded-full">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 px-3 py-1 rounded-full text-xs text-white">
-                            {currentImageIndex + 1} / {allImages.length}
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex items-center justify-center h-full w-full p-4">
-                          <div className="rounded-xl border-2 border-dashed border-slate-700/40 bg-slate-950/60 p-4 w-full h-full flex flex-col items-center justify-center">
-                            <Upload className="h-12 w-12 text-slate-500 mb-3" />
-                            <label htmlFor="image-upload-main" className="cursor-pointer">
-                              <div className="border border-[#0e88c9]/60 bg-[#0e88c9]/10 text-[#0e88c9] hover:bg-[#0e88c9]/20 px-4 py-2 rounded-lg text-sm font-medium">
-                                Seleccionar Imágenes
-                              </div>
-                            </label>
-                            <input id="image-upload-main" type="file" multiple accept="image/*" onChange={handleNewImagesChange} className="hidden" />
-                            <p className="text-xs text-slate-500 mt-2 text-center">PNG, JPG, JPEG hasta 10MB</p>
-                          </div>
+              <form id="product-form" onSubmit={handleSubmitClick} className="space-y-4">
+                {/* Galería de Imágenes - Centrada arriba */}
+                <Card className="bg-[#141e2e] border border-[#0e88c9]/30 shadow-[0_0_20px_rgba(14,136,201,0.25)] rounded-xl overflow-hidden max-w-md mx-auto">
+                  <CardHeader className="py-2 px-3 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm text-slate-200 tracking-wide">GALERÍA DE IMÁGENES</CardTitle>
+                    <span className="text-xs text-emerald-400">{allImages.length + newImages.length}/10</span>
+                  </CardHeader>
+                  <CardContent className="p-3 space-y-3">
+                    <div className="relative w-full h-[180px] bg-slate-900 rounded-xl overflow-hidden">
+                    {allImages.length > 0 ? (
+                      <>
+                        <div className="relative h-full w-full">
+                          <Image src={allImages[currentImageIndex]} alt="Producto" fill className="object-contain" />
                         </div>
-                      )}
-                    </div>
-                    {/* Miniaturas */}
-                    <div className="flex flex-wrap gap-2 items-center justify-center">
-                      {allImages.map((img, idx) => (
-                        <button key={idx} type="button" onClick={() => setCurrentImageIndex(idx)}
-                          className={`h-14 w-20 flex-shrink-0 rounded-md border overflow-hidden ${idx === currentImageIndex ? 'border-2 border-cyan-500' : 'border border-slate-700'}`}>
-                          <div className="relative h-full w-full">
-                            <Image src={img} alt="" fill className="object-cover" />
-                          </div>
+                        <button type="button" onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
+                          <ChevronLeft className="h-6 w-6" />
                         </button>
-                      ))}
-                      {newImages.map((img, idx) => (
-                        <div key={`new-${idx}`} className="h-14 w-20 flex-shrink-0 rounded-md border-2 border-emerald-500 bg-slate-900 overflow-hidden">
-                          <img src={URL.createObjectURL(img)} alt={`Nueva ${idx + 1}`} className="h-full w-full object-cover" />
+                        <button type="button" onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
+                          <ChevronRight className="h-6 w-6" />
+                        </button>
+                        <button type="button" onClick={deleteCurrentImage} className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 text-white p-2 rounded-full">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 px-3 py-1 rounded-full text-xs text-white">
+                          {currentImageIndex + 1} / {allImages.length}
                         </div>
-                      ))}
-                    </div>
-                    {allImages.length > 0 && (
-                      <div className="border-t border-slate-700/40 pt-3 text-center">
-                        <label htmlFor="image-upload-add" className="cursor-pointer inline-flex items-center gap-2 border border-[#0e88c9]/60 bg-[#0e88c9]/10 text-[#0e88c9] hover:bg-[#0e88c9]/20 px-3 py-1.5 rounded-lg text-xs font-medium">
-                          <Upload className="h-3 w-3" /> Agregar Nuevas Imágenes
-                        </label>
-                        <input id="image-upload-add" type="file" multiple accept="image/*" onChange={handleNewImagesChange} className="hidden" />
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center h-full w-full p-4">
+                        <div className="rounded-xl border-2 border-dashed border-slate-700/40 bg-slate-950/60 p-4 w-full h-full flex flex-col items-center justify-center">
+                          <Upload className="h-12 w-12 text-slate-500 mb-3" />
+                          <label htmlFor="image-upload-main" className="cursor-pointer">
+                            <div className="border border-[#0e88c9]/60 bg-[#0e88c9]/10 text-[#0e88c9] hover:bg-[#0e88c9]/20 px-4 py-2 rounded-lg text-sm font-medium">
+                              Seleccionar Imágenes
+                            </div>
+                          </label>
+                          <input id="image-upload-main" type="file" multiple accept="image/*" onChange={handleNewImagesChange} className="hidden" />
+                          <p className="text-xs text-slate-500 mt-2 text-center">PNG, JPG, JPEG hasta 10MB</p>
+                        </div>
                       </div>
                     )}
-                    </CardContent>
-                  </Card>
+                  </div>
+                  {/* Miniaturas */}
+                  <div className="flex flex-wrap gap-2 items-center justify-center">
+                    {allImages.map((img, idx) => (
+                      <button key={idx} type="button" onClick={() => setCurrentImageIndex(idx)}
+                        className={`h-14 w-20 flex-shrink-0 rounded-md border overflow-hidden ${idx === currentImageIndex ? 'border-2 border-cyan-500' : 'border border-slate-700'}`}>
+                        <div className="relative h-full w-full">
+                          <Image src={img} alt="" fill className="object-cover" />
+                        </div>
+                      </button>
+                    ))}
+                    {newImages.map((img, idx) => (
+                      <div key={`new-${idx}`} className="h-14 w-20 flex-shrink-0 rounded-md border-2 border-emerald-500 bg-slate-900 overflow-hidden">
+                        <img src={URL.createObjectURL(img)} alt={`Nueva ${idx + 1}`} className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                  {allImages.length > 0 && (
+                    <div className="border-t border-slate-700/40 pt-3 text-center">
+                      <label htmlFor="image-upload-add" className="cursor-pointer inline-flex items-center gap-2 border border-[#0e88c9]/60 bg-[#0e88c9]/10 text-[#0e88c9] hover:bg-[#0e88c9]/20 px-3 py-1.5 rounded-lg text-xs font-medium">
+                        <Upload className="h-3 w-3" /> Agregar Nuevas Imágenes
+                      </label>
+                      <input id="image-upload-add" type="file" multiple accept="image/*" onChange={handleNewImagesChange} className="hidden" />
+                    </div>
+                  )}
+                  </CardContent>
+                </Card>
 
-                  {/* Información Adicional - debajo de galería */}
-                  <Card className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl">
-                    <CardHeader className="py-2 px-3">
-                      <CardTitle className="text-xs text-slate-200">INFORMACIÓN ADICIONAL</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-3 space-y-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Etiquetas de Búsqueda</Label>
-                        <Input value={producto.etiquetas || ''} onChange={(e) => updateProductField('etiquetas', e.target.value)}
-                          placeholder="frenos, disco, toyota..." className="h-7 text-xs bg-slate-950/80 border-slate-700/40 text-slate-100" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Referencias Directas (OE)</Label>
-                        <Textarea value={producto.info_referencias_directas || ''} onChange={(e) => updateProductField('info_referencias_directas', e.target.value)}
-                          rows={2} className="text-xs bg-slate-950/80 border-slate-700/40 text-slate-100 resize-none" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Referencias Indirectas</Label>
-                        <Textarea value={producto.info_referencias_indirectas || ''} onChange={(e) => updateProductField('info_referencias_indirectas', e.target.value)}
-                          rows={2} className="text-xs bg-slate-950/80 border-slate-700/40 text-slate-100 resize-none" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Columna Derecha: Info Producto + Clasificación + Precios */}
-                <div className="space-y-4">
-                  <Card className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-slate-100 tracking-wide">INFORMACIÓN DEL PRODUCTO</CardTitle>
-                      <CardDescription className="text-xs text-slate-400">Ingrese los datos básicos y técnicos</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                {/* UN SOLO CUADRO: Información del Producto */}
+                <Card className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-slate-100 tracking-wide">INFORMACIÓN DEL PRODUCTO</CardTitle>
+                    <CardDescription className="text-xs text-slate-400">Datos básicos, clasificación y stock</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Datos Básicos */}
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="nombre">Nombre del Producto *</Label>
                         <Input id="nombre" value={producto.nombre} onChange={(e) => updateProductField('nombre', e.target.value)}
@@ -641,112 +670,134 @@ function EditarProductoContent() {
                         <Input id="descripcion" value={producto.descripcion || ''} onChange={(e) => updateProductField('descripcion', e.target.value)}
                           className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="marca">Marca</Label>
-                          <Input id="marca" value={producto.marca || ''} onChange={(e) => updateProductField('marca', e.target.value)}
-                            className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="OE">Referencia OE *</Label>
-                          <Input id="OE" value={producto.OE || ''} onChange={(e) => updateProductField('OE', e.target.value)}
-                            className="bg-slate-950/80 border-slate-700/40 text-slate-100" required />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="idprodprov">Código Proveedor</Label>
-                          <Input id="idprodprov" value={producto.idprodprov || ''} onChange={(e) => updateProductField('idprodprov', e.target.value)}
-                            className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="idprodpaquete">Código Paquete</Label>
-                          <Input id="idprodpaquete" value={producto.idprodpaquete || ''} onChange={(e) => updateProductField('idprodpaquete', e.target.value)}
-                            className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="idprodfisico">ID Producto Físico</Label>
-                          <Input id="idprodfisico" value={producto.idprodfisico || ''} onChange={(e) => updateProductField('idprodfisico', e.target.value)}
-                            className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
-                        </div>
-                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="codigo_barras">Código de Barras</Label>
-                        <Input id="codigo_barras" value={producto.codigo_barras || ''} onChange={(e) => updateProductField('codigo_barras', e.target.value)}
+                        <Label htmlFor="marca">Marca</Label>
+                        <Input id="marca" value={producto.marca || ''} onChange={(e) => updateProductField('marca', e.target.value)}
                           className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
                       </div>
-                    </CardContent>
-                  </Card>
+                      <div className="space-y-2">
+                        <Label htmlFor="OE">Referencia OE *</Label>
+                        <Input id="OE" value={producto.OE || ''} onChange={(e) => updateProductField('OE', e.target.value)}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100" required />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="idprodprov">Código Proveedor</Label>
+                        <Input id="idprodprov" value={producto.idprodprov || ''} onChange={(e) => updateProductField('idprodprov', e.target.value)}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="idprodpaquete">Código Paquete</Label>
+                        <Input id="idprodpaquete" value={producto.idprodpaquete || ''} onChange={(e) => updateProductField('idprodpaquete', e.target.value)}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="idprodfisico">ID Producto Físico</Label>
+                        <Input id="idprodfisico" value={producto.idprodfisico || ''} onChange={(e) => updateProductField('idprodfisico', e.target.value)}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="codigo_barras">Código de Barras</Label>
+                      <Input id="codigo_barras" value={producto.codigo_barras || ''} onChange={(e) => updateProductField('codigo_barras', e.target.value)}
+                        className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                    </div>
 
-                  <Card className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm text-slate-100 tracking-wide">CLASIFICACIÓN Y STOCK</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Categoría *</Label>
-                          <Select value={producto.idcategoria} onValueChange={(v) => updateProductField('idcategoria', v)}>
-                            <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100">
-                              <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-slate-900 border-slate-700">
-                              {categorias.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Lado</Label>
-                          <Select value={producto.lado} onValueChange={(v) => updateProductField('lado', v)}>
-                            <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100">
-                              <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-slate-900 border-slate-700">
-                              {lados.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Unidad de Medida</Label>
-                          <Select value={producto.unimedida} onValueChange={(v) => updateProductField('unimedida', v)}>
-                            <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100">
-                              <SelectValue placeholder="Seleccione" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-slate-900 border-slate-700">
-                              {unidadesMedida.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                    {/* Separador Clasificación y Stock */}
+                    <div className="border-t border-slate-700/40 pt-4">
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Clasificación y Stock</h4>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Categoría *</Label>
+                        <Select value={producto.idcategoria} onValueChange={(v) => updateProductField('idcategoria', v)}>
+                          <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100">
+                            <SelectValue placeholder="Seleccione" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-700">
+                            {categorias.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="grid grid-cols-4 gap-4">
-                        <div className="space-y-2">
-                          <Label>Stock Contable</Label>
-                          <Input type="number" value={producto.stock_contable || 0} onChange={(e) => updateProductField('stock_contable', Number(e.target.value))}
-                            className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Stock Físico</Label>
-                          <Input type="number" value={producto.stock_fisico || 0} onChange={(e) => updateProductField('stock_fisico', Number(e.target.value))}
-                            className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Costo</Label>
-                          <Input type="number" step="0.01" value={producto.costo || ''} onChange={(e) => updateProductField('costo', e.target.value)}
-                            className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Peso (lb)</Label>
-                          <Input type="number" step="0.001" value={producto.peso || ''} onChange={(e) => updateProductField('peso', e.target.value)}
-                            className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
-                        </div>
+                      <div className="space-y-2">
+                        <Label>Lado</Label>
+                        <Select value={producto.lado} onValueChange={(v) => updateProductField('lado', v)}>
+                          <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100">
+                            <SelectValue placeholder="Seleccione" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-700">
+                            {lados.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div className="flex items-center gap-2 pt-2">
-                        <input type="checkbox" id="exento" checked={producto.exento === 1} onChange={(e) => updateProductField('exento', e.target.checked ? 1 : 0)}
-                          className="w-4 h-4 rounded border-slate-700 bg-slate-950/80 text-[#0e88c9]" />
-                        <Label htmlFor="exento" className="cursor-pointer">Exento de Impuestos</Label>
+                      <div className="space-y-2">
+                        <Label>Unidad de Medida</Label>
+                        <Select value={producto.unimedida} onValueChange={(v) => updateProductField('unimedida', v)}>
+                          <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100">
+                            <SelectValue placeholder="Seleccione" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-700">
+                            {unidadesMedida.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label>Stock Contable</Label>
+                        <Input type="number" value={producto.stock_contable || 0} onChange={(e) => updateProductField('stock_contable', Number(e.target.value))}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Stock Físico</Label>
+                        <Input type="number" value={producto.stock_fisico || 0} onChange={(e) => updateProductField('stock_fisico', Number(e.target.value))}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Costo</Label>
+                        <Input type="number" step="0.01" value={producto.costo || ''} onChange={(e) => updateProductField('costo', e.target.value)}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Peso (lb)</Label>
+                        <Input type="number" step="0.001" value={producto.peso || ''} onChange={(e) => updateProductField('peso', e.target.value)}
+                          className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="exento" checked={producto.exento === 1} onChange={(e) => updateProductField('exento', e.target.checked ? 1 : 0)}
+                        className="w-4 h-4 rounded border-slate-700 bg-slate-950/80 text-[#0e88c9]" />
+                      <Label htmlFor="exento" className="cursor-pointer">Exento de Impuestos</Label>
+                    </div>
+
+                    {/* Separador Info Adicional */}
+                    <div className="border-t border-slate-700/40 pt-4">
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Información Adicional</h4>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs">Etiquetas de Búsqueda</Label>
+                      <Input value={producto.etiquetas || ''} onChange={(e) => updateProductField('etiquetas', e.target.value)}
+                        placeholder="frenos, disco, toyota..." className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Referencias Directas (OE)</Label>
+                        <Textarea value={producto.info_referencias_directas || ''} onChange={(e) => updateProductField('info_referencias_directas', e.target.value)}
+                          rows={2} className="text-sm bg-slate-950/80 border-slate-700/40 text-slate-100 resize-none" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Referencias Indirectas</Label>
+                        <Textarea value={producto.info_referencias_indirectas || ''} onChange={(e) => updateProductField('info_referencias_indirectas', e.target.value)}
+                          rows={2} className="text-sm bg-slate-950/80 border-slate-700/40 text-slate-100 resize-none" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                   {/* Sección de Precios con Bloqueo */}
                   <Card className="bg-[#141e2e] border border-[#ff6b35]/30 rounded-xl">
@@ -936,7 +987,6 @@ function EditarProductoContent() {
                       </div>
                     </CardContent>
                   </Card>
-                </div>
               </form>
             ) : (
               /* Preview del Producto */

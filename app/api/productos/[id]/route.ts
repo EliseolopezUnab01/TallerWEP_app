@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import path from 'path';
+import { existsSync } from 'fs';
 
 // PUT: Actualizar producto completo (con FormData para imágenes)
 export async function PUT(
@@ -123,15 +124,29 @@ async function handleFullProductUpdate(request: Request, id: string) {
       }
     }
 
-    // Manejar eliminación de imágenes
-    const imagenesEliminar = formData.get('imagenes_eliminar');
-    if (imagenesEliminar) {
-      const imagenesArray = JSON.parse(imagenesEliminar as string);
-      for (const imagenUrl of imagenesArray) {
+    // Manejar eliminación de imágenes (soporta ambos nombres de campo)
+    const imagenesEliminar = formData.getAll('imagesToDelete');
+    if (imagenesEliminar && imagenesEliminar.length > 0) {
+      for (const imagenUrl of imagenesEliminar) {
+        const urlString = imagenUrl.toString();
+        
+        // Eliminar de la base de datos
         await connection.execute(
           'DELETE FROM producto_imagenes WHERE idprod = ? AND imagen_url = ?',
-          [id, imagenUrl]
+          [id, urlString]
         );
+        
+        // Eliminar archivo físico del servidor
+        try {
+          const filePath = path.join(process.cwd(), 'public', urlString);
+          if (existsSync(filePath)) {
+            await unlink(filePath);
+            console.log('Archivo eliminado:', filePath);
+          }
+        } catch (fileError) {
+          console.error('Error al eliminar archivo físico:', fileError);
+          // Continuar aunque falle la eliminación del archivo
+        }
       }
     }
 

@@ -83,7 +83,7 @@ export function Sidebar() {
 
   return (
     <div
-      className={`bg-[#09101c] dark:bg-[#09101c] border-r border-[#0e88c9]/30 shadow-xl h-screen flex flex-col transition-[width] duration-200 ease-out ${
+      className={`bg-[#09101c] dark:bg-[#09101c] border-r border-[#0e88c9]/30 shadow-xl sticky top-0 h-screen flex flex-col transition-[width] duration-200 ease-out ${
         isExpanded ? 'w-64' : 'w-16'
       }`}
       onMouseEnter={() => setHovered(true)}
