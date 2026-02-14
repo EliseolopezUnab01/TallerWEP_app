@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { useRouter } from 'next/navigation';
-import { X, Package, Layers, Edit } from 'lucide-react';
+import { X, Package, Layers, Edit, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import { PriceHistoryChart } from './price-history-chart';
+import { getCodigoCatalogo } from '@/lib/format-utils';
 
 export function FloatingWindowsRenderer() {
   const router = useRouter();
@@ -14,12 +16,61 @@ export function FloatingWindowsRenderer() {
     closeFloatingWindow, 
     bringToFront, 
     updateWindowPosition,
-    updateWindowSize
+    updateWindowSize,
+    updateProductInWindows
   } = useFloatingWindows();
 
   const [draggingWindow, setDraggingWindow] = useState<number | null>(null);
   const [resizingWindow, setResizingWindow] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isRefreshing, setIsRefreshing] = useState<{[key: number]: boolean}>({});
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Función para refrescar datos de un producto específico
+  const refreshProductData = useCallback(async (productId: number) => {
+    try {
+      setIsRefreshing(prev => ({ ...prev, [productId]: true }));
+      const response = await fetch(`/api/productos/${productId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.product) {
+          updateProductInWindows(data.product);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing product:', error);
+    } finally {
+      setIsRefreshing(prev => ({ ...prev, [productId]: false }));
+    }
+  }, [updateProductInWindows]);
+
+  // Polling automático para actualizar todas las ventanas abiertas cada 10 segundos
+  useEffect(() => {
+    if (floatingWindows.length === 0) {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const refreshAllWindows = async () => {
+      const productIds = floatingWindows.map(w => w.producto.idprod);
+      for (const id of productIds) {
+        await refreshProductData(id);
+      }
+    };
+
+    // Iniciar polling cada 10 segundos
+    refreshIntervalRef.current = setInterval(refreshAllWindows, 10000);
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, [floatingWindows.length, refreshProductData]);
 
   // Manejo global del mouse para arrastrar y redimensionar
   useEffect(() => {
@@ -118,6 +169,16 @@ export function FloatingWindowsRenderer() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                refreshProductData(win.producto.idprod);
+              }}
+              className={`p-1 rounded hover:bg-[#0e88c9]/20 text-slate-400 hover:text-[#0e88c9] flex-shrink-0 ${isRefreshing[win.producto.idprod] ? 'animate-spin' : ''}`}
+              title="Actualizar datos"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
                 closeFloatingWindow(win.id);
               }}
               className="p-1 rounded hover:bg-red-500/20 text-slate-400 hover:text-red-400 flex-shrink-0"
@@ -175,11 +236,13 @@ export function FloatingWindowsRenderer() {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-slate-500 text-xs">Categoría:</span>
-                    <span className="text-[#0e88c9] ml-1 text-xs">{win.producto.categoria_nombre || '-'}</span>
+                    <span className="text-[#0e88c9] ml-1 text-xs">
+                      {win.producto.categoria_nueva_nombre || win.producto.categoria_nombre || '-'}
+                    </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 text-xs">Código:</span>
-                    <span className="text-slate-300 ml-1 text-xs">{win.producto.codigo_barras || '-'}</span>
+                    <span className="text-slate-500 text-xs">Cód. Catálogo:</span>
+                    <span className="text-amber-400 ml-1 text-xs font-medium">{getCodigoCatalogo(win.producto)}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mt-1">
@@ -189,43 +252,23 @@ export function FloatingWindowsRenderer() {
                   </div>
                   <div>
                     <span className="text-slate-500 text-xs">Stock Físico:</span>
-                    <span className="text-slate-300 ml-1 text-xs">{win.producto.stock_contable}</span>
+                    <span className="text-slate-300 ml-1 text-xs">{win.producto.stock_fisico || win.producto.stock_contable}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Precios */}
-              {(win.producto.precio1 || win.producto.precio2 || win.producto.precio3) && (
-                <div className="pt-2 border-t border-slate-700/50">
-                  <div className="text-xs text-slate-500 mb-1">PRECIOS DE VENTA</div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <div className="text-slate-500">GENERAL</div>
-                      <div className="text-[#0e88c9] font-medium">${win.producto.precio1 || '0.00'}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500">MAYORISTA</div>
-                      <div className="text-[#0e88c9] font-medium">${win.producto.precio2 || '0.00'}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500">CLIENTE</div>
-                      <div className="text-[#0e88c9] font-medium">${win.producto.precio3 || '0.00'}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500">MINORISTA</div>
-                      <div className="text-[#0e88c9] font-medium">${win.producto.precio5 || '0.00'}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500">INVERSOR</div>
-                      <div className="text-[#0e88c9] font-medium">${win.producto.precio6 || '0.00'}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500">ESPECIAL</div>
-                      <div className="text-[#0e88c9] font-medium">${win.producto.precio7 || '0.00'}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Gráfica de Evolución de Precios */}
+              <PriceHistoryChart
+                idprod={win.producto.idprod}
+                currentPrices={{
+                  precio1: win.producto.precio1,
+                  precio2: win.producto.precio2,
+                  precio3: win.producto.precio3,
+                  precio4: win.producto.precio4,
+                  precio5: win.producto.precio5,
+                  precio6: win.producto.precio6,
+                }}
+              />
 
               {/* Botones de acción */}
               <div className="flex gap-2 pt-3">

@@ -13,6 +13,11 @@ export async function GET() {
       SELECT 
         p.*,
         c.nombre as categoria_nombre,
+        cn.nombre as categoria_nueva_nombre,
+        g.codigo as grupo_codigo,
+        g.nombre as grupo_nombre,
+        sg.codigo as subgrupo_codigo,
+        sg.nombre as subgrupo_nombre,
         pr.precio_general as precio1,
         pr.precio_mayorista as precio2,
         pr.precio_cliente as precio3,
@@ -23,6 +28,9 @@ export async function GET() {
         (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY es_principal DESC, orden ASC LIMIT 1) as imagen_principal
       FROM productos p
       LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
+      LEFT JOIN categorias_nuevo cn ON p.idcategoria_nuevo = cn.idcategoria
+      LEFT JOIN grupos g ON p.id_grupo = g.id_grupo
+      LEFT JOIN subgrupos sg ON p.id_subgrupo = sg.id_subgrupo
       LEFT JOIN precios pr ON p.idprod = pr.idprod
       ORDER BY p.created_at DESC
     `);

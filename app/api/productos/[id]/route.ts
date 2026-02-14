@@ -64,15 +64,25 @@ async function handleFullProductUpdate(request: Request, id: string) {
       'lado', 'modelo', 'clase', 'estilo', 'giro', 'capacidad', 'unimedida',
       'idcategoria', 'codigo_barras', 'info_reservada', 'info_publica',
       'info_referencias_directas', 'info_referencias_indirectas',
-      'exento', 'stock_contable', 'stock_fisico', 'costo'
+      'exento', 'stock_contable', 'stock_fisico', 'costo',
+      'idcategoria_nuevo', 'id_grupo', 'id_subgrupo', 'codigo_jerarquico'
     ];
 
     fields.forEach(field => {
       const value = formData.get(field);
       if (value !== null) {
-        updateData[field] = value;
+        // Convertir "null" string a null real, y valores numéricos
+        if (value === 'null' || value === '') {
+          updateData[field] = null;
+        } else if (['idcategoria_nuevo', 'id_grupo', 'id_subgrupo', 'idcategoria', 'stock_contable', 'stock_fisico'].includes(field)) {
+          updateData[field] = value ? parseInt(value as string) : null;
+        } else {
+          updateData[field] = value;
+        }
       }
     });
+    
+    console.log('📦 Datos a actualizar:', updateData);
 
     // Actualizar datos del producto
     if (Object.keys(updateData).length > 0) {
@@ -86,8 +96,11 @@ async function handleFullProductUpdate(request: Request, id: string) {
       );
     }
 
-    // Manejar imágenes nuevas
-    const imagenes = formData.getAll('imagenes') as File[];
+    // Manejar imágenes nuevas (soporta ambos nombres: 'imagenes' y 'newImages')
+    let imagenes = formData.getAll('imagenes') as File[];
+    if (imagenes.length === 0) {
+      imagenes = formData.getAll('newImages') as File[];
+    }
     if (imagenes.length > 0) {
       const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'productos');
       
@@ -150,11 +163,28 @@ async function handleFullProductUpdate(request: Request, id: string) {
       }
     }
 
+    // Obtener el producto actualizado con toda su información incluyendo precios e imagen
+    const [updatedProduct]: any = await connection.execute(`
+      SELECT p.*, c.nombre as categoria_nombre,
+        pr.precio_general as precio1, pr.precio_mayorista as precio2, 
+        pr.precio_cliente as precio3, pr.precio_mecanico as precio4,
+        pr.precio_minorista as precio5, pr.precio_especial as precio6, pr.precio_especial as precio7,
+        COALESCE(
+          (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod AND es_principal = 1 LIMIT 1),
+          (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY orden LIMIT 1)
+        ) as imagen_principal
+      FROM productos p
+      LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
+      LEFT JOIN precios pr ON p.idprod = pr.idprod
+      WHERE p.idprod = ?
+    `, [id]);
+
     await connection.end();
 
     return NextResponse.json({
       success: true,
-      message: 'Producto actualizado exitosamente'
+      message: 'Producto actualizado exitosamente',
+      product: updatedProduct[0] || null
     });
 
   } catch (error: any) {
@@ -287,9 +317,19 @@ export async function GET(
       `SELECT 
         p.*,
         c.nombre as categoria_nombre,
+        cn.nombre as categoria_nueva_nombre,
+        pr.precio_general as precio1,
+        pr.precio_mayorista as precio2,
+        pr.precio_cliente as precio3,
+        pr.precio_mecanico as precio4,
+        pr.precio_minorista as precio5,
+        pr.precio_especial as precio6,
+        pr.precio_especial as precio7,
         (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY es_principal DESC, orden ASC LIMIT 1) as imagen_principal
       FROM productos p
       LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
+      LEFT JOIN categorias_nuevo cn ON p.idcategoria_nuevo = cn.idcategoria
+      LEFT JOIN precios pr ON p.idprod = pr.idprod
       WHERE p.idprod = ?`,
       [id]
     );

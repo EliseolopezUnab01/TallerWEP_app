@@ -9,14 +9,18 @@ interface ProductoFloating {
   descripcion?: string;
   imagen_principal?: string;
   stock_contable: number;
+  stock_fisico?: number;
   costo?: number;
   OE?: string;
   marca?: string;
   categoria_nombre?: string;
+  categoria_nueva_nombre?: string;
   idcategoria?: number;
+  idcategoria_nuevo?: number;
   idprodprov?: string;
   idprodpaquete?: string;
   codigo_barras?: string;
+  codigo_jerarquico?: string | number;
   precio1?: number;
   precio2?: number;
   precio3?: number;
@@ -41,6 +45,7 @@ interface FloatingWindowsContextType {
   bringToFront: (id: number) => void;
   updateWindowPosition: (id: number, position: { x: number; y: number }) => void;
   updateWindowSize: (id: number, size: { width: number; height: number }) => void;
+  updateProductInWindows: (producto: ProductoFloating) => void;
   closeAllWindows: () => void;
 }
 
@@ -114,6 +119,12 @@ export function FloatingWindowsProvider({ children }: { children: React.ReactNod
     );
   }, []);
 
+  const updateProductInWindows = useCallback((producto: ProductoFloating) => {
+    setFloatingWindows(prev => 
+      prev.map(w => w.id === producto.idprod ? { ...w, producto } : w)
+    );
+  }, []);
+
   const closeAllWindows = useCallback(() => {
     setFloatingWindows([]);
   }, []);
@@ -126,6 +137,7 @@ export function FloatingWindowsProvider({ children }: { children: React.ReactNod
       bringToFront,
       updateWindowPosition,
       updateWindowSize,
+      updateProductInWindows,
       closeAllWindows
     }}>
       {children}

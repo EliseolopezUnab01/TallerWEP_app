@@ -74,7 +74,6 @@ export function Sidebar() {
         { icon: Plus, label: 'Nuevo Producto', href: '/dashboard/inventario/nuevo' },
         { icon: List, label: 'Administrar Producto', href: '/dashboard/inventario/administrar' },
         { icon: Edit, label: 'Editar Producto', href: '/dashboard/inventario/editar-producto' },
-        { icon: Edit, label: 'Editar Precio', href: '/dashboard/inventario/precios' },
         { icon: Settings, label: 'Ajuste de Precios', href: '/dashboard/inventario/ajuste-precios' },
         { icon: FileText, label: 'Perfil del Producto', href: '/dashboard/inventario/perfil' },
       ]

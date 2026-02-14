@@ -17,6 +17,8 @@ import Image from 'next/image';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { useNotifications } from '@/contexts/notification-context';
+import { useFloatingWindows } from '@/contexts/floating-windows-context';
+import { getCodigoCatalogo } from '@/lib/format-utils';
 
 interface Producto {
   idprod: number;
@@ -51,6 +53,7 @@ interface Producto {
   costo: string;
   imagen_principal?: string;
   imagenes?: string[];
+  codigo_jerarquico?: string | number;
 }
 
 interface Precios {
@@ -92,6 +95,7 @@ function EditarProductoContent() {
   const idParam = searchParams?.get('id');
   const listRef = useRef<HTMLDivElement>(null);
   const { addNotification } = useNotifications();
+  const { updateProductInWindows } = useFloatingWindows();
 
   const [allProductos, setAllProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,7 +106,8 @@ function EditarProductoContent() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [newImages, setNewImages] = useState<File[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
+  // Si viene con idParam, iniciar en modo edición directamente
+  const [isEditing, setIsEditing] = useState(!!idParam);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   // Estados para precios
@@ -113,6 +118,15 @@ function EditarProductoContent() {
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [savingPrecios, setSavingPrecios] = useState(false);
 
+  // Estados para el sistema de categorías jerárquico
+  const [categoriasNuevo, setCategoriasNuevo] = useState<{idcategoria: number, nombre: string}[]>([]);
+  const [grupos, setGrupos] = useState<{id_grupo: number, codigo: string, nombre: string, idcategoria: number}[]>([]);
+  const [subgrupos, setSubgrupos] = useState<{id_subgrupo: number, codigo: string, nombre: string, id_grupo: number}[]>([]);
+  const [selectedCategoria, setSelectedCategoria] = useState<number | null>(null);
+  const [selectedGrupo, setSelectedGrupo] = useState<number | null>(null);
+  const [selectedSubgrupo, setSelectedSubgrupo] = useState<number | null>(null);
+
+  // Categorías antiguas (para compatibilidad)
   const categorias = [
     { id: 'FRENOS', nombre: 'Sistema de Frenos' },
     { id: 'MOTOR', nombre: 'Motor y Componentes' },
@@ -129,11 +143,92 @@ function EditarProductoContent() {
 
   useEffect(() => {
     fetchAllProductos();
+    fetchCategoriasJerarquia();
   }, []);
+
+  // Cargar categorías jerárquicas
+  const fetchCategoriasJerarquia = async () => {
+    try {
+      const response = await fetch('/api/categorias-jerarquia');
+      if (response.ok) {
+        const data = await response.json();
+        setCategoriasNuevo(data.categorias || []);
+        setGrupos(data.grupos || []);
+        setSubgrupos(data.subgrupos || []);
+      }
+    } catch (error) {
+      console.error('Error al cargar categorías:', error);
+    }
+  };
+
+  // Filtrar grupos por categoría seleccionada
+  const gruposFiltrados = selectedCategoria 
+    ? grupos.filter(g => g.idcategoria === selectedCategoria)
+    : [];
+
+  // Filtrar subgrupos por grupo seleccionado
+  const subgruposFiltrados = selectedGrupo
+    ? subgrupos.filter(s => s.id_grupo === selectedGrupo)
+    : [];
+
+  // Generar código jerárquico
+  const generarCodigoJerarquico = async (idcategoria: number, id_grupo: number | null, id_subgrupo: number | null) => {
+    try {
+      const response = await fetch('/api/categorias-jerarquia/generar-codigo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idcategoria, id_grupo, id_subgrupo })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📋 Código jerárquico generado:', data.codigo_jerarquico);
+        if (producto) {
+          updateProductField('codigo_jerarquico', data.codigo_jerarquico);
+        }
+        return data.codigo_jerarquico;
+      }
+    } catch (error) {
+      console.error('Error generando código:', error);
+    }
+    return null;
+  };
+
+  // Manejar cambio de categoría
+  const handleCategoriaChange = (idcategoria: number) => {
+    setSelectedCategoria(idcategoria);
+    setSelectedGrupo(null);
+    setSelectedSubgrupo(null);
+    if (producto) {
+      updateProductField('idcategoria_nuevo', idcategoria);
+      updateProductField('id_grupo', null);
+      updateProductField('id_subgrupo', null);
+      generarCodigoJerarquico(idcategoria, null, null);
+    }
+  };
+
+  // Manejar cambio de grupo
+  const handleGrupoChange = (id_grupo: number) => {
+    setSelectedGrupo(id_grupo);
+    setSelectedSubgrupo(null);
+    if (producto && selectedCategoria) {
+      updateProductField('id_grupo', id_grupo);
+      updateProductField('id_subgrupo', null);
+      generarCodigoJerarquico(selectedCategoria, id_grupo, null);
+    }
+  };
+
+  // Manejar cambio de subgrupo
+  const handleSubgrupoChange = (id_subgrupo: number) => {
+    setSelectedSubgrupo(id_subgrupo);
+    if (producto && selectedCategoria) {
+      updateProductField('id_subgrupo', id_subgrupo);
+      generarCodigoJerarquico(selectedCategoria, selectedGrupo, id_subgrupo);
+    }
+  };
 
   useEffect(() => {
     if (idParam && allProductos.length > 0) {
-      const found = allProductos.find(p => p.idprod === Number(idParam));
+      const found = allProductos.find(p => p.idprod === Number(idParam)) as any;
       if (found) {
         setProducto(found);
         setIsEditing(true);
@@ -141,6 +236,10 @@ function EditarProductoContent() {
         if (idx >= 0) setSelectedIndex(idx);
         fetchPrecios(Number(idParam));
         fetchHistorialPrecios(Number(idParam));
+        // Inicializar valores de categoría jerárquica
+        if (found.idcategoria_nuevo) setSelectedCategoria(found.idcategoria_nuevo);
+        if (found.id_grupo) setSelectedGrupo(found.id_grupo);
+        if (found.id_subgrupo) setSelectedSubgrupo(found.id_subgrupo);
       }
     }
   }, [idParam, allProductos]);
@@ -235,7 +334,7 @@ function EditarProductoContent() {
   }, [selectedIndex]);
 
   const handleEditProduct = (idprod: number) => {
-    const prod = allProductos.find(p => p.idprod === idprod);
+    const prod = allProductos.find(p => p.idprod === idprod) as any;
     if (prod) {
       setProducto(prod);
       setIsEditing(true);
@@ -247,6 +346,13 @@ function EditarProductoContent() {
       setMostrarHistorial(false);
       fetchPrecios(idprod);
       fetchHistorialPrecios(idprod);
+      // Inicializar valores de categoría jerárquica
+      if (prod.idcategoria_nuevo) setSelectedCategoria(prod.idcategoria_nuevo);
+      else setSelectedCategoria(null);
+      if (prod.id_grupo) setSelectedGrupo(prod.id_grupo);
+      else setSelectedGrupo(null);
+      if (prod.id_subgrupo) setSelectedSubgrupo(prod.id_subgrupo);
+      else setSelectedSubgrupo(null);
     }
   };
 
@@ -283,6 +389,34 @@ function EditarProductoContent() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        
+        // Actualizar el producto en las ventanas flotantes con los nuevos precios
+        if (data.product) {
+          updateProductInWindows({
+            idprod: data.product.idprod,
+            nombre: data.product.nombre,
+            descripcion: data.product.descripcion,
+            imagen_principal: data.product.imagen_principal,
+            stock_contable: data.product.stock_contable,
+            costo: data.product.costo,
+            OE: data.product.OE,
+            marca: data.product.marca,
+            categoria_nombre: data.product.categoria_nombre,
+            idcategoria: data.product.idcategoria,
+            idprodprov: data.product.idprodprov,
+            idprodpaquete: data.product.idprodpaquete,
+            codigo_barras: data.product.codigo_barras,
+            precio1: data.product.precio1,
+            precio2: data.product.precio2,
+            precio3: data.product.precio3,
+            precio4: data.product.precio4,
+            precio5: data.product.precio5,
+            precio6: data.product.precio6,
+            precio7: data.product.precio7,
+          });
+        }
+        
         alert('✅ Precios actualizados correctamente');
         setPreciosDesbloqueado(false);
         setJustificacionPrecio('');
@@ -306,7 +440,7 @@ function EditarProductoContent() {
     });
   };
 
-  const updateProductField = (field: keyof Producto, value: any) => {
+  const updateProductField = (field: keyof Producto | string, value: any) => {
     if (producto) {
       setProducto({ ...producto, [field]: value });
     }
@@ -355,6 +489,24 @@ function EditarProductoContent() {
           formData.append(key, String(value));
         }
       });
+      
+      // Agregar explícitamente los campos del sistema jerárquico
+      if (selectedCategoria) {
+        formData.set('idcategoria_nuevo', String(selectedCategoria));
+      }
+      if (selectedGrupo) {
+        formData.set('id_grupo', String(selectedGrupo));
+      }
+      if (selectedSubgrupo) {
+        formData.set('id_subgrupo', String(selectedSubgrupo));
+      }
+      
+      console.log('📤 Enviando datos jerárquicos:', {
+        idcategoria_nuevo: selectedCategoria,
+        id_grupo: selectedGrupo,
+        id_subgrupo: selectedSubgrupo
+      });
+      
       imagesToDelete.forEach(img => formData.append('imagesToDelete', img));
       newImages.forEach(file => formData.append('newImages', file));
 
@@ -364,6 +516,34 @@ function EditarProductoContent() {
       });
 
       if (response.ok) {
+        const updatedData = await response.json();
+        
+        // Actualizar el producto en las ventanas flotantes abiertas
+        if (updatedData.product) {
+          updateProductInWindows({
+            idprod: updatedData.product.idprod,
+            nombre: updatedData.product.nombre,
+            descripcion: updatedData.product.descripcion,
+            imagen_principal: updatedData.product.imagen_principal,
+            stock_contable: updatedData.product.stock_contable,
+            costo: updatedData.product.costo,
+            OE: updatedData.product.OE,
+            marca: updatedData.product.marca,
+            categoria_nombre: updatedData.product.categoria_nombre,
+            idcategoria: updatedData.product.idcategoria,
+            idprodprov: updatedData.product.idprodprov,
+            idprodpaquete: updatedData.product.idprodpaquete,
+            codigo_barras: updatedData.product.codigo_barras,
+            precio1: updatedData.product.precio1,
+            precio2: updatedData.product.precio2,
+            precio3: updatedData.product.precio3,
+            precio4: updatedData.product.precio4,
+            precio5: updatedData.product.precio5,
+            precio6: updatedData.product.precio6,
+            precio7: updatedData.product.precio7,
+          });
+        }
+        
         addNotification({
           type: 'success',
           title: 'Producto Actualizado',
@@ -394,8 +574,9 @@ function EditarProductoContent() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-screen bg-[#0a0f1a]">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#0e88c9]"></div>
+        <div className="flex flex-col items-center justify-center h-screen bg-[#0a0f1a]">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#0e88c9] mb-4"></div>
+          {idParam && <p className="text-slate-400">Cargando producto...</p>}
         </div>
       </DashboardLayout>
     );
@@ -521,8 +702,8 @@ function EditarProductoContent() {
                         <p className="text-sm font-medium text-slate-200 truncate">{prod.nombre}</p>
                         <p className="text-xs text-slate-500">OE: {prod.OE || '-'}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                            {prod.categoria_nombre || prod.idcategoria || '-'}
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-[#0e88c9]/10 text-[#0e88c9] border-[#0e88c9]/30">
+                            {(prod as any).categoria_nueva_nombre || prod.categoria_nombre || '-'}
                           </Badge>
                           <span className={`text-[10px] font-medium ${prod.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
                             Stock: {prod.stock_contable}
@@ -708,21 +889,86 @@ function EditarProductoContent() {
 
                     {/* Separador Clasificación y Stock */}
                     <div className="border-t border-slate-700/40 pt-4">
-                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Clasificación y Stock</h4>
+                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Clasificación Jerárquica</h4>
                     </div>
 
+                    {/* Sistema de Categorías Jerárquico: Categoría > Grupo > Subgrupo */}
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Categoría *</Label>
-                        <Select value={producto.idcategoria} onValueChange={(v) => updateProductField('idcategoria', v)}>
+                        <Select 
+                          value={selectedCategoria?.toString() || ''} 
+                          onValueChange={(v) => handleCategoriaChange(Number(v))}
+                        >
                           <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100">
-                            <SelectValue placeholder="Seleccione" />
+                            <SelectValue placeholder="Seleccione categoría" />
                           </SelectTrigger>
                           <SelectContent className="bg-slate-900 border-slate-700">
-                            {categorias.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
+                            {categoriasNuevo.map(c => (
+                              <SelectItem key={c.idcategoria} value={c.idcategoria.toString()}>
+                                {c.idcategoria} - {c.nombre}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="space-y-2">
+                        <Label>Grupo</Label>
+                        <Select 
+                          value={selectedGrupo?.toString() || ''} 
+                          onValueChange={(v) => handleGrupoChange(Number(v))}
+                          disabled={!selectedCategoria}
+                        >
+                          <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100">
+                            <SelectValue placeholder={selectedCategoria ? "Seleccione grupo" : "Primero seleccione categoría"} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-700">
+                            {gruposFiltrados.map(g => (
+                              <SelectItem key={g.id_grupo} value={g.id_grupo.toString()}>
+                                {g.codigo} - {g.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Subgrupo</Label>
+                        <Select 
+                          value={selectedSubgrupo?.toString() || ''} 
+                          onValueChange={(v) => handleSubgrupoChange(Number(v))}
+                          disabled={!selectedGrupo}
+                        >
+                          <SelectTrigger className="bg-slate-950/80 border-slate-700/40 text-slate-100">
+                            <SelectValue placeholder={selectedGrupo ? "Seleccione subgrupo" : "Primero seleccione grupo"} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-900 border-slate-700">
+                            {subgruposFiltrados.map(s => (
+                              <SelectItem key={s.id_subgrupo} value={s.id_subgrupo.toString()}>
+                                {s.codigo} - {s.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Código Jerárquico Generado */}
+                    {(producto as any).codigo_jerarquico && (
+                      <div className="mt-2 p-3 bg-[#0e88c9]/10 border border-[#0e88c9]/30 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-slate-400">Código Jerárquico:</span>
+                          <span className="text-lg font-mono font-bold text-[#0e88c9]">
+                            {(producto as any).codigo_jerarquico}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          Formato: [Categoría 2d][Grupo 3d][Subgrupo 3d] = 8 dígitos
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Otros campos de clasificación */}
+                    <div className="grid grid-cols-2 gap-4 mt-4">
                       <div className="space-y-2">
                         <Label>Lado</Label>
                         <Select value={producto.lado} onValueChange={(v) => updateProductField('lado', v)}>

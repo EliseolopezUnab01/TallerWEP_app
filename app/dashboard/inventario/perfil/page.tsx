@@ -15,6 +15,7 @@ import Image from 'next/image';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
+import { getCodigoCatalogo } from '@/lib/format-utils';
 
 interface Producto {
   idprod: number;
@@ -69,6 +70,7 @@ interface Producto {
   descuento: string;
   descuento_maximo: string;
   dias_entrega: number;
+  codigo_jerarquico?: string | number;
 }
 
 interface Precio {
@@ -114,6 +116,11 @@ function PerfilProductoPageContent() {
   // Precios múltiples
   const [precios, setPrecios] = useState<Precio[]>([]);
 
+  // Sistema de categorías jerárquico
+  const [categoriasNuevas, setCategoriasNuevas] = useState<{idcategoria: number, nombre: string}[]>([]);
+  const [gruposDB, setGruposDB] = useState<{id_grupo: number, codigo: string, nombre: string, idcategoria: number}[]>([]);
+  const [subgruposDB, setSubgruposDB] = useState<{id_subgrupo: number, codigo: string, nombre: string, id_grupo: number}[]>([]);
+
   // Referencias OEM/Cruces
   const [referencias, setReferencias] = useState([
     { fabricante: 'DAF', codigo: '1251720' },
@@ -137,7 +144,44 @@ function PerfilProductoPageContent() {
 
   useEffect(() => {
     fetchAllProductos();
+    fetchCategoriasJerarquia();
   }, []);
+
+  // Cargar categorías jerárquicas
+  const fetchCategoriasJerarquia = async () => {
+    try {
+      const response = await fetch('/api/categorias-jerarquia');
+      if (response.ok) {
+        const data = await response.json();
+        setCategoriasNuevas(data.categorias || []);
+        setGruposDB(data.grupos || []);
+        setSubgruposDB(data.subgrupos || []);
+      }
+    } catch (error) {
+      console.error('Error al cargar categorías:', error);
+    }
+  };
+
+  // Obtener nombre de categoría por ID
+  const getCategoriaNombre = (idcategoria_nuevo: number | null) => {
+    if (!idcategoria_nuevo) return null;
+    const cat = categoriasNuevas.find(c => c.idcategoria === idcategoria_nuevo);
+    return cat ? `${cat.idcategoria} - ${cat.nombre}` : null;
+  };
+
+  // Obtener nombre de grupo por ID
+  const getGrupoNombre = (id_grupo: number | null) => {
+    if (!id_grupo) return null;
+    const grupo = gruposDB.find(g => g.id_grupo === id_grupo);
+    return grupo ? `${grupo.codigo} - ${grupo.nombre}` : null;
+  };
+
+  // Obtener nombre de subgrupo por ID
+  const getSubgrupoNombre = (id_subgrupo: number | null) => {
+    if (!id_subgrupo) return null;
+    const subgrupo = subgruposDB.find(s => s.id_subgrupo === id_subgrupo);
+    return subgrupo ? `${subgrupo.codigo} - ${subgrupo.nombre}` : null;
+  };
 
   useEffect(() => {
     if (idParam && allProductos.length > 0) {
@@ -444,9 +488,14 @@ function PerfilProductoPageContent() {
 
   const getAllImages = () => {
     if (!producto) return [];
-    const images = [];
+    const images: string[] = [];
     
-    // Solo usar el array de imagenes, ya que imagen_principal está incluida ahí
+    // Primero agregar imagen_principal si existe
+    if (producto.imagen_principal) {
+      images.push(producto.imagen_principal);
+    }
+    
+    // Luego agregar el array de imagenes
     if (producto.imagenes && producto.imagenes.length > 0) {
       images.push(...producto.imagenes);
     }
@@ -556,8 +605,8 @@ function PerfilProductoPageContent() {
                         <p className="text-sm font-medium text-slate-200 truncate">{prod.nombre}</p>
                         <p className="text-xs text-slate-500">OE: {prod.OE || '-'}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                            {prod.categoria_nombre || prod.idcategoria || '-'}
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-[#0e88c9]/10 text-[#0e88c9] border-[#0e88c9]/30">
+                            {(prod as any).categoria_nueva_nombre || prod.categoria_nombre || '-'}
                           </Badge>
                           <span className={`text-[10px] font-medium ${prod.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
                             Stock: {prod.stock_contable}
@@ -733,6 +782,12 @@ function PerfilProductoPageContent() {
                       </div>
                     </div>
 
+                    {/* Código Catálogo */}
+                    <div className="p-4 border-b border-[#1e2a3b]">
+                      <div className="text-xs text-slate-500 uppercase">Código Catálogo</div>
+                      <div className="text-lg font-semibold text-amber-400">{getCodigoCatalogo(producto)}</div>
+                    </div>
+
                     {/* Referencia OE */}
                     <div className="p-4 border-b border-[#1e2a3b]">
                       <div className="text-xs text-slate-500 uppercase">Referencia OE</div>
@@ -745,10 +800,34 @@ function PerfilProductoPageContent() {
                       <div className="text-lg font-semibold text-slate-200">{producto.marca || '-'}</div>
                     </div>
 
-                    {/* Categoría */}
+                    {/* Categoría - Usando el nuevo sistema jerárquico */}
                     <div className="p-4 border-b border-[#1e2a3b]">
                       <div className="text-xs text-slate-500 uppercase">Categoría</div>
-                      <Badge variant="outline" className="mt-1">{producto.categoria_nombre || '-'}</Badge>
+                      <Badge variant="outline" className="mt-1 bg-[#0e88c9]/10 text-[#0e88c9] border-[#0e88c9]/30">
+                        {(producto as any).categoria_nueva_nombre 
+                          ? `${(producto as any).idcategoria_nuevo} - ${(producto as any).categoria_nueva_nombre}` 
+                          : producto.categoria_nombre || '-'}
+                      </Badge>
+                    </div>
+
+                    {/* Grupo y Subgrupo */}
+                    <div className="grid grid-cols-2 border-b border-[#1e2a3b]">
+                      <div className="p-4 border-r border-[#1e2a3b]">
+                        <div className="text-xs text-slate-500 uppercase">Grupo</div>
+                        <Badge variant="outline" className="mt-1 bg-green-500/10 text-green-400 border-green-500/30">
+                          {(producto as any).grupo_nombre 
+                            ? `${(producto as any).grupo_codigo} - ${(producto as any).grupo_nombre}` 
+                            : '-'}
+                        </Badge>
+                      </div>
+                      <div className="p-4">
+                        <div className="text-xs text-slate-500 uppercase">Subgrupo</div>
+                        <Badge variant="outline" className="mt-1 bg-purple-500/10 text-purple-400 border-purple-500/30">
+                          {(producto as any).subgrupo_nombre 
+                            ? `${(producto as any).subgrupo_codigo} - ${(producto as any).subgrupo_nombre}` 
+                            : '-'}
+                        </Badge>
+                      </div>
                     </div>
 
                     {/* Costo */}
@@ -795,14 +874,6 @@ function PerfilProductoPageContent() {
                     <div>
                       <div className="text-xs text-slate-500">Tipo</div>
                       <div className="text-sm font-medium text-slate-200">{producto.tipo || '-'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-500">Grupo</div>
-                      <div className="text-sm font-medium text-slate-200">{producto.grupo || '-'}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-slate-500">Subgrupo</div>
-                      <div className="text-sm font-medium text-slate-200">{producto.subgrupo || '-'}</div>
                     </div>
                     <div>
                       <div className="text-xs text-slate-500">Clase</div>

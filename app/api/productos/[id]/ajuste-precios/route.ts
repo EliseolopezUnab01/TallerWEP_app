@@ -131,11 +131,28 @@ export async function POST(
 
     console.log('✅ Ajuste registrado con ID:', result.insertId);
 
+    // Obtener el producto actualizado con toda su información
+    const [updatedProduct]: any = await connection.execute(`
+      SELECT p.*, c.nombre as categoria_nombre,
+        pr.precio_general as precio1, pr.precio_mayorista as precio2, 
+        pr.precio_cliente as precio3, pr.precio_mecanico as precio4,
+        pr.precio_minorista as precio5, pr.precio_especial as precio6, pr.precio_especial as precio7,
+        COALESCE(
+          (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod AND es_principal = 1 LIMIT 1),
+          (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY orden LIMIT 1)
+        ) as imagen_principal
+      FROM productos p
+      LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
+      LEFT JOIN precios pr ON p.idprod = pr.idprod
+      WHERE p.idprod = ?
+    `, [productId]);
+
     await connection.end();
 
     return NextResponse.json({
       success: true,
-      message: 'Ajuste de precios guardado exitosamente'
+      message: 'Ajuste de precios guardado exitosamente',
+      product: updatedProduct[0] || null
     });
 
   } catch (error: any) {
