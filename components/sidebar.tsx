@@ -15,7 +15,9 @@ import {
   ChevronRight,
   Moon,
   Sun,
-  Settings
+  Settings,
+  DollarSign,
+  Upload
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from './theme-toggle';
@@ -72,9 +74,12 @@ export function Sidebar() {
       toggle: toggleInventario,
       children: [
         { icon: Plus, label: 'Nuevo Producto', href: '/dashboard/inventario/nuevo' },
+        { icon: Upload, label: 'Importar Productos', href: '/dashboard/inventario/importar' },
         { icon: List, label: 'Administrar Producto', href: '/dashboard/inventario/administrar' },
         { icon: Edit, label: 'Editar Producto', href: '/dashboard/inventario/editar-producto' },
         { icon: Settings, label: 'Ajuste de Precios', href: '/dashboard/inventario/ajuste-precios' },
+        { icon: DollarSign, label: 'Gestión de Costos', href: '/dashboard/inventario/costos' },
+        { icon: DollarSign, label: 'Importar Costos', href: '/dashboard/inventario/importar-costos' },
         { icon: FileText, label: 'Perfil del Producto', href: '/dashboard/inventario/perfil' },
       ]
     },

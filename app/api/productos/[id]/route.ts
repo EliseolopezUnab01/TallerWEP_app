@@ -56,10 +56,10 @@ async function handleFullProductUpdate(request: Request, id: string) {
       );
     }
 
-    // Extraer datos del FormData
+    // Extraer datos del FormData (27 campos del Excel + costo + campos de categorización)
     const updateData: any = {};
     const fields = [
-      'tipo', 'idprodprov', 'idprodpaquete', 'idprodfisico', 'OE',
+      'idprodprov', 'idprodpaquete', 'idprodfisico', 'OE',
       'nombre', 'descripcion', 'etiquetas', 'marca', 'peso', 'codarancel',
       'lado', 'modelo', 'clase', 'estilo', 'giro', 'capacidad', 'unimedida',
       'idcategoria', 'codigo_barras', 'info_reservada', 'info_publica',
@@ -94,6 +94,32 @@ async function handleFullProductUpdate(request: Request, id: string) {
         `UPDATE productos SET ${updateFields.join(', ')} WHERE idprod = ?`,
         updateValues
       );
+    }
+
+    // Actualizar tabla costos si se modificó el costo
+    if (updateData.costo !== undefined) {
+      const costoValue = parseFloat(updateData.costo) || 0;
+      // Verificar si existe registro en costos
+      const [existingCosto]: any = await connection.execute(
+        'SELECT idcosto FROM costos WHERE idprod = ?', [id]
+      );
+      if (existingCosto.length > 0) {
+        // Actualizar con rotación de respaldos
+        await connection.execute(`
+          UPDATE costos SET
+            costo_previo2 = costo_previo1,
+            costo_previo1 = costo_local,
+            costo = ?,
+            costo_local = ?
+          WHERE idprod = ?
+        `, [costoValue, costoValue, id]);
+      } else {
+        // Crear nuevo registro
+        await connection.execute(
+          'INSERT INTO costos (idprod, costo, costo_local, costo_promedio) VALUES (?, ?, ?, ?)',
+          [id, costoValue, costoValue, costoValue]
+        );
+      }
     }
 
     // Manejar imágenes nuevas (soporta ambos nombres: 'imagenes' y 'newImages')
@@ -364,6 +390,68 @@ export async function GET(
     console.error('Error al obtener producto:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: Eliminar producto
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await context.params;
+    const { id } = params;
+    
+    const connection = await connectDB();
+    
+    // Verificar que el producto existe
+    const [existing]: any = await connection.execute(
+      'SELECT idprod FROM productos WHERE idprod = ?',
+      [id]
+    );
+    
+    if (existing.length === 0) {
+      await connection.end();
+      return NextResponse.json(
+        { error: 'Producto no encontrado' },
+        { status: 404 }
+      );
+    }
+    
+    // Eliminar imágenes asociadas
+    await connection.execute(
+      'DELETE FROM producto_imagenes WHERE idprod = ?',
+      [id]
+    );
+    
+    // Eliminar costos asociados
+    await connection.execute(
+      'DELETE FROM costos WHERE idprod = ?',
+      [id]
+    );
+    
+    // Eliminar precios asociados
+    await connection.execute(
+      'DELETE FROM precios WHERE idprod = ?',
+      [id]
+    );
+    
+    // Eliminar el producto
+    await connection.execute(
+      'DELETE FROM productos WHERE idprod = ?',
+      [id]
+    );
+    
+    await connection.end();
+    
+    return NextResponse.json({ success: true, message: 'Producto eliminado correctamente' });
+    
+  } catch (error: any) {
+    console.error('Error al eliminar producto:', error);
+    return NextResponse.json(
+      { error: 'Error al eliminar producto', details: error.message },
       { status: 500 }
     );
   }

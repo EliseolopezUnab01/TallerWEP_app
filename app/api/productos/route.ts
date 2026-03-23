@@ -25,6 +25,11 @@ export async function GET() {
         pr.precio_minorista as precio5,
         pr.precio_mayorista as precio6,
         pr.precio_especial as precio7,
+        COALESCE(co.costo, p.costo) as costo,
+        COALESCE(co.costo_local, p.costo_local, p.costo) as costo_local,
+        COALESCE(co.iva_pagado, p.iva_pagado, 0) as iva_pagado,
+        co.costo_promedio,
+        co.costo_proveedor,
         (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY es_principal DESC, orden ASC LIMIT 1) as imagen_principal
       FROM productos p
       LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
@@ -32,6 +37,7 @@ export async function GET() {
       LEFT JOIN grupos g ON p.id_grupo = g.id_grupo
       LEFT JOIN subgrupos sg ON p.id_subgrupo = sg.id_subgrupo
       LEFT JOIN precios pr ON p.idprod = pr.idprod
+      LEFT JOIN costos co ON p.idprod = co.idprod
       ORDER BY p.created_at DESC
     `);
     
@@ -73,9 +79,8 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     
-    // Obtener datos del producto (28 campos + costo)
+    // Obtener datos del producto (27 campos del Excel + costo)
     const productoData = {
-      tipo: formData.get('tipo') as string,
       idprodprov: formData.get('idprodprov') as string,
       idprodpaquete: formData.get('idprodpaquete') as string,
       idprodfisico: formData.get('idprodfisico') as string,
@@ -129,17 +134,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insertar producto en la base de datos (28 campos + costo)
+    // Insertar producto en la base de datos (27 campos del Excel + costo)
     const [result]: any = await connection.execute(
       `INSERT INTO productos (
-        tipo, idprodprov, idprodpaquete, idprodfisico, OE, nombre, descripcion,
+        idprodprov, idprodpaquete, idprodfisico, OE, nombre, descripcion,
         etiquetas, marca, peso, codarancel, lado, modelo, clase, estilo, giro,
         capacidad, unimedida, idcategoria, codigo_barras, info_reservada,
         info_publica, info_referencias_directas, info_referencias_indirectas,
         exento, stock_contable, stock_fisico, costo
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        productoData.tipo,
         productoData.idprodprov,
         productoData.idprodpaquete,
         productoData.idprodfisico,
@@ -171,6 +175,12 @@ export async function POST(request: Request) {
     );
 
     const productId = result.insertId;
+
+    // Crear registro en tabla costos
+    await connection.execute(
+      `INSERT INTO costos (idprod, costo, costo_local, costo_promedio) VALUES (?, ?, ?, ?)`,
+      [productId, productoData.costo, productoData.costo, productoData.costo]
+    );
 
     // Procesar imágenes
     const imagenes: string[] = [];

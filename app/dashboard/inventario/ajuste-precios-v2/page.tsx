@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Save, Package, Calculator, Percent, DollarSign, TrendingUp, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Search, Save, Package, Calculator, Percent, DollarSign, TrendingUp, RefreshCw, ArrowLeft, ExternalLink } from 'lucide-react';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
+import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import Image from 'next/image';
 
 // Tipos de precio según el sistema FoxPro (6 tipos)
@@ -42,6 +43,14 @@ interface ProductoSeleccionado {
   costo_local: number;
   iva_pagado: number;
   imagen_principal?: string;
+  // Datos adicionales para ventana flotante
+  stock_contable?: number;
+  stock_fisico?: number;
+  OE?: string;
+  marca?: string;
+  categoria_nueva_nombre?: string;
+  idprodprov?: string;
+  codigo_jerarquico?: string | number;
 }
 
 interface ProductoLista {
@@ -50,6 +59,11 @@ interface ProductoLista {
   codigo_barras?: string;
   costo: number;
   imagen_principal?: string;
+  descripcion?: string;
+  OE?: string;
+  etiquetas?: string;
+  aplicacion_marcas?: string;
+  marca?: string;
 }
 
 interface HistorialItem {
@@ -76,8 +90,12 @@ interface HistorialItem {
 export default function AjustePreciosV2Page() {
   const [productos, setProductos] = useState<ProductoLista[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchFilter, setSearchFilter] = useState<'todos' | 'descripcion' | 'referencia' | 'oem' | 'etiquetas' | 'aplicacion'>('todos');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Ventanas flotantes
+  const { openFloatingWindow } = useFloatingWindows();
   
   // Producto seleccionado para ajustar precios
   const [productoSeleccionado, setProductoSeleccionado] = useState<ProductoSeleccionado | null>(null);
@@ -113,15 +131,34 @@ export default function AjustePreciosV2Page() {
     }
   };
 
-  // Filtrar productos por búsqueda
+  // Filtrar productos por búsqueda con filtros específicos
   const productosFiltrados = productos.filter(p => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
-    return (
-      p.nombre?.toLowerCase().includes(search) ||
-      String(p.idprod).includes(search) ||
-      p.codigo_barras?.toLowerCase().includes(search)
-    );
+    
+    switch (searchFilter) {
+      case 'descripcion':
+        return p.descripcion?.toLowerCase().includes(search) || p.nombre?.toLowerCase().includes(search);
+      case 'referencia':
+        return p.codigo_barras?.toLowerCase().includes(search) || String(p.idprod).includes(search);
+      case 'oem':
+        return p.OE?.toLowerCase().includes(search);
+      case 'etiquetas':
+        return p.etiquetas?.toLowerCase().includes(search);
+      case 'aplicacion':
+        return p.aplicacion_marcas?.toLowerCase().includes(search) || p.marca?.toLowerCase().includes(search);
+      default: // 'todos'
+        return (
+          p.nombre?.toLowerCase().includes(search) ||
+          String(p.idprod).includes(search) ||
+          p.codigo_barras?.toLowerCase().includes(search) ||
+          p.descripcion?.toLowerCase().includes(search) ||
+          p.OE?.toLowerCase().includes(search) ||
+          p.etiquetas?.toLowerCase().includes(search) ||
+          p.aplicacion_marcas?.toLowerCase().includes(search) ||
+          p.marca?.toLowerCase().includes(search)
+        );
+    }
   });
 
   // Seleccionar producto para ajustar precios
@@ -139,7 +176,15 @@ export default function AjustePreciosV2Page() {
           costo: parseFloat(prod.costo) || 0,
           costo_local: parseFloat(prod.costo_local) || parseFloat(prod.costo) || 0,
           iva_pagado: parseFloat(prod.iva_pagado) || 0,
-          imagen_principal: prod.imagen_principal
+          imagen_principal: prod.imagen_principal,
+          // Datos adicionales para ventana flotante
+          stock_contable: parseInt(prod.stock_contable) || 0,
+          stock_fisico: parseInt(prod.stock_fisico) || 0,
+          OE: prod.OE || '',
+          marca: prod.marca || '',
+          categoria_nueva_nombre: prod.categoria_nueva_nombre || '',
+          idprodprov: prod.idprodprov || '',
+          codigo_jerarquico: prod.codigo_jerarquico || ''
         });
         
         setFactores(data.factores);
@@ -368,15 +413,89 @@ export default function AjustePreciosV2Page() {
         {!productoSeleccionado ? (
           /* VISTA: Lista de productos */
           <div className="space-y-4">
-            {/* Buscador */}
-            <div className="relative max-w-xl">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <Input
-                placeholder="Buscar producto por nombre, código o código de barras..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12 bg-[#0d1523] border-[#1e2a3b] text-slate-200"
-              />
+            {/* Buscador con filtros */}
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                <Input
+                  placeholder={
+                    searchFilter === 'todos' ? "Buscar en todos los campos..." :
+                    searchFilter === 'descripcion' ? "Buscar por descripción o nombre..." :
+                    searchFilter === 'referencia' ? "Buscar por código de barras o ID..." :
+                    searchFilter === 'oem' ? "Buscar por código OEM..." :
+                    searchFilter === 'etiquetas' ? "Buscar por etiquetas..." :
+                    "Buscar por aplicación o marca..."
+                  }
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-12 bg-[#0d1523] border-[#1e2a3b] text-slate-200"
+                />
+              </div>
+              
+              {/* Filtros de búsqueda */}
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-slate-500 self-center mr-2">Filtrar por:</span>
+                <button
+                  onClick={() => setSearchFilter('todos')}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                    searchFilter === 'todos' 
+                      ? 'bg-[#0e88c9] text-white' 
+                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                  }`}
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => setSearchFilter('descripcion')}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                    searchFilter === 'descripcion' 
+                      ? 'bg-[#0e88c9] text-white' 
+                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                  }`}
+                >
+                  Descripción
+                </button>
+                <button
+                  onClick={() => setSearchFilter('referencia')}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                    searchFilter === 'referencia' 
+                      ? 'bg-[#0e88c9] text-white' 
+                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                  }`}
+                >
+                  Referencia
+                </button>
+                <button
+                  onClick={() => setSearchFilter('oem')}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                    searchFilter === 'oem' 
+                      ? 'bg-[#0e88c9] text-white' 
+                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                  }`}
+                >
+                  OEM
+                </button>
+                <button
+                  onClick={() => setSearchFilter('etiquetas')}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                    searchFilter === 'etiquetas' 
+                      ? 'bg-[#0e88c9] text-white' 
+                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                  }`}
+                >
+                  Etiquetas
+                </button>
+                <button
+                  onClick={() => setSearchFilter('aplicacion')}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                    searchFilter === 'aplicacion' 
+                      ? 'bg-[#0e88c9] text-white' 
+                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                  }`}
+                >
+                  Aplicación
+                </button>
+              </div>
             </div>
 
             {/* Lista de productos */}
@@ -400,7 +519,7 @@ export default function AjustePreciosV2Page() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-200 truncate">{producto.nombre}</p>
                       <p className="text-xs text-slate-500">ID: {producto.idprod}</p>
-                      <p className="text-sm text-emerald-400 font-mono">Costo: ${parseFloat(producto.costo || 0).toFixed(2)}</p>
+                      <p className="text-sm text-emerald-400 font-mono">Costo: ${Number(producto.costo || 0).toFixed(2)}</p>
                     </div>
                     <Calculator className="h-5 w-5 text-[#0e88c9]" />
                   </CardContent>
@@ -418,6 +537,123 @@ export default function AjustePreciosV2Page() {
         ) : (
           /* VISTA: Formulario de ajuste de precios */
           <>
+          {/* Buscador rápido para cambiar de producto sin salir */}
+          <div className="mb-4 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+              <Input
+                placeholder={
+                  searchFilter === 'todos' ? "Buscar otro producto..." :
+                  searchFilter === 'descripcion' ? "Buscar por descripción o nombre..." :
+                  searchFilter === 'referencia' ? "Buscar por código de barras o ID..." :
+                  searchFilter === 'oem' ? "Buscar por código OEM..." :
+                  searchFilter === 'etiquetas' ? "Buscar por etiquetas..." :
+                  "Buscar por aplicación o marca..."
+                }
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-10 bg-[#0d1523] border-[#1e2a3b] text-slate-200"
+              />
+            </div>
+            
+            {/* Filtros de búsqueda */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs text-slate-500 self-center mr-2">Filtrar por:</span>
+              <button
+                onClick={() => setSearchFilter('todos')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilter === 'todos' 
+                    ? 'bg-[#0e88c9] text-white' 
+                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                }`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setSearchFilter('descripcion')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilter === 'descripcion' 
+                    ? 'bg-[#0e88c9] text-white' 
+                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                }`}
+              >
+                Descripción
+              </button>
+              <button
+                onClick={() => setSearchFilter('referencia')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilter === 'referencia' 
+                    ? 'bg-[#0e88c9] text-white' 
+                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                }`}
+              >
+                Referencia
+              </button>
+              <button
+                onClick={() => setSearchFilter('oem')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilter === 'oem' 
+                    ? 'bg-[#0e88c9] text-white' 
+                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                }`}
+              >
+                OEM
+              </button>
+              <button
+                onClick={() => setSearchFilter('etiquetas')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilter === 'etiquetas' 
+                    ? 'bg-[#0e88c9] text-white' 
+                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                }`}
+              >
+                Etiquetas
+              </button>
+              <button
+                onClick={() => setSearchFilter('aplicacion')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  searchFilter === 'aplicacion' 
+                    ? 'bg-[#0e88c9] text-white' 
+                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
+                }`}
+              >
+                Aplicación
+              </button>
+            </div>
+
+            {/* Resultados de búsqueda rápida */}
+            {searchTerm && productosFiltrados.length > 0 && (
+              <div className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg max-h-48 overflow-y-auto">
+                {productosFiltrados.slice(0, 10).map(producto => (
+                  <div
+                    key={producto.idprod}
+                    onClick={() => {
+                      seleccionarProducto(producto.idprod);
+                      setSearchTerm('');
+                    }}
+                    className={`flex items-center gap-3 p-2 cursor-pointer hover:bg-[#1e2a3b] transition-colors ${
+                      producto.idprod === productoSeleccionado?.idprod ? 'bg-[#0e88c9]/20 border-l-2 border-[#0e88c9]' : ''
+                    }`}
+                  >
+                    <div className="h-10 w-10 rounded bg-slate-900 flex-shrink-0 overflow-hidden">
+                      {producto.imagen_principal ? (
+                        <Image src={producto.imagen_principal} alt="" width={40} height={40} className="object-cover h-full w-full" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="h-5 w-5 text-slate-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-200 truncate">{producto.nombre}</p>
+                      <p className="text-xs text-slate-500">ID: {producto.idprod} | Costo: ${parseFloat(String(producto.costo) || '0').toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             {/* Info del producto */}
             <div className="lg:col-span-4">
@@ -427,7 +663,7 @@ export default function AjustePreciosV2Page() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <div className="h-20 w-20 rounded bg-slate-900 overflow-hidden">
+                    <div className="h-20 w-20 rounded bg-slate-900 overflow-hidden flex-shrink-0">
                       {productoSeleccionado.imagen_principal ? (
                         <Image src={productoSeleccionado.imagen_principal} alt="" width={80} height={80} className="object-cover h-full w-full" />
                       ) : (
@@ -436,10 +672,38 @@ export default function AjustePreciosV2Page() {
                         </div>
                       )}
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-200">{productoSeleccionado.nombre}</p>
                       <p className="text-xs text-slate-500">ID: {productoSeleccionado.idprod}</p>
                     </div>
+                    {/* Botón ventana flotante */}
+                    <Button 
+                      size="sm" 
+                      onClick={() => openFloatingWindow({ 
+                        idprod: productoSeleccionado.idprod, 
+                        nombre: productoSeleccionado.nombre,
+                        imagen_principal: productoSeleccionado.imagen_principal,
+                        costo: productoSeleccionado.costo,
+                        codigo_barras: productoSeleccionado.codigo_barras,
+                        stock_contable: productoSeleccionado.stock_contable,
+                        stock_fisico: productoSeleccionado.stock_fisico,
+                        OE: productoSeleccionado.OE,
+                        marca: productoSeleccionado.marca,
+                        categoria_nueva_nombre: productoSeleccionado.categoria_nueva_nombre,
+                        idprodprov: productoSeleccionado.idprodprov,
+                        codigo_jerarquico: productoSeleccionado.codigo_jerarquico,
+                        precio1: precios[0]?.precio || 0,
+                        precio2: precios[1]?.precio || 0,
+                        precio3: precios[2]?.precio || 0,
+                        precio4: precios[3]?.precio || 0,
+                        precio5: precios[4]?.precio || 0,
+                        precio6: precios[5]?.precio || 0
+                      })}
+                      className="h-8 px-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/20"
+                      title="Abrir en ventana flotante"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-700">

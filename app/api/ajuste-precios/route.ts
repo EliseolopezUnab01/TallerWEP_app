@@ -124,14 +124,14 @@ export async function POST(request: Request) {
 
     const connection = await connectDB();
 
-    // Obtener datos del producto
+    // Obtener datos del producto desde la tabla costos
     const [productData]: any = await connection.execute(`
       SELECT 
-        p.costo,
-        COALESCE(p.costo_local, p.costo) as costo_local,
-        COALESCE(p.iva_pagado, 0) as iva_pagado
-      FROM productos p
-      WHERE p.idprod = ?
+        c.costo,
+        COALESCE(c.costo_local, c.costo) as costo_local,
+        COALESCE(c.iva_pagado, 0) as iva_pagado
+      FROM costos c
+      WHERE c.idprod = ?
     `, [idprod]);
 
     if (productData.length === 0) {
@@ -379,9 +379,16 @@ export async function GET(request: Request) {
         p.nombre,
         ${hasCodigoBarras ? 'p.codigo_barras,' : "'' as codigo_barras,"}
         (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY es_principal DESC, orden ASC LIMIT 1) as imagen_principal,
-        p.costo,
-        COALESCE(p.costo_local, p.costo) as costo_local,
-        COALESCE(p.iva_pagado, 0) as iva_pagado,
+        c.costo,
+        COALESCE(c.costo_local, c.costo) as costo_local,
+        COALESCE(c.iva_pagado, 0) as iva_pagado,
+        COALESCE(p.stock_contable, 0) as stock_contable,
+        COALESCE(p.stock_fisico, 0) as stock_fisico,
+        p.OE,
+        p.marca,
+        p.idprodprov,
+        p.codigo_jerarquico,
+        cn.nombre as categoria_nueva_nombre,
         pr.precio_general,
         pr.precio_cliente,
         pr.precio_mecanico,
@@ -401,7 +408,9 @@ export async function GET(request: Request) {
         COALESCE(pr.ganancia_mayorista, 0) as ganancia_mayorista,
         COALESCE(pr.ganancia_especial, 0) as ganancia_especial
       FROM productos p
+      LEFT JOIN costos c ON p.idprod = c.idprod
       LEFT JOIN precios pr ON p.idprod = pr.idprod
+      LEFT JOIN categorias_nuevo cn ON p.idcategoria_nuevo = cn.idcategoria
       WHERE p.idprod = ?
     `, [idprod]);
 

@@ -16,6 +16,7 @@ import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { getCodigoCatalogo } from '@/lib/format-utils';
+import { SearchFilters, filterProductos, SearchFilterType } from '@/components/search-filters';
 
 interface Producto {
   idprod: number;
@@ -23,6 +24,7 @@ interface Producto {
   codigo_barras: string;
   idprodprov: string;
   idprodpaquete: string;
+  idprodfisico?: string;
   OE: string;
   descripcion: string;
   etiquetas: string;
@@ -47,29 +49,11 @@ interface Producto {
   stock_fisico: number;
   imagen_principal?: string;
   imagenes?: string[];
-  // Campos nuevos de la migración
-  precio_manual: string;
-  precio_pvr: string;
-  precio_lcl: string;
-  precio_general: string;
-  precio_cliente: string;
-  precio_mecanico: string;
-  precio_minorista: string;
-  precio_mayorista: string;
-  precio_especial: string;
-  serie: string;
-  tipo: string;
-  grupo: string;
-  subgrupo: string;
-  aplicacion_marcas: string;
-  aplicacion_modelos: string;
-  criterios: string;
+  // Campos adicionales
+  grupo_nombre?: string;
+  subgrupo_nombre?: string;
+  aplicacion_marcas?: string;
   costo: string;
-  aplica_imp: number;
-  utilidad: string;
-  descuento: string;
-  descuento_maximo: string;
-  dias_entrega: number;
   codigo_jerarquico?: string | number;
 }
 
@@ -98,6 +82,7 @@ function PerfilProductoPageContent() {
   const [producto, setProducto] = useState<Producto | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFilter, setSearchFilter] = useState<SearchFilterType>('todos');
   const [searchResults, setSearchResults] = useState<Producto[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   
@@ -202,18 +187,8 @@ function PerfilProductoPageContent() {
     }
   }, [idParam, allProductos]);
 
-  // Filtrar productos según búsqueda (movido aquí para usar en hooks)
-  const productosFiltrados = allProductos.filter(p => {
-    if (!searchQuery) return true;
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      p.nombre?.toLowerCase().includes(searchLower) ||
-      p.OE?.toLowerCase().includes(searchLower) ||
-      p.codigo_barras?.toLowerCase().includes(searchLower) ||
-      p.idprodprov?.toLowerCase().includes(searchLower) ||
-      p.idprod?.toString().includes(searchLower)
-    );
-  });
+  // Filtrar productos según búsqueda usando filtros unificados
+  const productosFiltrados = filterProductos(allProductos, searchQuery, searchFilter);
 
   // Producto seleccionado en la lista (para preview)
   const productoPreview = productosFiltrados[selectedIndex] || null;
@@ -303,7 +278,7 @@ function PerfilProductoPageContent() {
 
   // Función para abrir ventana flotante usando el contexto global
   const openFloatingWindow = (prod: Producto) => {
-    openGlobalFloatingWindow(prod);
+    openGlobalFloatingWindow(prod as any);
   };
 
   const fetchProducto = async () => {
@@ -349,7 +324,7 @@ function PerfilProductoPageContent() {
           const apps: string[] = [];
           if (found.info_publica) apps.push(found.info_publica);
           if (found.info_referencias_directas) apps.push(found.info_referencias_directas);
-          if (found.criterios) apps.push(found.criterios);
+          if (found.aplicacion_marcas) apps.push(found.aplicacion_marcas);
           setAplicaciones(apps.length > 0 ? apps : ['Sin información de aplicaciones disponible']);
         } else {
           setError('Producto no encontrado');
@@ -565,15 +540,13 @@ function PerfilProductoPageContent() {
           <div className="lg:col-span-4 space-y-3">
             <Card className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl overflow-hidden">
               <CardHeader className="py-2 px-3 border-b border-slate-800">
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input
-                    placeholder="Buscar producto..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 h-8 text-sm bg-slate-950/80 border-slate-700/40 text-slate-100"
-                  />
-                </div>
+                <SearchFilters
+                  searchTerm={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  searchFilter={searchFilter}
+                  onFilterChange={setSearchFilter}
+                  compact={true}
+                />
               </CardHeader>
               <div ref={listRef} className="h-[calc(100vh-280px)] overflow-y-auto divide-y divide-slate-800/50">
                 {productosFiltrados.length === 0 ? (
@@ -636,10 +609,10 @@ function PerfilProductoPageContent() {
                         <Layers className="h-3 w-3 mr-1" />
                         Pestaña
                       </Button>
-                      {/* Botón para abrir en ventana flotante */}
+                      {/* Botón para abrir en ventana flotante - usa producto seleccionado si existe, sino el preview */}
                       <Button 
                         size="sm" 
-                        onClick={() => openFloatingWindow(productoPreview)}
+                        onClick={() => openFloatingWindow(producto || productoPreview)}
                         className="h-7 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/20"
                         title="Abrir en ventana flotante"
                       >
@@ -872,10 +845,6 @@ function PerfilProductoPageContent() {
                   <div className="text-xs text-slate-500 uppercase mb-3">Información Adicional</div>
                   <div className="grid grid-cols-4 gap-4">
                     <div>
-                      <div className="text-xs text-slate-500">Tipo</div>
-                      <div className="text-sm font-medium text-slate-200">{producto.tipo || '-'}</div>
-                    </div>
-                    <div>
                       <div className="text-xs text-slate-500">Clase</div>
                       <div className="text-sm font-medium text-slate-200">{producto.clase || '-'}</div>
                     </div>
@@ -886,6 +855,14 @@ function PerfilProductoPageContent() {
                     <div>
                       <div className="text-xs text-slate-500">Modelo</div>
                       <div className="text-sm font-medium text-slate-200">{producto.modelo || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Estilo</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.estilo || '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-slate-500">Giro</div>
+                      <div className="text-sm font-medium text-slate-200">{producto.giro || '-'}</div>
                     </div>
                     <div>
                       <div className="text-xs text-slate-500">Peso</div>

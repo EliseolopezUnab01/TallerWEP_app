@@ -19,10 +19,10 @@ import { UserDropdown } from '@/components/user-dropdown';
 import { useNotifications } from '@/contexts/notification-context';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { getCodigoCatalogo } from '@/lib/format-utils';
+import { SearchFilters, filterProductos, SearchFilterType } from '@/components/search-filters';
 
 interface Producto {
   idprod: number;
-  tipo: string;
   idprodprov: string;
   idprodpaquete: string;
   idprodfisico: string;
@@ -102,6 +102,7 @@ function EditarProductoContent() {
   const [saving, setSaving] = useState(false);
   const [producto, setProducto] = useState<Producto | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFilter, setSearchFilter] = useState<SearchFilterType>('todos');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [newImages, setNewImages] = useState<File[]>([]);
@@ -161,14 +162,14 @@ function EditarProductoContent() {
     }
   };
 
-  // Filtrar grupos por categoría seleccionada
+  // Filtrar grupos por categoría seleccionada (comparar como números)
   const gruposFiltrados = selectedCategoria 
-    ? grupos.filter(g => g.idcategoria === selectedCategoria)
+    ? grupos.filter(g => Number(g.idcategoria) === Number(selectedCategoria))
     : [];
 
-  // Filtrar subgrupos por grupo seleccionado
+  // Filtrar subgrupos por grupo seleccionado (comparar como números)
   const subgruposFiltrados = selectedGrupo
-    ? subgrupos.filter(s => s.id_grupo === selectedGrupo)
+    ? subgrupos.filter(s => Number(s.id_grupo) === Number(selectedGrupo))
     : [];
 
   // Generar código jerárquico
@@ -236,10 +237,10 @@ function EditarProductoContent() {
         if (idx >= 0) setSelectedIndex(idx);
         fetchPrecios(Number(idParam));
         fetchHistorialPrecios(Number(idParam));
-        // Inicializar valores de categoría jerárquica
-        if (found.idcategoria_nuevo) setSelectedCategoria(found.idcategoria_nuevo);
-        if (found.id_grupo) setSelectedGrupo(found.id_grupo);
-        if (found.id_subgrupo) setSelectedSubgrupo(found.id_subgrupo);
+        // Inicializar valores de categoría jerárquica (convertir a números)
+        if (found.idcategoria_nuevo) setSelectedCategoria(Number(found.idcategoria_nuevo));
+        if (found.id_grupo) setSelectedGrupo(Number(found.id_grupo));
+        if (found.id_subgrupo) setSelectedSubgrupo(Number(found.id_subgrupo));
       }
     }
   }, [idParam, allProductos]);
@@ -289,18 +290,8 @@ function EditarProductoContent() {
     }
   };
 
-  const productosFiltrados = allProductos.filter(p => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      p.nombre?.toLowerCase().includes(query) ||
-      p.OE?.toLowerCase().includes(query) ||
-      p.codigo_barras?.toLowerCase().includes(query) ||
-      p.idprodprov?.toLowerCase().includes(query) ||
-      p.marca?.toLowerCase().includes(query) ||
-      p.idprod?.toString().includes(query)
-    );
-  });
+  // Filtrar productos usando filtros unificados
+  const productosFiltrados = filterProductos(allProductos, searchQuery, searchFilter);
 
   const productoPreview = productosFiltrados[selectedIndex] || null;
 
@@ -346,12 +337,12 @@ function EditarProductoContent() {
       setMostrarHistorial(false);
       fetchPrecios(idprod);
       fetchHistorialPrecios(idprod);
-      // Inicializar valores de categoría jerárquica
-      if (prod.idcategoria_nuevo) setSelectedCategoria(prod.idcategoria_nuevo);
+      // Inicializar valores de categoría jerárquica (convertir a números)
+      if (prod.idcategoria_nuevo) setSelectedCategoria(Number(prod.idcategoria_nuevo));
       else setSelectedCategoria(null);
-      if (prod.id_grupo) setSelectedGrupo(prod.id_grupo);
+      if (prod.id_grupo) setSelectedGrupo(Number(prod.id_grupo));
       else setSelectedGrupo(null);
-      if (prod.id_subgrupo) setSelectedSubgrupo(prod.id_subgrupo);
+      if (prod.id_subgrupo) setSelectedSubgrupo(Number(prod.id_subgrupo));
       else setSelectedSubgrupo(null);
     }
   };
@@ -490,16 +481,13 @@ function EditarProductoContent() {
         }
       });
       
-      // Agregar explícitamente los campos del sistema jerárquico
+      // Agregar explícitamente los campos del sistema jerárquico (incluyendo valores vacíos para limpiar)
       if (selectedCategoria) {
         formData.set('idcategoria_nuevo', String(selectedCategoria));
       }
-      if (selectedGrupo) {
-        formData.set('id_grupo', String(selectedGrupo));
-      }
-      if (selectedSubgrupo) {
-        formData.set('id_subgrupo', String(selectedSubgrupo));
-      }
+      // Siempre enviar id_grupo e id_subgrupo, incluso si son null (para limpiarlos)
+      formData.set('id_grupo', selectedGrupo ? String(selectedGrupo) : '');
+      formData.set('id_subgrupo', selectedSubgrupo ? String(selectedSubgrupo) : '');
       
       console.log('📤 Enviando datos jerárquicos:', {
         idcategoria_nuevo: selectedCategoria,
@@ -526,14 +514,18 @@ function EditarProductoContent() {
             descripcion: updatedData.product.descripcion,
             imagen_principal: updatedData.product.imagen_principal,
             stock_contable: updatedData.product.stock_contable,
+            stock_fisico: updatedData.product.stock_fisico,
             costo: updatedData.product.costo,
             OE: updatedData.product.OE,
             marca: updatedData.product.marca,
             categoria_nombre: updatedData.product.categoria_nombre,
+            categoria_nueva_nombre: updatedData.product.categoria_nueva_nombre,
             idcategoria: updatedData.product.idcategoria,
+            idcategoria_nuevo: updatedData.product.idcategoria_nuevo,
             idprodprov: updatedData.product.idprodprov,
             idprodpaquete: updatedData.product.idprodpaquete,
             codigo_barras: updatedData.product.codigo_barras,
+            codigo_jerarquico: updatedData.product.codigo_jerarquico,
             precio1: updatedData.product.precio1,
             precio2: updatedData.product.precio2,
             precio3: updatedData.product.precio3,
@@ -662,15 +654,13 @@ function EditarProductoContent() {
           <div className="lg:col-span-4 space-y-4">
             <Card className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl overflow-hidden">
               <CardHeader className="py-2 px-3 border-b border-slate-800">
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input
-                    placeholder="Buscar producto..."
-                    value={searchQuery}
-                    onChange={(e) => { setSearchQuery(e.target.value); setSelectedIndex(0); }}
-                    className="pl-8 h-8 text-sm bg-slate-950/80 border-slate-700/40 text-slate-100"
-                  />
-                </div>
+                <SearchFilters
+                  searchTerm={searchQuery}
+                  onSearchChange={(value) => { setSearchQuery(value); setSelectedIndex(0); }}
+                  searchFilter={searchFilter}
+                  onFilterChange={setSearchFilter}
+                  compact={true}
+                />
               </CardHeader>
               <div ref={listRef} className="h-[500px] overflow-y-auto divide-y divide-slate-800/50">
                 {productosFiltrados.length === 0 ? (
@@ -992,6 +982,29 @@ function EditarProductoContent() {
                         </Select>
                       </div>
                     </div>
+                    {/* Clasificación: Modelo, Clase, Estilo, Giro */}
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label>Modelo</Label>
+                        <Input value={producto.modelo || ''} onChange={(e) => updateProductField('modelo', e.target.value)}
+                          placeholder="Modelo" className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Clase</Label>
+                        <Input value={producto.clase || ''} onChange={(e) => updateProductField('clase', e.target.value)}
+                          placeholder="Clase" className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Estilo</Label>
+                        <Input value={producto.estilo || ''} onChange={(e) => updateProductField('estilo', e.target.value)}
+                          placeholder="Estilo" className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Giro</Label>
+                        <Input value={producto.giro || ''} onChange={(e) => updateProductField('giro', e.target.value)}
+                          placeholder="Giro" className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
+                      </div>
+                    </div>
                     <div className="grid grid-cols-4 gap-4">
                       <div className="space-y-2">
                         <Label>Stock Contable</Label>
@@ -1030,6 +1043,18 @@ function EditarProductoContent() {
                       <Input value={producto.etiquetas || ''} onChange={(e) => updateProductField('etiquetas', e.target.value)}
                         placeholder="frenos, disco, toyota..." className="bg-slate-950/80 border-slate-700/40 text-slate-100" />
                     </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Información Reservada (Acerca del Item)</Label>
+                      <Textarea value={producto.info_reservada || ''} onChange={(e) => updateProductField('info_reservada', e.target.value)}
+                        placeholder="Información RESERVADA para documentar el producto"
+                        rows={2} className="text-sm bg-slate-950/80 border-slate-700/40 text-slate-100 resize-none" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Información Pública</Label>
+                      <Textarea value={producto.info_publica || ''} onChange={(e) => updateProductField('info_publica', e.target.value)}
+                        placeholder="Información para mostrar en tienda en línea"
+                        rows={2} className="text-sm bg-slate-950/80 border-slate-700/40 text-slate-100 resize-none" />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-xs">Referencias Directas (OE)</Label>
@@ -1044,195 +1069,6 @@ function EditarProductoContent() {
                     </div>
                   </CardContent>
                 </Card>
-
-                  {/* Sección de Precios con Bloqueo */}
-                  <Card className="bg-[#141e2e] border border-[#ff6b35]/30 rounded-xl">
-                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                      <div>
-                        <CardTitle className="text-sm text-[#ff6b35] tracking-wide">AJUSTE DE PRECIOS</CardTitle>
-                        <CardDescription className="text-xs text-slate-400">Modifica los precios con justificación</CardDescription>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={() => setPreciosDesbloqueado(!preciosDesbloqueado)}
-                        className={`h-8 px-3 ${
-                          preciosDesbloqueado
-                            ? 'bg-green-600 hover:bg-green-700'
-                            : 'bg-yellow-600 hover:bg-yellow-700'
-                        }`}
-                      >
-                        {preciosDesbloqueado ? (
-                          <><Unlock className="h-4 w-4 mr-1" /> Desbloqueado</>
-                        ) : (
-                          <><Lock className="h-4 w-4 mr-1" /> Desbloquear</>
-                        )}
-                      </Button>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {!preciosDesbloqueado && (
-                        <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <span className="text-yellow-500">🔒</span>
-                            <p className="text-xs text-yellow-500 font-medium">
-                              Click en "Desbloquear" para modificar los precios
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {[
-                          { key: 'precio1', label: 'General' },
-                          { key: 'precio2', label: 'Mayorista' },
-                          { key: 'precio3', label: 'Cliente' },
-                          { key: 'precio4', label: 'Mecánico' },
-                          { key: 'precio5', label: 'Minorista' },
-                          { key: 'precio6', label: 'Inversor' },
-                          { key: 'precio7', label: 'Especial' },
-                        ].map(({ key, label }) => (
-                          <div key={key} className="space-y-1">
-                            <Label className="text-xs text-slate-400">{label}</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={precios[key as keyof Precios] || 0}
-                              onChange={(e) => updatePrecioField(key as keyof Precios, parseFloat(e.target.value) || 0)}
-                              disabled={!preciosDesbloqueado}
-                              className={`h-8 text-sm font-mono ${
-                                !preciosDesbloqueado ? 'bg-[#1e2a3b]/50 cursor-not-allowed opacity-60' : 'bg-slate-950/80'
-                              } border-slate-700/40 text-slate-100`}
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      {preciosDesbloqueado && (
-                        <div className="p-3 bg-[#0e88c9]/10 border border-[#0e88c9]/30 rounded-lg">
-                          <Label className="text-xs font-medium text-[#0e88c9] block mb-2">
-                            Justificación del Ajuste (Requerido) *
-                          </Label>
-                          <Textarea
-                            placeholder="Explica el motivo del ajuste de precios..."
-                            value={justificacionPrecio}
-                            onChange={(e) => setJustificacionPrecio(e.target.value)}
-                            className="bg-slate-950/80 border-[#0e88c9]/50 text-slate-200 min-h-[60px] text-sm"
-                          />
-                          <div className="flex justify-end gap-2 mt-3">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                setPreciosDesbloqueado(false);
-                                setJustificacionPrecio('');
-                                if (producto) fetchPrecios(producto.idprod);
-                              }}
-                              className="h-8 px-4 border-slate-600 text-slate-300 hover:bg-slate-700"
-                            >
-                              Cancelar
-                            </Button>
-                            <Button
-                              type="button"
-                              onClick={handleGuardarPrecios}
-                              disabled={savingPrecios || !justificacionPrecio.trim()}
-                              className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white h-8 px-4"
-                            >
-                              <Save className="h-4 w-4 mr-1" />
-                              {savingPrecios ? 'Guardando...' : 'Guardar Precios'}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Historial de Ajustes */}
-                      <div className="border-t border-slate-700/40 pt-3">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => setMostrarHistorial(!mostrarHistorial)}
-                          className="w-full justify-between text-slate-300 hover:text-[#0e88c9] hover:bg-[#1e2a3b] h-8"
-                        >
-                          <div className="flex items-center gap-2">
-                            <History className="h-4 w-4" />
-                            <span className="text-xs font-medium">Historial de Modificaciones</span>
-                          </div>
-                          <span className="text-xs text-slate-500">
-                            {mostrarHistorial ? 'Ocultar' : 'Ver historial'}
-                          </span>
-                        </Button>
-
-                        {mostrarHistorial && (
-                          <div className="mt-3 space-y-2 max-h-[250px] overflow-y-auto">
-                            {historialPrecios.length > 0 ? (
-                              historialPrecios.map((ajuste) => (
-                                <div key={ajuste.idajuste} className="bg-[#0d1523] border border-[#1e2a3b] rounded-lg p-3">
-                                  <div className="flex items-start justify-between mb-2">
-                                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                                      <Calendar className="h-3 w-3" />
-                                      <span>{formatFecha(ajuste.fecha)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                                      <User className="h-3 w-3" />
-                                      <span>{ajuste.nombre_usuario}</span>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Tabla de cambios de precios */}
-                                  <div className="mb-2 overflow-x-auto">
-                                    <table className="w-full text-xs">
-                                      <thead>
-                                        <tr className="border-b border-[#1e2a3b]">
-                                          <th className="text-left py-1 px-1 text-slate-500 font-medium">Precio</th>
-                                          <th className="text-right py-1 px-1 text-red-400 font-medium">Anterior</th>
-                                          <th className="text-center py-1 px-1 text-slate-500">→</th>
-                                          <th className="text-right py-1 px-1 text-green-400 font-medium">Nuevo</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {[
-                                          { nombre: 'General', anterior: ajuste.precio1_anterior, nuevo: ajuste.precio1_nuevo },
-                                          { nombre: 'Mayorista', anterior: ajuste.precio2_anterior, nuevo: ajuste.precio2_nuevo },
-                                          { nombre: 'Cliente', anterior: ajuste.precio3_anterior, nuevo: ajuste.precio3_nuevo },
-                                          { nombre: 'Mecánico', anterior: ajuste.precio4_anterior, nuevo: ajuste.precio4_nuevo },
-                                          { nombre: 'Minorista', anterior: ajuste.precio5_anterior, nuevo: ajuste.precio5_nuevo },
-                                          { nombre: 'Inversor', anterior: ajuste.precio6_anterior, nuevo: ajuste.precio6_nuevo },
-                                          { nombre: 'Especial', anterior: ajuste.precio7_anterior, nuevo: ajuste.precio7_nuevo },
-                                        ].filter(p => p.anterior !== null || p.nuevo !== null).map((precio, idx) => {
-                                          const anteriorNum = Number(precio.anterior) || 0;
-                                          const nuevoNum = Number(precio.nuevo) || 0;
-                                          const diff = nuevoNum - anteriorNum;
-                                          return (
-                                            <tr key={idx} className={`border-b border-[#1e2a3b]/50 ${diff !== 0 ? 'bg-[#0e88c9]/5' : ''}`}>
-                                              <td className="py-1 px-1 text-slate-300">{precio.nombre}</td>
-                                              <td className="py-1 px-1 text-right font-mono text-red-400/80">
-                                                ${anteriorNum.toFixed(2)}
-                                              </td>
-                                              <td className="py-1 px-1 text-center text-slate-600">→</td>
-                                              <td className="py-1 px-1 text-right font-mono text-green-400">
-                                                ${nuevoNum.toFixed(2)}
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
-                                      </tbody>
-                                    </table>
-                                  </div>
-
-                                  <div className="text-xs text-slate-300 pt-1 border-t border-[#1e2a3b]">
-                                    <span className="font-medium text-[#0e88c9]">Razón:</span>
-                                    <p className="mt-0.5 text-slate-400">{ajuste.razon_justificacion}</p>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-center py-4 text-xs text-slate-500">
-                                No hay historial de modificaciones
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
               </form>
             ) : (
               /* Preview del Producto */

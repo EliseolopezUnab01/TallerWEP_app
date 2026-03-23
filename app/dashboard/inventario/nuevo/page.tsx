@@ -22,8 +22,7 @@ export default function NuevoProductoPage() {
   const { addNotification } = useNotifications();
   const [images, setImages] = useState<File[]>([]);
   const [formData, setFormData] = useState({
-    // 28 campos de la tabla PRODUCTOS
-    tipo: '',
+    // 27 campos de la tabla PRODUCTOS (Excel) + costo
     idprodprov: '',
     idprodpaquete: '',
     idprodfisico: '',
@@ -465,17 +464,7 @@ export default function NuevoProductoPage() {
                   </div>
 
                   {/* Clasificación Adicional */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo">Tipo</Label>
-                      <Input 
-                        id="tipo" 
-                        placeholder="Tipo de producto" 
-                        value={formData.tipo}
-                        onChange={handleInputChange}
-                        className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
                     <div className="space-y-2">
                       <Label htmlFor="modelo">Modelo</Label>
                       <Input 
@@ -557,6 +546,59 @@ export default function NuevoProductoPage() {
                         type="number" 
                         value={formData.stock_fisico}
                         onChange={handleInputChange}
+                        className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Información Adicional */}
+                  <div className="space-y-4 border-t pt-4">
+                    <h3 className="text-sm font-medium text-slate-400">Información Adicional</h3>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="info_reservada">Información Reservada (Acerca del Item)</Label>
+                      <Textarea 
+                        id="info_reservada" 
+                        placeholder="Información escrita RESERVADA que se desea documentar del producto. Debe ser multilínea."
+                        value={formData.info_reservada}
+                        onChange={handleInputChange}
+                        rows={3}
+                        className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="info_publica">Información Pública</Label>
+                      <Textarea 
+                        id="info_publica" 
+                        placeholder="Lo mismo que lo anterior pero en caso de publicar en tienda en línea, sería esta la información a mostrar."
+                        value={formData.info_publica}
+                        onChange={handleInputChange}
+                        rows={3}
+                        className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="info_referencias_directas">Referencias Directas (OEM, ODA, OE)</Label>
+                      <Textarea 
+                        id="info_referencias_directas" 
+                        placeholder="Todas las referencias originales que identifican a este producto (OEM, ODA, OE, números originales de fabricantes)"
+                        value={formData.info_referencias_directas}
+                        onChange={handleInputChange}
+                        rows={2}
+                        className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="info_referencias_indirectas">Referencias Indirectas</Label>
+                      <Textarea 
+                        id="info_referencias_indirectas" 
+                        placeholder="Referencias de productos que no son exactamente estos productos, pero que pueden ser útiles como referencia."
+                        value={formData.info_referencias_indirectas}
+                        onChange={handleInputChange}
+                        rows={2}
                         className="bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
                       />
                     </div>

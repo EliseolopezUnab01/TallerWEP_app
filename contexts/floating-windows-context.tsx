@@ -8,14 +8,14 @@ interface ProductoFloating {
   nombre: string;
   descripcion?: string;
   imagen_principal?: string;
-  stock_contable: number;
+  stock_contable?: number;
   stock_fisico?: number;
-  costo?: number;
+  costo?: number | string;
   OE?: string;
   marca?: string;
   categoria_nombre?: string;
   categoria_nueva_nombre?: string;
-  idcategoria?: number;
+  idcategoria?: number | string;
   idcategoria_nuevo?: number;
   idprodprov?: string;
   idprodpaquete?: string;

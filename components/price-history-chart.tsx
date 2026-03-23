@@ -173,14 +173,7 @@ export function PriceHistoryChart({ idprod, currentPrices }: PriceHistoryChartPr
     return data;
   };
 
-  if (loading) {
-    return (
-      <div className="pt-2 border-t border-slate-700/50">
-        <div className="text-[10px] text-slate-500 text-center py-4 animate-pulse">Cargando...</div>
-      </div>
-    );
-  }
-
+  // Mostrar precios actuales inmediatamente, cargar historial en segundo plano
   const hasHistory = historial.length > 0;
   const availablePrices = preciosActuales.length > 0 ? preciosActuales : PRICE_CONFIG.filter(cfg =>
     historial.some((e: any) => (parseFloat(e[cfg.nuevoKey]) || 0) > 0)
@@ -213,40 +206,48 @@ export function PriceHistoryChart({ idprod, currentPrices }: PriceHistoryChartPr
       )}
 
 
-      {/* Gráfica de evolución (si hay historial) */}
-      {hasHistory && chartData.length >= 2 && (
-        <div>
-          {/* Selector de precio */}
-          <div className="flex items-center gap-1 mb-1.5 flex-wrap">
-            {availablePrices.map((p, i) => (
-              <button
-                key={p.key}
-                onClick={() => setSelectedPrice(i)}
-                className={`px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${
-                  selectedPrice === i ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 bg-transparent'
-                }`}
-                style={selectedPrice === i ? { backgroundColor: p.color, boxShadow: `0 0 8px ${p.color}40` } : {}}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Valor + tendencia */}
-          <div className="flex items-end justify-between mb-1">
-            <span className="text-lg font-bold" style={{ color: selected.color }}>${lastVal.toFixed(2)}</span>
-            {diff !== 0 && (
-              <div className={`flex items-center gap-0.5 text-[10px] ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {diff > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                <span className="font-medium">{diff > 0 ? '+' : ''}{diffPercent.toFixed(1)}%</span>
-              </div>
-            )}
-          </div>
-
-          {/* AreaChart */}
-          <EvolutionChart data={chartData} color={selected.color} idprod={idprod} />
+      {/* Gráfica de evolución */}
+      <div>
+        {/* Selector de precio */}
+        <div className="flex items-center gap-1 mb-1.5 flex-wrap">
+          {availablePrices.map((p, i) => (
+            <button
+              key={p.key}
+              onClick={() => setSelectedPrice(i)}
+              className={`px-1.5 py-0.5 rounded text-[8px] font-medium transition-all ${
+                selectedPrice === i ? 'text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 bg-transparent'
+              }`}
+              style={selectedPrice === i ? { backgroundColor: p.color, boxShadow: `0 0 8px ${p.color}40` } : {}}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
-      )}
+
+        {/* Valor + tendencia */}
+        <div className="flex items-end justify-between mb-1">
+          <span className="text-lg font-bold" style={{ color: selected.color }}>${selected.valor.toFixed(2)}</span>
+          {hasHistory && diff !== 0 && (
+            <div className={`flex items-center gap-0.5 text-[10px] ${diff > 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {diff > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+              <span className="font-medium">{diff > 0 ? '+' : ''}{diffPercent.toFixed(1)}%</span>
+            </div>
+          )}
+        </div>
+
+        {/* AreaChart - solo si hay historial con suficientes datos */}
+        {loading ? (
+          <div className="h-[100px] bg-[#0a0f1a] rounded-lg border border-slate-800/30 flex items-center justify-center">
+            <span className="text-[10px] text-slate-500 animate-pulse">Cargando historial...</span>
+          </div>
+        ) : hasHistory && chartData.length >= 2 ? (
+          <EvolutionChart data={chartData} color={selected.color} idprod={idprod} />
+        ) : (
+          <div className="h-[60px] bg-[#0a0f1a] rounded-lg border border-slate-800/30 flex items-center justify-center">
+            <span className="text-[10px] text-slate-500">Sin historial de cambios</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

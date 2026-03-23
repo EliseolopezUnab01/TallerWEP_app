@@ -44,7 +44,8 @@ export function FloatingWindowsRenderer() {
     }
   }, [updateProductInWindows]);
 
-  // Polling automático para actualizar todas las ventanas abiertas cada 10 segundos
+  // Polling automático para actualizar todas las ventanas abiertas cada 30 segundos
+  // Con delay inicial de 5 segundos para no bloquear la carga inicial
   useEffect(() => {
     if (floatingWindows.length === 0) {
       if (refreshIntervalRef.current) {
@@ -61,10 +62,14 @@ export function FloatingWindowsRenderer() {
       }
     };
 
-    // Iniciar polling cada 10 segundos
-    refreshIntervalRef.current = setInterval(refreshAllWindows, 10000);
+    // Delay inicial de 5 segundos antes de empezar el polling
+    const initialDelay = setTimeout(() => {
+      // Iniciar polling cada 30 segundos (menos frecuente para mejor rendimiento)
+      refreshIntervalRef.current = setInterval(refreshAllWindows, 30000);
+    }, 5000);
 
     return () => {
+      clearTimeout(initialDelay);
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
         refreshIntervalRef.current = null;
@@ -213,8 +218,8 @@ export function FloatingWindowsRenderer() {
                 </div>
                 <div>
                   <span className="text-slate-500">Stock:</span>
-                  <span className={`ml-1 font-medium ${win.producto.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {win.producto.stock_contable}
+                  <span className={`ml-1 font-medium ${(win.producto.stock_contable || 0) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {win.producto.stock_contable ?? '-'}
                   </span>
                 </div>
                 <div>

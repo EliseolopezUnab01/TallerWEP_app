@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Edit, Trash2, Eye, Package, Filter, Plus, X, LayoutGrid, List, FileDown, Loader2 } from 'lucide-react';
+import { Search, Edit, Trash2, Eye, Package, Filter, Plus, X, LayoutGrid, List, FileDown, Loader2, ExternalLink } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { generateCatalogPDF } from '@/lib/generate-catalog-pdf';
+import { SearchFilters, filterProductos, SearchFilterType } from '@/components/search-filters';
+import { useFloatingWindows } from '@/contexts/floating-windows-context';
 
 interface Producto {
   idprod: number;
@@ -20,7 +22,9 @@ interface Producto {
   marca: string;
   OE: string;
   idcategoria: string;
+  idcategoria_nuevo?: number;
   categoria_nombre: string;
+  categoria_nueva_nombre?: string;
   stock_contable: number;
   stock_fisico: number;
   imagen_principal: string;
@@ -62,6 +66,7 @@ interface Subgrupo {
 
 
 export default function AdministrarProductoPage() {
+  const { openFloatingWindow } = useFloatingWindows();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   // Nuevos estados para el sistema jerárquico
@@ -72,6 +77,7 @@ export default function AdministrarProductoPage() {
   const [subgrupos, setSubgrupos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchFilter, setSearchFilter] = useState<SearchFilterType>('todos');
   const [filterCategoria, setFilterCategoria] = useState('');
   const [filterGrupo, setFilterGrupo] = useState('');
   const [filterSubgrupo, setFilterSubgrupo] = useState('');
@@ -124,9 +130,9 @@ export default function AdministrarProductoPage() {
         const prods = productosData.products || [];
         setProductos(prods);
         
-        // Extraer grupos y subgrupos únicos de los productos (para compatibilidad)
-        const gruposUnicos = [...new Set(prods.map((p: any) => p.grupo).filter((g: string) => g && g.trim() !== ''))] as string[];
-        const subgruposUnicos = [...new Set(prods.map((p: any) => p.subgrupo).filter((s: string) => s && s.trim() !== ''))] as string[];
+        // Extraer grupos y subgrupos únicos de los productos (usando grupo_nombre y subgrupo_nombre de los JOINs)
+        const gruposUnicos = [...new Set(prods.map((p: any) => p.grupo_nombre).filter((g: string) => g && g.trim() !== ''))] as string[];
+        const subgruposUnicos = [...new Set(prods.map((p: any) => p.subgrupo_nombre).filter((s: string) => s && s.trim() !== ''))] as string[];
         
         setGrupos(gruposUnicos.sort());
         setSubgrupos(subgruposUnicos.sort());
@@ -163,7 +169,8 @@ export default function AdministrarProductoPage() {
         alert('Producto eliminado exitosamente');
         cargarDatos();
       } else {
-        const data = await response.json();
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : { error: 'Error desconocido' };
         alert(`Error: ${data.error}`);
       }
     } catch (error) {
@@ -405,16 +412,13 @@ export default function AdministrarProductoPage() {
     return ''; // No hay códigos disponibles
   };
 
-  const productosFiltrados = productos.filter(producto => {
-    const coincideBusqueda = 
-      producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      producto.OE.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      producto.marca?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      producto.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const coincideCategoria = !filterCategoria || producto.idcategoria === filterCategoria;
-
-    return coincideBusqueda && coincideCategoria;
+  // Primero filtrar por búsqueda usando filtros unificados
+  const productosConBusqueda = filterProductos(productos, searchTerm, searchFilter);
+  
+  // Luego aplicar filtro de categoría
+  const productosFiltrados = productosConBusqueda.filter(producto => {
+    const coincideCategoria = !filterCategoria || String(producto.idcategoria_nuevo) === filterCategoria;
+    return coincideCategoria;
   });
 
   if (loading) {
@@ -478,6 +482,29 @@ export default function AdministrarProductoPage() {
                   Nuevo Producto
                 </Button>
               </Link>
+              <Button 
+                variant="outline"
+                className="border-emerald-500/60 text-emerald-400 hover:bg-emerald-500/10"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/exportar-productos');
+                    if (!response.ok) throw new Error('Error al exportar');
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `productos_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                  } catch (error) {
+                    console.error('Error al exportar:', error);
+                    alert('Error al exportar productos');
+                  }
+                }}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                Exportar Excel
+              </Button>
             </div>
           </div>
 
@@ -565,38 +592,37 @@ export default function AdministrarProductoPage() {
               <CardDescription className="text-slate-400">Busca y filtra productos por categoría</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
-                  <Input
-                    placeholder="Buscar por nombre, OE, marca..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500"
-                  />
-                </div>
-                <div className="sm:w-48">
-                  <select
-                    value={filterCategoria}
-                    onChange={(e) => setFilterCategoria(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-slate-700/40 bg-slate-950/80 text-sm text-slate-100"
+              <div className="space-y-4">
+                <SearchFilters
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  searchFilter={searchFilter}
+                  onFilterChange={setSearchFilter}
+                />
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="sm:w-48">
+                    <select
+                      value={filterCategoria}
+                      onChange={(e) => setFilterCategoria(e.target.value)}
+                      className="w-full h-10 px-3 rounded-md border border-slate-700/40 bg-slate-950/80 text-sm text-slate-100"
+                    >
+                      <option value="">Todas las categorías</option>
+                      {categoriasNuevas.map(categoria => (
+                        <option key={categoria.idcategoria} value={categoria.idcategoria}>
+                          {categoria.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="border-[#0e88c9]/60 text-[#0e88c9] hover:bg-[#0e88c9]/10"
+                    onClick={() => { setSearchTerm(''); setFilterCategoria(''); setSearchFilter('todos'); }}
                   >
-                    <option value="">Todas las categorías</option>
-                    {categorias.map(categoria => (
-                      <option key={categoria.idcategoria} value={categoria.idcategoria}>
-                        {categoria.nombre}
-                      </option>
-                    ))}
-                  </select>
+                    <Filter className="h-4 w-4 mr-2" />
+                    Limpiar
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  className="border-[#0e88c9]/60 text-[#0e88c9] hover:bg-[#0e88c9]/10"
-                  onClick={() => { setSearchTerm(''); setFilterCategoria(''); }}
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Limpiar
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -683,6 +709,7 @@ export default function AdministrarProductoPage() {
                               <Link href={`/dashboard/inventario/editar-producto?id=${producto.idprod}`}>
                                 <Button variant="outline" size="sm" className="h-7 px-2 border-cyan-500/30 text-cyan-300"><Edit className="h-3 w-3" /></Button>
                               </Link>
+                              <Button variant="outline" size="sm" className="h-7 px-2 border-emerald-500/30 text-emerald-300" onClick={() => openFloatingWindow(producto as any)} title="Ventana flotante"><ExternalLink className="h-3 w-3" /></Button>
                               <Button variant="outline" size="sm" className="h-7 px-2 text-red-400 border-red-500/40" onClick={() => handleEliminar(producto.idprod)}><Trash2 className="h-3 w-3" /></Button>
                             </div>
                           </td>
@@ -716,6 +743,7 @@ export default function AdministrarProductoPage() {
                           <Link href={`/dashboard/inventario/editar-producto?id=${producto.idprod}`}>
                             <Button variant="outline" size="sm" className="h-7 px-2 border-cyan-500/30 text-cyan-300"><Edit className="h-3 w-3" /></Button>
                           </Link>
+                          <Button variant="outline" size="sm" className="h-7 px-2 border-emerald-500/30 text-emerald-300" onClick={() => openFloatingWindow(producto as any)} title="Ventana flotante"><ExternalLink className="h-3 w-3" /></Button>
                           <Button variant="outline" size="sm" className="h-7 px-2 text-red-400 border-red-500/40" onClick={() => handleEliminar(producto.idprod)}><Trash2 className="h-3 w-3" /></Button>
                         </div>
                       </CardContent>

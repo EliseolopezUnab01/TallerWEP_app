@@ -61,7 +61,7 @@ export default function EditarPreciosPage() {
         
         // Bloquear automáticamente los productos que ya tienen precios guardados
         const bloqueados: {[key: number]: boolean} = {};
-        productosArray.forEach(producto => {
+        productosArray.forEach((producto: any) => {
           // Si el producto tiene al menos un precio diferente de 0, está bloqueado
           const tienePreciosGuardados = 
             (producto.precio1 && producto.precio1 > 0) ||
