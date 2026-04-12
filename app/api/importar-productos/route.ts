@@ -318,14 +318,39 @@ export async function POST(request: NextRequest) {
       
       // Mapeo de idprod_excel → idprod_nuevo para vincular costos después
       const mapeoIds: { [key: string]: number } = {};
+      
+      // Rastrear productos ya procesados en esta sesión para evitar duplicados internos del Excel
+      const productosYaProcesados: Map<string, number> = new Map(); // clave: nombre|marca → idprod
 
       for (const producto of productos) {
         try {
           // Buscar si ya existe el producto en la BD
           let existingIdProd: number | null = null;
+          let metodoEncontrado = '';
           
-          // 1. Primero verificar si ya existe en la BD por nombre+marca (más confiable)
-          if (producto.nombre && producto.marca) {
+          // 0. Verificar si ya procesamos este producto en esta misma importación (duplicado interno del Excel)
+          const claveProducto = `${producto.nombre || ''}|${producto.marca || ''}`.toLowerCase();
+          if (productosYaProcesados.has(claveProducto)) {
+            existingIdProd = productosYaProcesados.get(claveProducto)!;
+            metodoEncontrado = 'duplicado_interno';
+          }
+          
+          // 1. Si tiene idprod del Excel, buscar directamente por ese ID
+          const idprodLimpio = String(producto.idprod || '').replace(/['"]/g, '').trim();
+          if (!existingIdProd && idprodLimpio && !isNaN(parseInt(idprodLimpio))) {
+            const idprodNum = parseInt(idprodLimpio);
+            const [byId]: any = await connection.execute(
+              'SELECT idprod FROM productos WHERE idprod = ?',
+              [idprodNum]
+            );
+            if (byId.length > 0) {
+              existingIdProd = byId[0].idprod;
+              metodoEncontrado = 'idprod';
+            }
+          }
+          
+          // 2. Buscar por nombre+marca (si tiene marca)
+          if (!existingIdProd && producto.nombre && producto.marca) {
             const [byNombreMarca]: any = await connection.execute(
               'SELECT idprod FROM productos WHERE nombre = ? AND marca = ?',
               [producto.nombre, producto.marca]
@@ -335,7 +360,19 @@ export async function POST(request: NextRequest) {
             }
           }
           
-          // 2. Si no encontró por nombre+marca, buscar por OE (si tiene OE válido)
+          // 3. Buscar solo por nombre exacto (si no tiene marca o no encontró)
+          if (!existingIdProd && producto.nombre) {
+            const [byNombre]: any = await connection.execute(
+              'SELECT idprod FROM productos WHERE nombre = ?',
+              [producto.nombre]
+            );
+            if (byNombre.length === 1) {
+              // Solo si hay exactamente 1 coincidencia para evitar ambigüedad
+              existingIdProd = byNombre[0].idprod;
+            }
+          }
+          
+          // 4. Buscar por OE (si tiene OE válido)
           if (!existingIdProd && producto.OE && producto.OE.trim() !== '') {
             const [byOE]: any = await connection.execute(
               'SELECT idprod FROM productos WHERE OE = ?',
@@ -346,7 +383,7 @@ export async function POST(request: NextRequest) {
             }
           }
           
-          // 3. Verificar mapeo de sesión actual (por si el mismo Excel tiene duplicados internos)
+          // 5. Verificar mapeo de sesión actual (por si el mismo Excel tiene duplicados internos)
           if (!existingIdProd && producto.idprod && mapeoIds[String(producto.idprod)]) {
             existingIdProd = mapeoIds[String(producto.idprod)];
           }
@@ -380,60 +417,117 @@ export async function POST(request: NextRequest) {
                 mapeoIds[String(producto.idprod)] = existingIdProd;
               }
               
+              // Registrar como procesado para evitar duplicados internos del Excel
+              productosYaProcesados.set(claveProducto, existingIdProd);
+              
               actualizados++;
             }
           } else {
             // Insertar nuevo producto
-            const [result]: any = await connection.execute(
-              `INSERT INTO productos (
-                idprodprov, idprodpaquete, idprodfisico, OE, nombre, descripcion,
-                etiquetas, marca, peso, codarancel, lado, modelo, clase, estilo, giro,
-                capacidad, unimedida, idcategoria, codigo_barras, info_reservada,
-                info_publica, info_referencias_directas, info_referencias_indirectas,
-                exento, stock_contable, stock_fisico, costo, aplicacion_marcas
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                producto.idprodprov || null,
-                producto.idprodpaquete || null,
-                producto.idprodfisico || null,
-                producto.OE,
-                producto.nombre,
-                producto.descripcion || null,
-                producto.etiquetas || null,
-                producto.marca || null,
-                producto.peso || null,
-                producto.codarancel || null,
-                producto.lado || null,
-                producto.modelo || null,
-                producto.clase || null,
-                producto.estilo || null,
-                producto.giro || null,
-                producto.capacidad || null,
-                producto.unimedida || null,
-                producto.idcategoria || null,
-                producto.codigo_barras || null,
-                producto.info_reservada || null,
-                producto.info_publica || null,
-                producto.info_referencias_directas || null,
-                producto.info_referencias_indirectas || null,
-                producto.exento ? 1 : 0,
-                producto.stock_contable,
-                producto.stock_fisico,
-                producto.costo,
-                producto.aplicacion_marcas || null
-              ]
-            );
+            // Si viene idprod del Excel, usarlo para mantener consistencia con sistema anterior
+            let newIdProd: number;
+            
+            if (idprodLimpio && !isNaN(parseInt(idprodLimpio))) {
+              // Insertar con el idprod específico del Excel
+              const idprodNum = parseInt(idprodLimpio);
+              await connection.execute(
+                `INSERT INTO productos (
+                  idprod, idprodprov, idprodpaquete, idprodfisico, OE, nombre, descripcion,
+                  etiquetas, marca, peso, codarancel, lado, modelo, clase, estilo, giro,
+                  capacidad, unimedida, idcategoria, codigo_barras, info_reservada,
+                  info_publica, info_referencias_directas, info_referencias_indirectas,
+                  exento, stock_contable, stock_fisico, costo, aplicacion_marcas
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  idprodNum,
+                  producto.idprodprov || null,
+                  producto.idprodpaquete || null,
+                  producto.idprodfisico || null,
+                  producto.OE,
+                  producto.nombre,
+                  producto.descripcion || null,
+                  producto.etiquetas || null,
+                  producto.marca || null,
+                  producto.peso || null,
+                  producto.codarancel || null,
+                  producto.lado || null,
+                  producto.modelo || null,
+                  producto.clase || null,
+                  producto.estilo || null,
+                  producto.giro || null,
+                  producto.capacidad || null,
+                  producto.unimedida || null,
+                  producto.idcategoria || null,
+                  producto.codigo_barras || null,
+                  producto.info_reservada || null,
+                  producto.info_publica || null,
+                  producto.info_referencias_directas || null,
+                  producto.info_referencias_indirectas || null,
+                  producto.exento ? 1 : 0,
+                  producto.stock_contable,
+                  producto.stock_fisico,
+                  producto.costo,
+                  producto.aplicacion_marcas || null
+                ]
+              );
+              newIdProd = idprodNum;
+            } else {
+              // Insertar sin idprod específico (auto-increment)
+              const [result]: any = await connection.execute(
+                `INSERT INTO productos (
+                  idprodprov, idprodpaquete, idprodfisico, OE, nombre, descripcion,
+                  etiquetas, marca, peso, codarancel, lado, modelo, clase, estilo, giro,
+                  capacidad, unimedida, idcategoria, codigo_barras, info_reservada,
+                  info_publica, info_referencias_directas, info_referencias_indirectas,
+                  exento, stock_contable, stock_fisico, costo, aplicacion_marcas
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  producto.idprodprov || null,
+                  producto.idprodpaquete || null,
+                  producto.idprodfisico || null,
+                  producto.OE,
+                  producto.nombre,
+                  producto.descripcion || null,
+                  producto.etiquetas || null,
+                  producto.marca || null,
+                  producto.peso || null,
+                  producto.codarancel || null,
+                  producto.lado || null,
+                  producto.modelo || null,
+                  producto.clase || null,
+                  producto.estilo || null,
+                  producto.giro || null,
+                  producto.capacidad || null,
+                  producto.unimedida || null,
+                  producto.idcategoria || null,
+                  producto.codigo_barras || null,
+                  producto.info_reservada || null,
+                  producto.info_publica || null,
+                  producto.info_referencias_directas || null,
+                  producto.info_referencias_indirectas || null,
+                  producto.exento ? 1 : 0,
+                  producto.stock_contable,
+                  producto.stock_fisico,
+                  producto.costo,
+                  producto.aplicacion_marcas || null
+                ]
+              );
+              newIdProd = result.insertId;
+            }
 
             // Crear registro en tabla costos
             await connection.execute(
               'INSERT INTO costos (idprod, costo, costo_local, costo_promedio) VALUES (?, ?, ?, ?)',
-              [result.insertId, producto.costo, producto.costo, producto.costo]
+              [newIdProd, producto.costo, producto.costo, producto.costo]
             );
 
-            // Guardar mapeo: idprod del Excel → idprod nuevo asignado
+            // Guardar mapeo: idprod del Excel → idprod asignado
             if (producto.idprod) {
-              mapeoIds[String(producto.idprod)] = result.insertId;
+              mapeoIds[String(producto.idprod)] = newIdProd;
             }
+
+            // Registrar como procesado para evitar duplicados internos del Excel
+            productosYaProcesados.set(claveProducto, newIdProd);
 
             // Guardar info del producto nuevo para debug
             productosNuevos.push({
