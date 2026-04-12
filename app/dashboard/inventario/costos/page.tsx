@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, DollarSign, Package, Save, RefreshCw, History, TrendingUp, FileText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { SearchFilters, filterProductos, SearchFilterType } from '@/components/search-filters';
+import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 
 interface Producto {
   idprod: number;
@@ -41,7 +41,7 @@ interface Costo {
 export default function CostosPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchFilter, setSearchFilter] = useState<SearchFilterType>('todos');
+  const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
@@ -130,7 +130,7 @@ export default function CostosPage() {
     }
   };
 
-  const productosFiltrados = filterProductos(productos, searchTerm, searchFilter);
+  const productosFiltrados = filterProductos(productos, searchTerm, selectedFilters);
 
   if (loading) {
     return (
@@ -167,8 +167,8 @@ export default function CostosPage() {
               <SearchFilters
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
-                searchFilter={searchFilter}
-                onFilterChange={setSearchFilter}
+                selectedFilters={selectedFilters}
+                onFiltersChange={setSelectedFilters}
                 compact={true}
               />
               

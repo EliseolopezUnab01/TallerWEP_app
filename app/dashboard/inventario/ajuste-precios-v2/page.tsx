@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Save, Package, Calculator, Percent, DollarSign, TrendingUp, RefreshCw, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Save, Package, Calculator, Percent, DollarSign, TrendingUp, RefreshCw, ArrowLeft, ExternalLink } from 'lucide-react';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import Image from 'next/image';
+import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 
 // Tipos de precio según el sistema FoxPro (6 tipos)
 const TIPOS_PRECIO = [
@@ -90,7 +91,7 @@ interface HistorialItem {
 export default function AjustePreciosV2Page() {
   const [productos, setProductos] = useState<ProductoLista[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchFilter, setSearchFilter] = useState<'todos' | 'descripcion' | 'referencia' | 'oem' | 'etiquetas' | 'aplicacion'>('todos');
+  const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -131,35 +132,8 @@ export default function AjustePreciosV2Page() {
     }
   };
 
-  // Filtrar productos por búsqueda con filtros específicos
-  const productosFiltrados = productos.filter(p => {
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    
-    switch (searchFilter) {
-      case 'descripcion':
-        return p.descripcion?.toLowerCase().includes(search) || p.nombre?.toLowerCase().includes(search);
-      case 'referencia':
-        return p.codigo_barras?.toLowerCase().includes(search) || String(p.idprod).includes(search);
-      case 'oem':
-        return p.OE?.toLowerCase().includes(search);
-      case 'etiquetas':
-        return p.etiquetas?.toLowerCase().includes(search);
-      case 'aplicacion':
-        return p.aplicacion_marcas?.toLowerCase().includes(search) || p.marca?.toLowerCase().includes(search);
-      default: // 'todos'
-        return (
-          p.nombre?.toLowerCase().includes(search) ||
-          String(p.idprod).includes(search) ||
-          p.codigo_barras?.toLowerCase().includes(search) ||
-          p.descripcion?.toLowerCase().includes(search) ||
-          p.OE?.toLowerCase().includes(search) ||
-          p.etiquetas?.toLowerCase().includes(search) ||
-          p.aplicacion_marcas?.toLowerCase().includes(search) ||
-          p.marca?.toLowerCase().includes(search)
-        );
-    }
-  });
+  // Filtrar productos usando el componente SearchFilters
+  const productosFiltrados = filterProductos(productos, searchTerm, selectedFilters);
 
   // Seleccionar producto para ajustar precios
   const seleccionarProducto = async (idprod: number) => {
@@ -414,89 +388,12 @@ export default function AjustePreciosV2Page() {
           /* VISTA: Lista de productos */
           <div className="space-y-4">
             {/* Buscador con filtros */}
-            <div className="space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                <Input
-                  placeholder={
-                    searchFilter === 'todos' ? "Buscar en todos los campos..." :
-                    searchFilter === 'descripcion' ? "Buscar por descripción o nombre..." :
-                    searchFilter === 'referencia' ? "Buscar por código de barras o ID..." :
-                    searchFilter === 'oem' ? "Buscar por código OEM..." :
-                    searchFilter === 'etiquetas' ? "Buscar por etiquetas..." :
-                    "Buscar por aplicación o marca..."
-                  }
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-12 bg-[#0d1523] border-[#1e2a3b] text-slate-200"
-                />
-              </div>
-              
-              {/* Filtros de búsqueda */}
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs text-slate-500 self-center mr-2">Filtrar por:</span>
-                <button
-                  onClick={() => setSearchFilter('todos')}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                    searchFilter === 'todos' 
-                      ? 'bg-[#0e88c9] text-white' 
-                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                  }`}
-                >
-                  Todos
-                </button>
-                <button
-                  onClick={() => setSearchFilter('descripcion')}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                    searchFilter === 'descripcion' 
-                      ? 'bg-[#0e88c9] text-white' 
-                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                  }`}
-                >
-                  Descripción
-                </button>
-                <button
-                  onClick={() => setSearchFilter('referencia')}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                    searchFilter === 'referencia' 
-                      ? 'bg-[#0e88c9] text-white' 
-                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                  }`}
-                >
-                  Referencia
-                </button>
-                <button
-                  onClick={() => setSearchFilter('oem')}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                    searchFilter === 'oem' 
-                      ? 'bg-[#0e88c9] text-white' 
-                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                  }`}
-                >
-                  OEM
-                </button>
-                <button
-                  onClick={() => setSearchFilter('etiquetas')}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                    searchFilter === 'etiquetas' 
-                      ? 'bg-[#0e88c9] text-white' 
-                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                  }`}
-                >
-                  Etiquetas
-                </button>
-                <button
-                  onClick={() => setSearchFilter('aplicacion')}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                    searchFilter === 'aplicacion' 
-                      ? 'bg-[#0e88c9] text-white' 
-                      : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                  }`}
-                >
-                  Aplicación
-                </button>
-              </div>
-            </div>
+            <SearchFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              selectedFilters={selectedFilters}
+              onFiltersChange={setSelectedFilters}
+            />
 
             {/* Lista de productos */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -539,87 +436,13 @@ export default function AjustePreciosV2Page() {
           <>
           {/* Buscador rápido para cambiar de producto sin salir */}
           <div className="mb-4 space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-              <Input
-                placeholder={
-                  searchFilter === 'todos' ? "Buscar otro producto..." :
-                  searchFilter === 'descripcion' ? "Buscar por descripción o nombre..." :
-                  searchFilter === 'referencia' ? "Buscar por código de barras o ID..." :
-                  searchFilter === 'oem' ? "Buscar por código OEM..." :
-                  searchFilter === 'etiquetas' ? "Buscar por etiquetas..." :
-                  "Buscar por aplicación o marca..."
-                }
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 bg-[#0d1523] border-[#1e2a3b] text-slate-200"
-              />
-            </div>
-            
-            {/* Filtros de búsqueda */}
-            <div className="flex flex-wrap gap-2">
-              <span className="text-xs text-slate-500 self-center mr-2">Filtrar por:</span>
-              <button
-                onClick={() => setSearchFilter('todos')}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  searchFilter === 'todos' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                }`}
-              >
-                Todos
-              </button>
-              <button
-                onClick={() => setSearchFilter('descripcion')}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  searchFilter === 'descripcion' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                }`}
-              >
-                Descripción
-              </button>
-              <button
-                onClick={() => setSearchFilter('referencia')}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  searchFilter === 'referencia' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                }`}
-              >
-                Referencia
-              </button>
-              <button
-                onClick={() => setSearchFilter('oem')}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  searchFilter === 'oem' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                }`}
-              >
-                OEM
-              </button>
-              <button
-                onClick={() => setSearchFilter('etiquetas')}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  searchFilter === 'etiquetas' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                }`}
-              >
-                Etiquetas
-              </button>
-              <button
-                onClick={() => setSearchFilter('aplicacion')}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  searchFilter === 'aplicacion' 
-                    ? 'bg-[#0e88c9] text-white' 
-                    : 'bg-[#1e2a3b] text-slate-400 hover:bg-[#2a3a4b]'
-                }`}
-              >
-                Aplicación
-              </button>
-            </div>
+            <SearchFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              selectedFilters={selectedFilters}
+              onFiltersChange={setSelectedFilters}
+              compact
+            />
 
             {/* Resultados de búsqueda rápida */}
             {searchTerm && productosFiltrados.length > 0 && (

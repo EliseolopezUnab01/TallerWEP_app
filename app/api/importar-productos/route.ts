@@ -314,23 +314,45 @@ export async function POST(request: NextRequest) {
       let insertados = 0;
       let actualizados = 0;
       const erroresImport: { fila: number; error: string }[] = [];
+      const productosNuevos: { nombre: string; marca: string; OE: string; fila: number }[] = [];
       
       // Mapeo de idprod_excel → idprod_nuevo para vincular costos después
       const mapeoIds: { [key: string]: number } = {};
 
       for (const producto of productos) {
         try {
-          // Buscar si ya existe el producto usando el mapeo de idprod del Excel
-          // Si ya importamos este idprod antes, actualizamos en lugar de insertar
+          // Buscar si ya existe el producto en la BD
           let existingIdProd: number | null = null;
           
-          // Verificar si este idprod del Excel ya fue mapeado a un idprod de la BD
-          if (producto.idprod && mapeoIds[String(producto.idprod)]) {
+          // 1. Primero verificar si ya existe en la BD por nombre+marca (más confiable)
+          if (producto.nombre && producto.marca) {
+            const [byNombreMarca]: any = await connection.execute(
+              'SELECT idprod FROM productos WHERE nombre = ? AND marca = ?',
+              [producto.nombre, producto.marca]
+            );
+            if (byNombreMarca.length > 0) {
+              existingIdProd = byNombreMarca[0].idprod;
+            }
+          }
+          
+          // 2. Si no encontró por nombre+marca, buscar por OE (si tiene OE válido)
+          if (!existingIdProd && producto.OE && producto.OE.trim() !== '') {
+            const [byOE]: any = await connection.execute(
+              'SELECT idprod FROM productos WHERE OE = ?',
+              [producto.OE]
+            );
+            if (byOE.length === 1) {
+              existingIdProd = byOE[0].idprod;
+            }
+          }
+          
+          // 3. Verificar mapeo de sesión actual (por si el mismo Excel tiene duplicados internos)
+          if (!existingIdProd && producto.idprod && mapeoIds[String(producto.idprod)]) {
             existingIdProd = mapeoIds[String(producto.idprod)];
           }
 
           if (existingIdProd) {
-            // Actualizar producto existente (ya fue importado antes en esta sesión)
+            // Actualizar producto existente
             const updateFields: string[] = [];
             const updateValues: any[] = [];
 
@@ -352,6 +374,12 @@ export async function POST(request: NextRequest) {
                 `UPDATE productos SET ${updateFields.join(', ')} WHERE idprod = ?`,
                 updateValues
               );
+              
+              // Guardar mapeo para vincular costos
+              if (producto.idprod) {
+                mapeoIds[String(producto.idprod)] = existingIdProd;
+              }
+              
               actualizados++;
             }
           } else {
@@ -407,6 +435,14 @@ export async function POST(request: NextRequest) {
               mapeoIds[String(producto.idprod)] = result.insertId;
             }
 
+            // Guardar info del producto nuevo para debug
+            productosNuevos.push({
+              nombre: producto.nombre || '',
+              marca: producto.marca || '',
+              OE: producto.OE || '',
+              fila: producto._fila || 0
+            });
+
             insertados++;
           }
         } catch (error: any) {
@@ -429,6 +465,7 @@ export async function POST(request: NextRequest) {
         insertados,
         actualizados,
         errores: erroresImport,
+        productosNuevos, // Lista de productos que se insertaron como nuevos
         mapeoIds, // Devolver mapeo para referencia
         mapeoGuardado: Object.keys(mapeoIds).length > 0
       });

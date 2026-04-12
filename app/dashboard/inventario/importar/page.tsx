@@ -20,6 +20,7 @@ interface ImportResult {
   insertados: number;
   actualizados: number;
   errores: { fila: number; error: string }[];
+  productosNuevos?: { nombre: string; marca: string; OE: string; fila: number }[];
 }
 
 export default function ImportarProductosPage() {
@@ -402,6 +403,30 @@ REF-002,Producto Ejemplo 2,Otra descripción,MARCA2,5,5,50.00,987654321,frenos,H
                       <li key={idx}>Fila {err.fila}: {err.error}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Mostrar productos nuevos insertados (para debug de duplicados) */}
+              {importResult.productosNuevos && importResult.productosNuevos.length > 0 && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg mb-4">
+                  <p className="text-sm font-medium text-amber-400 mb-2">
+                    ⚠️ Productos insertados como NUEVOS (no encontrados en BD):
+                  </p>
+                  <ul className="text-sm text-amber-300/80 space-y-1 max-h-40 overflow-y-auto">
+                    {importResult.productosNuevos.map((prod, idx) => (
+                      <li key={idx} className="flex gap-2">
+                        <span className="text-slate-500">Fila {prod.fila}:</span>
+                        <span className="font-medium">{prod.nombre}</span>
+                        <span className="text-slate-500">|</span>
+                        <span>Marca: {prod.marca || '(vacía)'}</span>
+                        <span className="text-slate-500">|</span>
+                        <span>OE: {prod.OE || '(vacío)'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Estos productos no coincidieron con ninguno existente por nombre+marca ni por OE.
+                  </p>
                 </div>
               )}
 

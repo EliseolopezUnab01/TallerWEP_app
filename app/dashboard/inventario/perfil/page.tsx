@@ -16,7 +16,7 @@ import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { getCodigoCatalogo } from '@/lib/format-utils';
-import { SearchFilters, filterProductos, SearchFilterType } from '@/components/search-filters';
+import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 
 interface Producto {
   idprod: number;
@@ -82,7 +82,7 @@ function PerfilProductoPageContent() {
   const [producto, setProducto] = useState<Producto | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchFilter, setSearchFilter] = useState<SearchFilterType>('todos');
+  const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
   const [searchResults, setSearchResults] = useState<Producto[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   
@@ -94,6 +94,17 @@ function PerfilProductoPageContent() {
   const [allProductos, setAllProductos] = useState<Producto[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProductos, setTotalProductos] = useState(0);
+  const [itemsPerPage] = useState(20);
+  const [loadingList, setLoadingList] = useState(false);
+  
+  // Debounce para búsqueda en servidor
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Ventanas flotantes - usando contexto global
   const { openFloatingWindow: openGlobalFloatingWindow } = useFloatingWindows();
@@ -127,10 +138,41 @@ function PerfilProductoPageContent() {
     { codigo: 'E9-A6', stock: 33 },
   ]);
 
+  // Debounce del término de búsqueda
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 150);
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Resetear página cuando cambia la búsqueda o filtros
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedIndex(0);
+  }, [debouncedSearch, selectedFilters]);
+
   useEffect(() => {
     fetchAllProductos();
     fetchCategoriasJerarquia();
-  }, []);
+  }, [currentPage, debouncedSearch, selectedFilters]);
+
+  // Cargar producto específico si viene con idParam (solo una vez al inicio)
+  const idParamLoadedRef = useRef(false);
+  useEffect(() => {
+    if (idParam && !idParamLoadedRef.current) {
+      idParamLoadedRef.current = true;
+      fetchProductoById(Number(idParam));
+    }
+  }, [idParam]);
 
   // Cargar categorías jerárquicas
   const fetchCategoriasJerarquia = async () => {
@@ -187,8 +229,8 @@ function PerfilProductoPageContent() {
     }
   }, [idParam, allProductos]);
 
-  // Filtrar productos según búsqueda usando filtros unificados
-  const productosFiltrados = filterProductos(allProductos, searchQuery, searchFilter);
+  // Los productos ya vienen filtrados del servidor
+  const productosFiltrados = allProductos;
 
   // Producto seleccionado en la lista (para preview)
   const productoPreview = productosFiltrados[selectedIndex] || null;
@@ -250,16 +292,32 @@ function PerfilProductoPageContent() {
   }, [selectedIndex, loading]);
 
   const fetchAllProductos = async () => {
+    setLoadingList(true);
     try {
-      const response = await fetch('/api/productos');
+      // Construir URL con parámetros de búsqueda
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString()
+      });
+      if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim());
+      if (selectedFilters.length > 0) params.append('filters', selectedFilters.join(','));
+      
+      const response = await fetch(`/api/productos?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setAllProductos(data.products || []);
+        
+        // Actualizar datos de paginación
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages);
+          setTotalProductos(data.pagination.total);
+        }
       }
     } catch (error) {
       console.error('Error al cargar productos:', error);
     } finally {
       setLoading(false);
+      setLoadingList(false);
     }
   };
 
@@ -274,6 +332,31 @@ function PerfilProductoPageContent() {
       { tipo: 'ESPECIAL', valor: parseFloat(prod.precio7 || '0'), editable: false },
     ];
     setPrecios(preciosFromDB);
+  };
+
+  // Función para cargar un producto específico por ID (cuando viene de otra página)
+  const fetchProductoById = async (id: number) => {
+    try {
+      const response = await fetch(`/api/productos/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.product) {
+          const prod = data.product;
+          setProducto(prod);
+          setOpenTabs(prev => {
+            const existingTab = prev.find(tab => tab.id === prod.idprod);
+            if (existingTab) return prev;
+            return [...prev, { id: prod.idprod, nombre: prod.nombre, producto: prod }];
+          });
+          setActiveTabId(prod.idprod);
+          loadPrecios(prod);
+          setLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar producto:', error);
+      setLoading(false);
+    }
   };
 
   // Función para abrir ventana flotante usando el contexto global
@@ -543,8 +626,8 @@ function PerfilProductoPageContent() {
                 <SearchFilters
                   searchTerm={searchQuery}
                   onSearchChange={setSearchQuery}
-                  searchFilter={searchFilter}
-                  onFilterChange={setSearchFilter}
+                  selectedFilters={selectedFilters}
+                  onFiltersChange={setSelectedFilters}
                   compact={true}
                 />
               </CardHeader>
@@ -590,6 +673,36 @@ function PerfilProductoPageContent() {
                   ))
                 )}
               </div>
+              
+              {/* Controles de Paginación */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between p-2 border-t border-slate-700 bg-slate-900/50">
+                  <span className="text-xs text-slate-400">
+                    Pág. {currentPage}/{totalPages} ({totalProductos} total)
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1 || loadingList}
+                      className="h-6 px-2 text-xs border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    <span className="text-xs text-slate-300 px-2">{currentPage}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages || loadingList}
+                      className="h-6 px-2 text-xs border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
 
             {/* Info del producto seleccionado (preview) */}

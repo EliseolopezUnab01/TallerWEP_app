@@ -6,15 +6,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Save, Package } from 'lucide-react';
+import { Save, Package } from 'lucide-react';
 import Image from 'next/image';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
+import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 
 interface Producto {
   idprod: number;
   nombre: string;
   codigo_barras: string;
+  descripcion?: string;
+  OE?: string;
+  etiquetas?: string;
+  aplicacion_marcas?: string;
+  marca?: string;
+  idprodprov?: string;
+  idprodpaquete?: string;
+  idprodfisico?: string;
   // Costo
   costo: number;
   // 7 tipos de precios
@@ -32,6 +41,7 @@ export default function EditarPreciosPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [productosFiltrados, setProductosFiltrados] = useState<Producto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
   const [loading, setLoading] = useState(true);
   const [preciosAutomaticos, setPreciosAutomaticos] = useState<{[key: string]: boolean}>({});
   const [porcentajeGanancia, setPorcentajeGanancia] = useState<{[key: string]: number}>({});
@@ -42,8 +52,9 @@ export default function EditarPreciosPage() {
   }, []);
 
   useEffect(() => {
-    filterProductos();
-  }, [searchTerm, productos]);
+    const filtered = filterProductos(productos, searchTerm, selectedFilters);
+    setProductosFiltrados(filtered);
+  }, [searchTerm, productos, selectedFilters]);
 
   const fetchProductos = async () => {
     try {
@@ -105,27 +116,6 @@ export default function EditarPreciosPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterProductos = () => {
-    // Asegurarse de que productos sea un array
-    if (!Array.isArray(productos)) {
-      setProductosFiltrados([]);
-      return;
-    }
-
-    let filtered = productos;
-
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.nombre?.toLowerCase().includes(searchLower) ||
-        String(p.idprod || '').toLowerCase().includes(searchLower) ||
-        p.codigo_barras?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    setProductosFiltrados(filtered);
   };
 
   const handlePrecioChange = (idprod: number, field: keyof Producto, value: any) => {
@@ -273,17 +263,14 @@ export default function EditarPreciosPage() {
           <p className="text-sm text-slate-400">Gestiona y configura los precios de los productos del inventario</p>
         </div>
 
-        {/* Barra de búsqueda */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex-1 max-w-2xl relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <Input
-              placeholder="Buscar por nombre, código o código de barras..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-[#0d1523] border-[#1e2a3b] text-slate-200 placeholder:text-slate-500 h-12 text-base"
-            />
-          </div>
+        {/* Barra de búsqueda con filtros */}
+        <div className="mb-6">
+          <SearchFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedFilters={selectedFilters}
+            onFiltersChange={setSelectedFilters}
+          />
         </div>
 
         {/* Lista de productos */}

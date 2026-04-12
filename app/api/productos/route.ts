@@ -4,11 +4,95 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
-// GET: Obtener todos los productos
-export async function GET() {
+// GET: Obtener productos con paginación
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const search = searchParams.get('search') || '';
+    const categoria = searchParams.get('categoria') || '';
+    const filters = searchParams.get('filters') || ''; // Filtros múltiples separados por coma
+    const offset = (page - 1) * limit;
+    
     const connection = await connectDB();
     
+    // Construir condiciones de filtro
+    let whereConditions: string[] = [];
+    let params: any[] = [];
+    
+    if (search) {
+      const filterList = filters ? filters.split(',').filter(f => f.trim()) : [];
+      
+      // Dividir búsqueda en palabras para búsqueda flexible
+      // Ejemplo: "hi crem" busca productos que contengan "hi" Y "crem" en cualquier orden
+      const words = search.trim().split(/\s+/).filter(w => w.length > 0);
+      
+      // Definir campos de búsqueda según filtros
+      let searchFields: string[] = [];
+      if (filterList.length === 0) {
+        // Buscar en todos los campos principales
+        searchFields = ['p.nombre', 'p.OE', 'p.marca', 'p.codigo_barras', 'p.idprodprov', 'p.descripcion', 'p.etiquetas', 'p.aplicacion_marcas'];
+      } else {
+        if (filterList.includes('nombre')) searchFields.push('p.nombre');
+        if (filterList.includes('descripcion')) searchFields.push('p.descripcion');
+        if (filterList.includes('codigo')) {
+          searchFields.push('p.codigo_barras', 'p.idprodprov', 'p.idprodpaquete', 'p.idprodfisico');
+        }
+        if (filterList.includes('oem')) searchFields.push('p.OE');
+        if (filterList.includes('etiquetas')) searchFields.push('p.etiquetas');
+        if (filterList.includes('aplicacion')) searchFields.push('p.aplicacion_marcas', 'p.marca');
+      }
+      
+      // Concatenar todos los campos en un solo texto para búsqueda flexible
+      // Cada palabra debe encontrarse en el texto combinado de todos los campos
+      const concatFields = `CONCAT_WS(' ', ${searchFields.map(f => `COALESCE(${f}, '')`).join(', ')})`;
+      
+      // Cada palabra debe estar en el texto concatenado
+      const wordConditions: string[] = [];
+      for (const word of words) {
+        wordConditions.push(`${concatFields} LIKE ?`);
+        params.push(`%${word}%`);
+      }
+      
+      if (wordConditions.length > 0) {
+        whereConditions.push(`(${wordConditions.join(' AND ')})`);
+      }
+    }
+    
+    if (categoria) {
+      whereConditions.push(`p.idcategoria_nuevo = ?`);
+      params.push(categoria);
+    }
+    
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    
+    // Ejecutar consultas en paralelo para mayor velocidad
+    const [countResult, statsResult]: any = await Promise.all([
+      // Total para paginación
+      connection.execute(
+        `SELECT COUNT(*) as total FROM productos p ${whereClause}`,
+        params
+      ),
+      // Estadísticas globales (solo si no hay búsqueda activa para ahorrar tiempo)
+      !search ? connection.execute(`
+        SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN stock_contable > 0 THEN 1 ELSE 0 END) as en_stock,
+          SUM(CASE WHEN stock_contable = 0 OR stock_contable IS NULL THEN 1 ELSE 0 END) as sin_stock
+        FROM productos
+      `) : Promise.resolve([[{ total: 0, en_stock: 0, sin_stock: 0 }]])
+    ]);
+    
+    const total = countResult[0][0].total;
+    const totalPages = Math.ceil(total / limit);
+    const stats = {
+      totalProductos: statsResult[0][0].total || 0,
+      enStock: statsResult[0][0].en_stock || 0,
+      sinStock: statsResult[0][0].sin_stock || 0
+    };
+    
+    // Obtener productos paginados
     const [products]: any = await connection.execute(`
       SELECT 
         p.*,
@@ -38,33 +122,52 @@ export async function GET() {
       LEFT JOIN subgrupos sg ON p.id_subgrupo = sg.id_subgrupo
       LEFT JOIN precios pr ON p.idprod = pr.idprod
       LEFT JOIN costos co ON p.idprod = co.idprod
+      ${whereClause}
       ORDER BY p.created_at DESC
-    `);
+      LIMIT ? OFFSET ?
+    `, [...params, limit, offset]);
     
-    // Obtener todas las imágenes de todos los productos para construir el arreglo `imagenes`
-    const [imagesRows]: any = await connection.execute(`
-      SELECT idprod, imagen_url, orden, es_principal
-      FROM producto_imagenes
-      ORDER BY idprod ASC, es_principal DESC, orden ASC
-    `);
+    // Obtener imágenes solo de los productos de esta página
+    const productIds = products.map((p: any) => p.idprod);
+    let imagesByProduct: Record<number, string[]> = {};
+    
+    if (productIds.length > 0) {
+      const placeholders = productIds.map(() => '?').join(',');
+      const [imagesRows]: any = await connection.execute(`
+        SELECT idprod, imagen_url, orden, es_principal
+        FROM producto_imagenes
+        WHERE idprod IN (${placeholders})
+        ORDER BY idprod ASC, es_principal DESC, orden ASC
+      `, productIds);
+
+      for (const row of imagesRows) {
+        const id = Number(row.idprod);
+        if (!imagesByProduct[id]) {
+          imagesByProduct[id] = [];
+        }
+        imagesByProduct[id].push(row.imagen_url as string);
+      }
+    }
 
     await connection.end();
-
-    const imagesByProduct: Record<number, string[]> = {};
-    for (const row of imagesRows) {
-      const id = Number(row.idprod);
-      if (!imagesByProduct[id]) {
-        imagesByProduct[id] = [];
-      }
-      imagesByProduct[id].push(row.imagen_url as string);
-    }
 
     const productsWithImages = products.map((p: any) => ({
       ...p,
       imagenes: imagesByProduct[Number(p.idprod)] || [],
     }));
 
-    return NextResponse.json({ products: productsWithImages });
+    return NextResponse.json({ 
+      products: productsWithImages,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      },
+      stats
+    });
   } catch (error) {
     console.error('Error al obtener productos:', error);
     return NextResponse.json(

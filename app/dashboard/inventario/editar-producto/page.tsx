@@ -19,7 +19,7 @@ import { UserDropdown } from '@/components/user-dropdown';
 import { useNotifications } from '@/contexts/notification-context';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { getCodigoCatalogo } from '@/lib/format-utils';
-import { SearchFilters, filterProductos, SearchFilterType } from '@/components/search-filters';
+import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 
 interface Producto {
   idprod: number;
@@ -102,7 +102,7 @@ function EditarProductoContent() {
   const [saving, setSaving] = useState(false);
   const [producto, setProducto] = useState<Producto | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchFilter, setSearchFilter] = useState<SearchFilterType>('todos');
+  const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [newImages, setNewImages] = useState<File[]>([]);
@@ -126,6 +126,17 @@ function EditarProductoContent() {
   const [selectedCategoria, setSelectedCategoria] = useState<number | null>(null);
   const [selectedGrupo, setSelectedGrupo] = useState<number | null>(null);
   const [selectedSubgrupo, setSelectedSubgrupo] = useState<number | null>(null);
+  
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProductos, setTotalProductos] = useState(0);
+  const [itemsPerPage] = useState(20);
+  const [loadingList, setLoadingList] = useState(false);
+  
+  // Debounce para búsqueda en servidor
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Categorías antiguas (para compatibilidad)
   const categorias = [
@@ -142,10 +153,31 @@ function EditarProductoContent() {
   const unidadesMedida = ['UNIDAD', 'PAR', 'JUEGO', 'KIT', 'LITRO', 'GALON', 'METRO'];
   const lados = ['IZQUIERDO', 'DERECHO', 'AMBOS', 'NO APLICA'];
 
+  // Debounce del término de búsqueda
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 150);
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Resetear página cuando cambia la búsqueda o filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, selectedFilters]);
+
   useEffect(() => {
     fetchAllProductos();
     fetchCategoriasJerarquia();
-  }, []);
+  }, [currentPage, debouncedSearch, selectedFilters]);
 
   // Cargar categorías jerárquicas
   const fetchCategoriasJerarquia = async () => {
@@ -277,21 +309,37 @@ function EditarProductoContent() {
   };
 
   const fetchAllProductos = async () => {
+    setLoadingList(true);
     try {
-      const response = await fetch('/api/productos');
+      // Construir URL con parámetros de búsqueda
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString()
+      });
+      if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim());
+      if (selectedFilters.length > 0) params.append('filters', selectedFilters.join(','));
+      
+      const response = await fetch(`/api/productos?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setAllProductos(data.products || []);
+        
+        // Actualizar datos de paginación
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages);
+          setTotalProductos(data.pagination.total);
+        }
       }
     } catch (error) {
       console.error('Error al cargar productos:', error);
     } finally {
       setLoading(false);
+      setLoadingList(false);
     }
   };
 
-  // Filtrar productos usando filtros unificados
-  const productosFiltrados = filterProductos(allProductos, searchQuery, searchFilter);
+  // Los productos ya vienen filtrados del servidor
+  const productosFiltrados = allProductos;
 
   const productoPreview = productosFiltrados[selectedIndex] || null;
 
@@ -657,8 +705,8 @@ function EditarProductoContent() {
                 <SearchFilters
                   searchTerm={searchQuery}
                   onSearchChange={(value) => { setSearchQuery(value); setSelectedIndex(0); }}
-                  searchFilter={searchFilter}
-                  onFilterChange={setSearchFilter}
+                  selectedFilters={selectedFilters}
+                  onFiltersChange={setSelectedFilters}
                   compact={true}
                 />
               </CardHeader>
@@ -707,6 +755,36 @@ function EditarProductoContent() {
                   ))
                 )}
               </div>
+              
+              {/* Controles de Paginación */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between p-2 border-t border-slate-700 bg-slate-900/50">
+                  <span className="text-xs text-slate-400">
+                    Pág. {currentPage}/{totalPages} ({totalProductos} total)
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1 || loadingList}
+                      className="h-6 px-2 text-xs border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    <span className="text-xs text-slate-300 px-2">{currentPage}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages || loadingList}
+                      className="h-6 px-2 text-xs border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
 
             {/* Info del producto seleccionado (cuando NO está editando) */}

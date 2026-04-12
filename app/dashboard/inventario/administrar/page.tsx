@@ -5,14 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Edit, Trash2, Eye, Package, Filter, Plus, X, LayoutGrid, List, FileDown, Loader2, ExternalLink } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Search, Edit, Trash2, Eye, Package, Filter, Plus, X, LayoutGrid, List, FileDown, Loader2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { generateCatalogPDF } from '@/lib/generate-catalog-pdf';
-import { SearchFilters, filterProductos, SearchFilterType } from '@/components/search-filters';
+import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 
 interface Producto {
@@ -77,7 +77,7 @@ export default function AdministrarProductoPage() {
   const [subgrupos, setSubgrupos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchFilter, setSearchFilter] = useState<SearchFilterType>('todos');
+  const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
   const [filterCategoria, setFilterCategoria] = useState('');
   const [filterGrupo, setFilterGrupo] = useState('');
   const [filterSubgrupo, setFilterSubgrupo] = useState('');
@@ -109,15 +109,69 @@ export default function AdministrarProductoPage() {
   const [categoriaSubTab, setCategoriaSubTab] = useState<'categorias' | 'grupos' | 'subgrupos'>('categorias');
   const [selectedCategoriaFilter, setSelectedCategoriaFilter] = useState<number | null>(null);
   const [generandoPDF, setGenerandoPDF] = useState(false);
-
+  
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProductos, setTotalProductos] = useState(0);
+  const [itemsPerPage] = useState(20);
+  
+  // Estadísticas globales
+  const [statsGlobal, setStatsGlobal] = useState({ totalProductos: 0, enStock: 0, sinStock: 0 });
+  
+  // Debounce para búsqueda
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Debounce del término de búsqueda (esperar 150ms después de que el usuario deje de escribir)
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 150);
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchTerm]);
 
-  const cargarDatos = async () => {
+  // Carga inicial con loading
+  const isFirstLoad = useRef(true);
+  
+  useEffect(() => {
+    if (isFirstLoad.current) {
+      cargarDatos(true); // Primera carga muestra loading
+      isFirstLoad.current = false;
+    } else {
+      cargarDatos(false); // Búsquedas no muestran loading (evita scroll arriba)
+    }
+  }, [currentPage, debouncedSearch, filterCategoria, selectedFilters]);
+
+  // Resetear página cuando cambia el término de búsqueda, categoría o filtros
+  useEffect(() => {
+    if (!isFirstLoad.current) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearch, filterCategoria, selectedFilters]);
+
+  const cargarDatos = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     try {
+      // Construir URL con parámetros de búsqueda
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString()
+      });
+      if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim());
+      if (filterCategoria) params.append('categoria', filterCategoria);
+      if (selectedFilters.length > 0) params.append('filters', selectedFilters.join(','));
+      
       const [productosResponse, categoriasResponse, jerarquiaResponse] = await Promise.all([
-        fetch('/api/productos'),
+        fetch(`/api/productos?${params.toString()}`),
         fetch('/api/categorias'),
         fetch('/api/categorias-jerarquia')
       ]);
@@ -129,6 +183,17 @@ export default function AdministrarProductoPage() {
       if (productosResponse.ok) {
         const prods = productosData.products || [];
         setProductos(prods);
+        
+        // Actualizar datos de paginación
+        if (productosData.pagination) {
+          setTotalPages(productosData.pagination.totalPages);
+          setTotalProductos(productosData.pagination.total);
+        }
+        
+        // Actualizar estadísticas globales (solo si vienen datos válidos - durante búsqueda se omiten)
+        if (productosData.stats && productosData.stats.totalProductos > 0) {
+          setStatsGlobal(productosData.stats);
+        }
         
         // Extraer grupos y subgrupos únicos de los productos (usando grupo_nombre y subgrupo_nombre de los JOINs)
         const gruposUnicos = [...new Set(prods.map((p: any) => p.grupo_nombre).filter((g: string) => g && g.trim() !== ''))] as string[];
@@ -412,14 +477,8 @@ export default function AdministrarProductoPage() {
     return ''; // No hay códigos disponibles
   };
 
-  // Primero filtrar por búsqueda usando filtros unificados
-  const productosConBusqueda = filterProductos(productos, searchTerm, searchFilter);
-  
-  // Luego aplicar filtro de categoría
-  const productosFiltrados = productosConBusqueda.filter(producto => {
-    const coincideCategoria = !filterCategoria || String(producto.idcategoria_nuevo) === filterCategoria;
-    return coincideCategoria;
-  });
+  // Los productos ya vienen filtrados del servidor, solo aplicamos filtros locales adicionales si es necesario
+  const productosFiltrados = productos;
 
   if (loading) {
     return (
@@ -544,7 +603,7 @@ export default function AdministrarProductoPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-400">Total Productos</p>
-                    <p className="text-2xl font-bold text-slate-50">{productos.length}</p>
+                    <p className="text-2xl font-bold text-slate-50">{statsGlobal.totalProductos}</p>
                   </div>
                   <Package className="h-8 w-8 text-cyan-400" />
                 </div>
@@ -555,7 +614,7 @@ export default function AdministrarProductoPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-400">En Stock</p>
-                    <p className="text-2xl font-bold text-green-500">{productos.filter(p => p.stock_contable > 0).length}</p>
+                    <p className="text-2xl font-bold text-green-500">{statsGlobal.enStock}</p>
                   </div>
                   <Package className="h-8 w-8 text-green-500" />
                 </div>
@@ -566,7 +625,7 @@ export default function AdministrarProductoPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-400">Sin Stock</p>
-                    <p className="text-2xl font-bold text-red-500">{productos.filter(p => p.stock_contable === 0).length}</p>
+                    <p className="text-2xl font-bold text-red-500">{statsGlobal.sinStock}</p>
                   </div>
                   <Package className="h-8 w-8 text-red-500" />
                 </div>
@@ -585,47 +644,48 @@ export default function AdministrarProductoPage() {
             </Card>
           </div>
 
-          {/* Filtros y Búsqueda */}
-          <Card className="bg-[#141e2e] border border-[#0e88c9]/30 shadow-lg rounded-xl">
-            <CardHeader>
-              <CardTitle className="text-slate-200">Filtrar Productos</CardTitle>
-              <CardDescription className="text-slate-400">Busca y filtra productos por categoría</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+          {/* Filtros y Búsqueda - Sticky */}
+          <div className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-[#0a0f1a]/95 backdrop-blur-sm border-b border-slate-800/50">
+            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+              <div className="flex-1 w-full">
                 <SearchFilters
                   searchTerm={searchTerm}
                   onSearchChange={setSearchTerm}
-                  searchFilter={searchFilter}
-                  onFilterChange={setSearchFilter}
+                  selectedFilters={selectedFilters}
+                  onFiltersChange={setSelectedFilters}
                 />
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="sm:w-48">
-                    <select
-                      value={filterCategoria}
-                      onChange={(e) => setFilterCategoria(e.target.value)}
-                      className="w-full h-10 px-3 rounded-md border border-slate-700/40 bg-slate-950/80 text-sm text-slate-100"
-                    >
-                      <option value="">Todas las categorías</option>
-                      {categoriasNuevas.map(categoria => (
-                        <option key={categoria.idcategoria} value={categoria.idcategoria}>
-                          {categoria.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="border-[#0e88c9]/60 text-[#0e88c9] hover:bg-[#0e88c9]/10"
-                    onClick={() => { setSearchTerm(''); setFilterCategoria(''); setSearchFilter('todos'); }}
-                  >
-                    <Filter className="h-4 w-4 mr-2" />
-                    Limpiar
-                  </Button>
-                </div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex gap-2 items-center">
+                <select
+                  value={filterCategoria}
+                  onChange={(e) => setFilterCategoria(e.target.value)}
+                  className="h-10 px-3 rounded-md border border-slate-700/40 bg-slate-950/80 text-sm text-slate-100"
+                >
+                  <option value="">Todas las categorías</option>
+                  {categoriasNuevas.map(categoria => (
+                    <option key={categoria.idcategoria} value={categoria.idcategoria}>
+                      {categoria.nombre}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-[#0e88c9]/60 text-[#0e88c9] hover:bg-[#0e88c9]/10"
+                  onClick={() => { setSearchTerm(''); setFilterCategoria(''); setSelectedFilters([]); }}
+                >
+                  <Filter className="h-4 w-4 mr-1" />
+                  Limpiar
+                </Button>
+              </div>
+            </div>
+            {(searchTerm || filterCategoria) && (
+              <div className="mt-2 text-sm text-slate-400">
+                Mostrando {totalProductos} resultado{totalProductos !== 1 ? 's' : ''}
+                {searchTerm && <span className="text-[#0e88c9]"> para "{searchTerm}"</span>}
+              </div>
+            )}
+          </div>
 
           {/* Lista de Productos */}
           <Card className="bg-[#141e2e] border border-[#0e88c9]/30 shadow-lg rounded-xl">
@@ -633,7 +693,7 @@ export default function AdministrarProductoPage() {
               <div>
                 <CardTitle className="text-slate-200">Lista de Productos</CardTitle>
                 <CardDescription className="text-slate-400">
-                  {productosFiltrados.length} de {productos.length} productos encontrados
+                  {productosFiltrados.length} de {totalProductos} productos (Página {currentPage} de {totalPages})
                 </CardDescription>
               </div>
               {/* Toggle Vista Cards / Tabla */}
@@ -749,6 +809,81 @@ export default function AdministrarProductoPage() {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              )}
+              
+              {/* Controles de Paginación */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-700">
+                  <div className="text-sm text-slate-400">
+                    Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalProductos)} de {totalProductos}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      Primera
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={currentPage === pageNum 
+                              ? "bg-[#0e88c9] text-white" 
+                              : "border-slate-600 text-slate-300 hover:bg-slate-700"
+                            }
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                    >
+                      Última
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>

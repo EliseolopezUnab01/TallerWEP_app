@@ -242,7 +242,7 @@ export function FloatingWindowsRenderer() {
                   <div>
                     <span className="text-slate-500 text-xs">Categoría:</span>
                     <span className="text-[#0e88c9] ml-1 text-xs">
-                      {win.producto.categoria_nueva_nombre || win.producto.categoria_nombre || '-'}
+                      {(win.producto as any).categoria_nueva_nombre || (win.producto as any).categoria_nombre || '-'}
                     </span>
                   </div>
                   <div>
@@ -257,7 +257,7 @@ export function FloatingWindowsRenderer() {
                   </div>
                   <div>
                     <span className="text-slate-500 text-xs">Stock Físico:</span>
-                    <span className="text-slate-300 ml-1 text-xs">{win.producto.stock_fisico || win.producto.stock_contable}</span>
+                    <span className="text-slate-300 ml-1 text-xs">{(win.producto as any).stock_fisico || win.producto.stock_contable}</span>
                   </div>
                 </div>
               </div>
@@ -266,12 +266,12 @@ export function FloatingWindowsRenderer() {
               <PriceHistoryChart
                 idprod={win.producto.idprod}
                 currentPrices={{
-                  precio1: win.producto.precio1,
-                  precio2: win.producto.precio2,
-                  precio3: win.producto.precio3,
-                  precio4: win.producto.precio4,
-                  precio5: win.producto.precio5,
-                  precio6: win.producto.precio6,
+                  precio1: (win.producto as any).precio1 || 0,
+                  precio2: (win.producto as any).precio2 || 0,
+                  precio3: (win.producto as any).precio3 || 0,
+                  precio4: (win.producto as any).precio4 || 0,
+                  precio5: (win.producto as any).precio5 || 0,
+                  precio6: (win.producto as any).precio6 || 0,
                 }}
               />
 
