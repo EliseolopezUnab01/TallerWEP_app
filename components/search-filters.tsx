@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Check } from 'lucide-react';
+import { Search, Check, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 // Tipos de filtro individuales
@@ -81,8 +81,17 @@ export function SearchFilters({
           placeholder={getPlaceholder()}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10 bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500"
+          className="pl-10 pr-10 bg-slate-950/80 border-slate-700/40 text-slate-100 placeholder:text-slate-500"
         />
+        {searchTerm && (
+          <button
+            onClick={() => onSearchChange('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 hover:text-slate-200 transition-colors"
+            title="Limpiar búsqueda"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Filtros de búsqueda - selección múltiple */}

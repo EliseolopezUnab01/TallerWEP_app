@@ -114,6 +114,32 @@ export default function NuevoProductoPage() {
 
   const lados = ['IZQUIERDO', 'DERECHO', 'AMBOS', 'NO APLICA'];
   
+  // Clave para localStorage
+  const STORAGE_KEY = 'nuevo_producto_draft';
+
+  // Restaurar datos del formulario desde localStorage al cargar
+  useEffect(() => {
+    const savedData = localStorage.getItem(STORAGE_KEY);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setFormData(prev => ({ ...prev, ...parsed }));
+      } catch (error) {
+        console.error('Error al restaurar datos guardados:', error);
+      }
+    }
+  }, []);
+
+  // Guardar datos del formulario en localStorage cuando cambian
+  useEffect(() => {
+    // Solo guardar si hay algún dato
+    const hasData = formData.nombre || formData.OE || formData.descripcion || 
+                    formData.marca || formData.idprodprov || formData.etiquetas;
+    if (hasData) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+    }
+  }, [formData]);
+
   // Cargar categorías jerárquicas
   useEffect(() => {
     const fetchCategorias = async () => {
@@ -287,13 +313,74 @@ export default function NuevoProductoPage() {
     }
   };
   
-  // Prevenir submit con Enter en campos de texto
+  // Hacer que Enter funcione como Tab para cambiar de campo
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && e.currentTarget.tagName !== 'TEXTAREA') {
       e.preventDefault();
+      // Buscar el siguiente elemento focusable
+      const form = e.currentTarget.form;
+      if (form) {
+        const elements = Array.from(form.elements) as HTMLElement[];
+        const currentIndex = elements.indexOf(e.currentTarget as HTMLElement);
+        // Buscar el siguiente elemento que sea input, textarea o select
+        for (let i = currentIndex + 1; i < elements.length; i++) {
+          const el = elements[i];
+          if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.tagName === 'BUTTON') && 
+              !el.hasAttribute('disabled') && 
+              el.getAttribute('type') !== 'hidden') {
+            el.focus();
+            break;
+          }
+        }
+      }
     }
   };
   
+  // Limpiar formulario
+  const handleLimpiarFormulario = () => {
+    setFormData({
+      idprodprov: '',
+      idprodpaquete: '',
+      idprodfisico: '',
+      OE: '',
+      nombre: '',
+      descripcion: '',
+      etiquetas: '',
+      marca: '',
+      peso: '',
+      codarancel: '',
+      lado: '',
+      modelo: '',
+      clase: '',
+      estilo: '',
+      giro: '',
+      capacidad: '',
+      unimedida: 'UNIDAD',
+      idcategoria: '',
+      idcategoria_nuevo: '',
+      id_grupo: '',
+      id_subgrupo: '',
+      codigo_barras: '',
+      info_reservada: '',
+      info_publica: '',
+      info_referencias_directas: '',
+      info_referencias_indirectas: '',
+      exento: false,
+      stock_contable: '0',
+      stock_fisico: '0',
+      costo: '0'
+    });
+    setImages([]);
+    setSelectedImageIndex(0);
+    setValidationErrors({});
+    setOeError(null);
+    setProveedorError(null);
+    setGruposFiltrados([]);
+    setSubgruposFiltrados([]);
+    // Limpiar localStorage
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
   // Validar campos obligatorios
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
@@ -304,12 +391,11 @@ export default function NuevoProductoPage() {
     if (!formData.OE.trim()) errors.OE = 'La referencia OE es obligatoria';
     if (!formData.idprodprov.trim()) errors.idprodprov = 'El código proveedor es obligatorio';
     if (!formData.idcategoria_nuevo) errors.idcategoria_nuevo = 'La categoría es obligatoria';
-    if (!formData.id_grupo) errors.id_grupo = 'El grupo es obligatorio';
-    if (!formData.id_subgrupo) errors.id_subgrupo = 'El subgrupo es obligatorio';
+    // Grupo y subgrupo ya no son obligatorios
     if (!formData.etiquetas.trim()) errors.etiquetas = 'Las etiquetas de búsqueda son obligatorias';
     if (!formData.info_referencias_directas.trim()) errors.info_referencias_directas = 'Al menos una referencia directa es obligatoria';
     
-    if (oeError) errors.OE = oeError;
+    // OE ya no se valida como duplicado - puede repetirse
     if (proveedorError) errors.idprodprov = proveedorError;
     
     setValidationErrors(errors);
@@ -359,6 +445,8 @@ export default function NuevoProductoPage() {
       const result = await response.json();
 
       if (response.ok) {
+        // Limpiar localStorage al guardar exitosamente
+        localStorage.removeItem(STORAGE_KEY);
         // Agregar notificación de éxito
         addNotification({
           type: 'success',
@@ -428,15 +516,27 @@ export default function NuevoProductoPage() {
               </p>
             </div>
           </div>
-          <Button 
-            type="submit" 
-            form="product-form"
-            disabled={loading} 
-            className="border-[#0e88c9]/60 bg-[#0e88c9]/10 text-[#0e88c9] hover:bg-[#0e88c9]/20 rounded-full px-5"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {loading ? 'Guardando...' : 'Guardar Producto'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              type="button"
+              onClick={handleLimpiarFormulario}
+              disabled={loading}
+              variant="outline"
+              className="border-slate-600 text-slate-300 hover:bg-slate-700 rounded-full px-5"
+            >
+              <X className="h-4 w-4 mr-2" />
+              Limpiar
+            </Button>
+            <Button 
+              type="submit" 
+              form="product-form"
+              disabled={loading} 
+              className="border-[#0e88c9]/60 bg-[#0e88c9]/10 text-[#0e88c9] hover:bg-[#0e88c9]/20 rounded-full px-5"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? 'Guardando...' : 'Guardar Producto'}
+            </Button>
+          </div>
         </div>
 
         <form id="product-form" onSubmit={handleSaveClick}>
@@ -644,54 +744,24 @@ export default function NuevoProductoPage() {
                       {validationErrors.marca && <p className="text-xs text-red-400">{validationErrors.marca}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="OE" className={validationErrors.OE || oeError ? 'text-red-400' : ''}>Referencia OE *</Label>
-                      <div className="relative">
-                        <Input 
-                          id="OE" 
-                          placeholder="Referencia del fabricante" 
-                          value={formData.OE}
-                          onChange={(e) => {
-                            handleInputChange(e);
-                            const value = e.target.value;
-                            // Copiar OE a Referencias Directas automáticamente
-                            setFormData(prev => ({
-                              ...prev,
-                              info_referencias_directas: value ? (prev.info_referencias_directas.includes(value) ? prev.info_referencias_directas : value) : prev.info_referencias_directas
-                            }));
-                            // Verificar OE duplicado con debounce más eficiente
-                            if (oeTimeoutRef.current) {
-                              clearTimeout(oeTimeoutRef.current);
-                            }
-                            if (value.trim()) {
-                              oeTimeoutRef.current = setTimeout(() => checkOEDuplicate(value), 300);
-                            } else {
-                              setOeError(null);
-                              setCheckingOE(false);
-                            }
-                          }}
-                          onKeyDown={handleKeyDown}
-                          className={`bg-slate-950/80 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20 pr-10 ${validationErrors.OE || oeError ? 'border-red-500' : 'border-slate-700/40'}`}
-                        />
-                        {/* Indicador de estado */}
-                        <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                          {checkingOE ? (
-                            <div className="w-5 h-5 border-2 border-[#0e88c9] border-t-transparent rounded-full animate-spin"></div>
-                          ) : formData.OE.trim() ? (
-                            oeError ? (
-                              <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                                <X className="h-3 w-3 text-white" />
-                              </div>
-                            ) : (
-                              <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                              </div>
-                            )
-                          ) : null}
-                        </div>
-                      </div>
-                      {(validationErrors.OE || oeError) && <p className="text-xs text-red-400">{validationErrors.OE || oeError}</p>}
+                      <Label htmlFor="OE" className={validationErrors.OE ? 'text-red-400' : ''}>Referencia OE *</Label>
+                      <Input 
+                        id="OE" 
+                        placeholder="Referencia del fabricante" 
+                        value={formData.OE}
+                        onChange={(e) => {
+                          handleInputChange(e);
+                          const value = e.target.value;
+                          // Copiar OE a Referencias Directas automáticamente
+                          setFormData(prev => ({
+                            ...prev,
+                            info_referencias_directas: value ? (prev.info_referencias_directas.includes(value) ? prev.info_referencias_directas : value) : prev.info_referencias_directas
+                          }));
+                        }}
+                        onKeyDown={handleKeyDown}
+                        className={`bg-slate-950/80 text-slate-100 placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20 ${validationErrors.OE ? 'border-red-500' : 'border-slate-700/40'}`}
+                      />
+                      {validationErrors.OE && <p className="text-xs text-red-400">{validationErrors.OE}</p>}
                     </div>
                   </div>
 
@@ -798,13 +868,13 @@ export default function NuevoProductoPage() {
                       {validationErrors.idcategoria_nuevo && <p className="text-xs text-red-400">{validationErrors.idcategoria_nuevo}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="id_grupo" className={validationErrors.id_grupo ? 'text-red-400' : ''}>Grupo *</Label>
+                      <Label htmlFor="id_grupo">Grupo</Label>
                       <Select 
                         value={formData.id_grupo}
                         onValueChange={(value) => handleSelectChange('id_grupo', value)}
                         disabled={!formData.idcategoria_nuevo}
                       >
-                        <SelectTrigger className={`bg-slate-950/80 text-slate-100 focus:border-cyan-700/60 focus:ring-cyan-700/20 ${validationErrors.id_grupo ? 'border-red-500' : 'border-slate-700/40'} ${!formData.idcategoria_nuevo ? 'opacity-50' : ''}`}>
+                        <SelectTrigger className={`bg-slate-950/80 text-slate-100 focus:border-cyan-700/60 focus:ring-cyan-700/20 border-slate-700/40 ${!formData.idcategoria_nuevo ? 'opacity-50' : ''}`}>
                           <SelectValue placeholder={formData.idcategoria_nuevo ? "Seleccione grupo" : "Primero seleccione categoría"} />
                         </SelectTrigger>
                         <SelectContent className="bg-slate-900 border-slate-700 text-slate-100">
@@ -815,16 +885,15 @@ export default function NuevoProductoPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      {validationErrors.id_grupo && <p className="text-xs text-red-400">{validationErrors.id_grupo}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="id_subgrupo" className={validationErrors.id_subgrupo ? 'text-red-400' : ''}>Subgrupo *</Label>
+                      <Label htmlFor="id_subgrupo">Subgrupo</Label>
                       <Select 
                         value={formData.id_subgrupo}
                         onValueChange={(value) => handleSelectChange('id_subgrupo', value)}
                         disabled={!formData.id_grupo}
                       >
-                        <SelectTrigger className={`bg-slate-950/80 text-slate-100 focus:border-cyan-700/60 focus:ring-cyan-700/20 ${validationErrors.id_subgrupo ? 'border-red-500' : 'border-slate-700/40'} ${!formData.id_grupo ? 'opacity-50' : ''}`}>
+                        <SelectTrigger className={`bg-slate-950/80 text-slate-100 focus:border-cyan-700/60 focus:ring-cyan-700/20 border-slate-700/40 ${!formData.id_grupo ? 'opacity-50' : ''}`}>
                           <SelectValue placeholder={formData.id_grupo ? "Seleccione subgrupo" : "Primero seleccione grupo"} />
                         </SelectTrigger>
                         <SelectContent className="bg-slate-900 border-slate-700 text-slate-100">
@@ -835,7 +904,6 @@ export default function NuevoProductoPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      {validationErrors.id_subgrupo && <p className="text-xs text-red-400">{validationErrors.id_subgrupo}</p>}
                     </div>
                   </div>
                   

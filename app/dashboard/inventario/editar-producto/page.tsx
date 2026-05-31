@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
+import { useState, useEffect, Suspense, useRef, useCallback, memo, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -127,12 +127,25 @@ function EditarProductoContent() {
   const [selectedGrupo, setSelectedGrupo] = useState<number | null>(null);
   const [selectedSubgrupo, setSelectedSubgrupo] = useState<number | null>(null);
   
-  // Estados de paginación
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  // Estado de carga y total
   const [totalProductos, setTotalProductos] = useState(0);
-  const [itemsPerPage] = useState(20);
   const [loadingList, setLoadingList] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(100); // Mostrar 100 productos inicialmente
+  
+  // Estados para selección múltiple y edición masiva
+  const [modoSeleccionMultiple, setModoSeleccionMultiple] = useState(false);
+  const [productosSeleccionados, setProductosSeleccionados] = useState<Set<number>>(new Set());
+  const [showEdicionMasiva, setShowEdicionMasiva] = useState(false);
+  const [savingMasivo, setSavingMasivo] = useState(false);
+  const [edicionMasivaData, setEdicionMasivaData] = useState({
+    marca: '',
+    idcategoria_nuevo: '',
+    id_grupo: '',
+    id_subgrupo: '',
+    unimedida: '',
+    lado: '',
+    exento: '' as '' | 'true' | 'false',
+  });
   
   // Debounce para búsqueda en servidor
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -169,15 +182,12 @@ function EditarProductoContent() {
     };
   }, [searchQuery]);
 
-  // Resetear página cuando cambia la búsqueda o filtros
+  // Cargar productos cuando cambia la búsqueda o filtros
   useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, selectedFilters]);
-
-  useEffect(() => {
+    setVisibleCount(100); // Resetear al cambiar búsqueda
     fetchAllProductos();
     fetchCategoriasJerarquia();
-  }, [currentPage, debouncedSearch, selectedFilters]);
+  }, [debouncedSearch, selectedFilters]);
 
   // Cargar categorías jerárquicas
   const fetchCategoriasJerarquia = async () => {
@@ -311,10 +321,10 @@ function EditarProductoContent() {
   const fetchAllProductos = async () => {
     setLoadingList(true);
     try {
-      // Construir URL con parámetros de búsqueda
+      // Cargar TODOS los productos (limit alto para traer todos)
       const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: itemsPerPage.toString()
+        page: '1',
+        limit: '10000' // Traer todos los productos
       });
       if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim());
       if (selectedFilters.length > 0) params.append('filters', selectedFilters.join(','));
@@ -323,12 +333,7 @@ function EditarProductoContent() {
       if (response.ok) {
         const data = await response.json();
         setAllProductos(data.products || []);
-        
-        // Actualizar datos de paginación
-        if (data.pagination) {
-          setTotalPages(data.pagination.totalPages);
-          setTotalProductos(data.pagination.total);
-        }
+        setTotalProductos(data.pagination?.total || data.products?.length || 0);
       }
     } catch (error) {
       console.error('Error al cargar productos:', error);
@@ -403,6 +408,99 @@ function EditarProductoContent() {
     setPreciosDesbloqueado(false);
     setJustificacionPrecio('');
     setMostrarHistorial(false);
+  };
+
+  // Funciones para selección múltiple
+  const toggleProductoSeleccionado = (idprod: number) => {
+    setProductosSeleccionados(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(idprod)) {
+        newSet.delete(idprod);
+      } else {
+        newSet.add(idprod);
+      }
+      return newSet;
+    });
+  };
+
+  const seleccionarTodos = () => {
+    const todosIds = productosFiltrados.map(p => p.idprod);
+    setProductosSeleccionados(new Set(todosIds));
+  };
+
+  const deseleccionarTodos = () => {
+    setProductosSeleccionados(new Set());
+  };
+
+  const cancelarModoSeleccion = () => {
+    setModoSeleccionMultiple(false);
+    setProductosSeleccionados(new Set());
+    setShowEdicionMasiva(false);
+  };
+
+  // Función para guardar edición masiva
+  const handleGuardarEdicionMasiva = async () => {
+    if (productosSeleccionados.size === 0) {
+      alert('No hay productos seleccionados');
+      return;
+    }
+
+    // Construir objeto con solo los campos que tienen valor
+    const camposAActualizar: Record<string, any> = {};
+    if (edicionMasivaData.marca) camposAActualizar.marca = edicionMasivaData.marca;
+    if (edicionMasivaData.idcategoria_nuevo) camposAActualizar.idcategoria_nuevo = parseInt(edicionMasivaData.idcategoria_nuevo);
+    if (edicionMasivaData.id_grupo) camposAActualizar.id_grupo = parseInt(edicionMasivaData.id_grupo);
+    if (edicionMasivaData.id_subgrupo) camposAActualizar.id_subgrupo = parseInt(edicionMasivaData.id_subgrupo);
+    if (edicionMasivaData.unimedida) camposAActualizar.unimedida = edicionMasivaData.unimedida;
+    if (edicionMasivaData.lado) camposAActualizar.lado = edicionMasivaData.lado;
+    if (edicionMasivaData.exento !== '') camposAActualizar.exento = edicionMasivaData.exento === 'true';
+
+    if (Object.keys(camposAActualizar).length === 0) {
+      alert('No hay campos para actualizar. Selecciona al menos un campo.');
+      return;
+    }
+
+    setSavingMasivo(true);
+    try {
+      const response = await fetch('/api/productos/edicion-masiva', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ids: Array.from(productosSeleccionados),
+          campos: camposAActualizar
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        addNotification({
+          type: 'success',
+          title: 'Edición masiva completada',
+          message: `Se actualizaron ${data.actualizados} productos correctamente`,
+        });
+        
+        // Recargar productos y limpiar selección
+        fetchAllProductos();
+        cancelarModoSeleccion();
+        setEdicionMasivaData({
+          marca: '',
+          idcategoria_nuevo: '',
+          id_grupo: '',
+          id_subgrupo: '',
+          unimedida: '',
+          lado: '',
+          exento: '',
+        });
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.error || 'No se pudo completar la edición masiva'}`);
+      }
+    } catch (error) {
+      console.error('Error en edición masiva:', error);
+      alert('Error al realizar la edición masiva');
+    } finally {
+      setSavingMasivo(false);
+    }
   };
 
   const updatePrecioField = (field: keyof Precios, value: number) => {
@@ -701,7 +799,7 @@ function EditarProductoContent() {
           {/* Columna Izquierda: Lista de productos */}
           <div className="lg:col-span-4 space-y-4">
             <Card className="bg-[#141e2e] border border-[#0e88c9]/30 rounded-xl overflow-hidden">
-              <CardHeader className="py-2 px-3 border-b border-slate-800">
+              <CardHeader className="py-2 px-3 border-b border-slate-800 space-y-2">
                 <SearchFilters
                   searchTerm={searchQuery}
                   onSearchChange={(value) => { setSearchQuery(value); setSelectedIndex(0); }}
@@ -709,24 +807,110 @@ function EditarProductoContent() {
                   onFiltersChange={setSelectedFilters}
                   compact={true}
                 />
+                
+                {/* Controles de selección múltiple */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-700">
+                  {!modoSeleccionMultiple ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setModoSeleccionMultiple(true)}
+                      className="h-7 text-xs border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Edición Masiva
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-purple-400 font-medium">
+                        {productosSeleccionados.size} seleccionados
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={seleccionarTodos}
+                        className="h-6 text-[10px] px-2 border-slate-600 text-slate-300 hover:bg-slate-700"
+                      >
+                        Todos
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={deseleccionarTodos}
+                        className="h-6 text-[10px] px-2 border-slate-600 text-slate-300 hover:bg-slate-700"
+                      >
+                        Ninguno
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={cancelarModoSeleccion}
+                        className="h-6 text-[10px] px-2 border-red-500/50 text-red-400 hover:bg-red-500/10"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {modoSeleccionMultiple && productosSeleccionados.size > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => setShowEdicionMasiva(true)}
+                      className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      Editar {productosSeleccionados.size}
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
-              <div ref={listRef} className="h-[500px] overflow-y-auto divide-y divide-slate-800/50">
+              <div 
+                ref={listRef} 
+                className="h-[500px] overflow-y-auto"
+                onScroll={(e) => {
+                  const target = e.target as HTMLDivElement;
+                  // Cargar más cuando llegue cerca del final
+                  if (target.scrollHeight - target.scrollTop - target.clientHeight < 200) {
+                    if (visibleCount < productosFiltrados.length) {
+                      setVisibleCount(prev => Math.min(prev + 50, productosFiltrados.length));
+                    }
+                  }
+                }}
+              >
                 {productosFiltrados.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-slate-500">
                     <Package className="h-8 w-8 mb-2" />
                     <p className="text-sm">No hay productos</p>
                   </div>
                 ) : (
-                  productosFiltrados.map((prod, idx) => (
+                  productosFiltrados.slice(0, visibleCount).map((prod, index) => (
                     <div
                       key={prod.idprod}
-                      onClick={() => setSelectedIndex(idx)}
-                      onDoubleClick={() => handleEditProduct(prod.idprod)}
-                      onMouseEnter={() => !isEditing && setSelectedIndex(idx)}
-                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
-                        idx === selectedIndex ? 'bg-[#0e88c9]/20 border-l-2 border-[#0e88c9]' : 'hover:bg-slate-800/50'
-                      } ${isEditing && producto?.idprod === prod.idprod ? 'bg-emerald-500/10 border-l-2 border-emerald-500' : ''}`}
+                      onClick={() => {
+                        if (modoSeleccionMultiple) {
+                          toggleProductoSeleccionado(prod.idprod);
+                        } else {
+                          setSelectedIndex(index);
+                        }
+                      }}
+                      onDoubleClick={() => !modoSeleccionMultiple && handleEditProduct(prod.idprod)}
+                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors border-b border-slate-800/50 ${
+                        modoSeleccionMultiple && productosSeleccionados.has(prod.idprod) 
+                          ? 'bg-purple-500/20 border-l-2 border-l-purple-500' 
+                          : index === selectedIndex && !modoSeleccionMultiple 
+                            ? 'bg-[#0e88c9]/20 border-l-2 border-l-[#0e88c9]' 
+                            : 'hover:bg-slate-800/50'
+                      } ${isEditing && producto?.idprod === prod.idprod ? 'bg-emerald-500/10 border-l-2 border-l-emerald-500' : ''}`}
                     >
+                      {/* Checkbox para selección múltiple */}
+                      {modoSeleccionMultiple && (
+                        <input
+                          type="checkbox"
+                          checked={productosSeleccionados.has(prod.idprod)}
+                          onChange={() => toggleProductoSeleccionado(prod.idprod)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 rounded border-purple-500 bg-slate-900 text-purple-600 focus:ring-purple-500 focus:ring-offset-0 flex-shrink-0"
+                        />
+                      )}
                       <div className="h-10 w-10 rounded bg-slate-900 flex-shrink-0 overflow-hidden">
                         {prod.imagen_principal ? (
                           <Image src={prod.imagen_principal} alt="" width={40} height={40} className="object-cover h-full w-full" />
@@ -756,35 +940,15 @@ function EditarProductoContent() {
                 )}
               </div>
               
-              {/* Controles de Paginación */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between p-2 border-t border-slate-700 bg-slate-900/50">
-                  <span className="text-xs text-slate-400">
-                    Pág. {currentPage}/{totalPages} ({totalProductos} total)
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1 || loadingList}
-                      className="h-6 px-2 text-xs border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
-                    >
-                      <ChevronLeft className="h-3 w-3" />
-                    </Button>
-                    <span className="text-xs text-slate-300 px-2">{currentPage}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages || loadingList}
-                      className="h-6 px-2 text-xs border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50"
-                    >
-                      <ChevronRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              {/* Info de total de productos */}
+              <div className="flex items-center justify-center p-2 border-t border-slate-700 bg-slate-900/50">
+                <span className="text-xs text-slate-400">
+                  {visibleCount < productosFiltrados.length 
+                    ? `Mostrando ${visibleCount} de ${productosFiltrados.length} productos (scroll para ver más)`
+                    : `${productosFiltrados.length} productos`
+                  }
+                </span>
+              </div>
             </Card>
 
             {/* Info del producto seleccionado (cuando NO está editando) */}
@@ -1233,7 +1397,202 @@ function EditarProductoContent() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    {/* Modal de Edición Masiva */}
+        {showEdicionMasiva && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#141e2e] border border-purple-500/30 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-100">Edición Masiva</h3>
+                  <p className="text-sm text-purple-400">{productosSeleccionados.size} productos seleccionados</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowEdicionMasiva(false)}
+                  className="text-slate-400 hover:text-slate-200"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              
+              <div className="p-4 space-y-4">
+                <p className="text-xs text-slate-400 bg-slate-800/50 p-2 rounded">
+                  Solo los campos que completes se actualizarán. Los campos vacíos no se modificarán.
+                </p>
+                
+                {/* Marca */}
+                <div className="space-y-1">
+                  <Label className="text-slate-300">Marca</Label>
+                  <Input
+                    placeholder="Dejar vacío para no modificar"
+                    value={edicionMasivaData.marca}
+                    onChange={(e) => setEdicionMasivaData(prev => ({ ...prev, marca: e.target.value }))}
+                    className="bg-slate-900 border-slate-700 text-slate-200"
+                  />
+                </div>
+                
+                {/* Categoría */}
+                <div className="space-y-1">
+                  <Label className="text-slate-300">Categoría</Label>
+                  <Select
+                    value={edicionMasivaData.idcategoria_nuevo}
+                    onValueChange={(value) => setEdicionMasivaData(prev => ({ 
+                      ...prev, 
+                      idcategoria_nuevo: value,
+                      id_grupo: '',
+                      id_subgrupo: ''
+                    }))}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectValue placeholder="No modificar" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {categoriasNuevo.map(cat => (
+                        <SelectItem key={cat.idcategoria} value={String(cat.idcategoria)}>
+                          {cat.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Grupo (si hay categoría seleccionada) */}
+                {edicionMasivaData.idcategoria_nuevo && (
+                  <div className="space-y-1">
+                    <Label className="text-slate-300">Grupo</Label>
+                    <Select
+                      value={edicionMasivaData.id_grupo}
+                      onValueChange={(value) => setEdicionMasivaData(prev => ({ 
+                        ...prev, 
+                        id_grupo: value,
+                        id_subgrupo: ''
+                      }))}
+                    >
+                      <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                        <SelectValue placeholder="No modificar" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {grupos
+                          .filter(g => Number(g.idcategoria) === Number(edicionMasivaData.idcategoria_nuevo))
+                          .map(grupo => (
+                            <SelectItem key={grupo.id_grupo} value={String(grupo.id_grupo)}>
+                              {grupo.codigo} - {grupo.nombre}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
+                {/* Subgrupo (si hay grupo seleccionado) */}
+                {edicionMasivaData.id_grupo && (
+                  <div className="space-y-1">
+                    <Label className="text-slate-300">Subgrupo</Label>
+                    <Select
+                      value={edicionMasivaData.id_subgrupo}
+                      onValueChange={(value) => setEdicionMasivaData(prev => ({ ...prev, id_subgrupo: value }))}
+                    >
+                      <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                        <SelectValue placeholder="No modificar" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {subgrupos
+                          .filter(s => Number(s.id_grupo) === Number(edicionMasivaData.id_grupo))
+                          .map(sub => (
+                            <SelectItem key={sub.id_subgrupo} value={String(sub.id_subgrupo)}>
+                              {sub.codigo} - {sub.nombre}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
+                {/* Unidad de Medida */}
+                <div className="space-y-1">
+                  <Label className="text-slate-300">Unidad de Medida</Label>
+                  <Select
+                    value={edicionMasivaData.unimedida}
+                    onValueChange={(value) => setEdicionMasivaData(prev => ({ ...prev, unimedida: value }))}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectValue placeholder="No modificar" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {unidadesMedida.map(u => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Lado */}
+                <div className="space-y-1">
+                  <Label className="text-slate-300">Lado</Label>
+                  <Select
+                    value={edicionMasivaData.lado}
+                    onValueChange={(value) => setEdicionMasivaData(prev => ({ ...prev, lado: value }))}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectValue placeholder="No modificar" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {lados.map(l => (
+                        <SelectItem key={l} value={l}>{l}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Exento de Impuestos */}
+                <div className="space-y-1">
+                  <Label className="text-slate-300">Exento de Impuestos</Label>
+                  <Select
+                    value={edicionMasivaData.exento}
+                    onValueChange={(value) => setEdicionMasivaData(prev => ({ ...prev, exento: value as '' | 'true' | 'false' }))}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-200">
+                      <SelectValue placeholder="No modificar" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectItem value="true">Sí - Exento</SelectItem>
+                      <SelectItem value="false">No - Con impuestos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="p-4 border-t border-slate-700 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEdicionMasiva(false)}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleGuardarEdicionMasiva}
+                  disabled={savingMasivo}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {savingMasivo ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Aplicar a {productosSeleccionados.size} productos
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </DashboardLayout>
   );
 }
 

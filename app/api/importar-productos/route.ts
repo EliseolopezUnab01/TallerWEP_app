@@ -328,16 +328,27 @@ export async function POST(request: NextRequest) {
           let existingIdProd: number | null = null;
           let metodoEncontrado = '';
           
+          // Limpiar idprod del Excel
+          const idprodLimpio = String(producto.idprod || '').replace(/['"]/g, '').trim();
+          const tieneIdprod = idprodLimpio && !isNaN(parseInt(idprodLimpio));
+          
           // 0. Verificar si ya procesamos este producto en esta misma importación (duplicado interno del Excel)
-          const claveProducto = `${producto.nombre || ''}|${producto.marca || ''}`.toLowerCase();
+          // Usar idprod como clave principal si existe, sino usar nombre|marca
+          const claveProducto = tieneIdprod 
+            ? `id:${idprodLimpio}` 
+            : `${producto.nombre || ''}|${producto.marca || ''}`.toLowerCase();
+          
           if (productosYaProcesados.has(claveProducto)) {
-            existingIdProd = productosYaProcesados.get(claveProducto)!;
-            metodoEncontrado = 'duplicado_interno';
+            // Es un duplicado interno del Excel - ignorar esta fila
+            erroresImport.push({ 
+              fila: producto._fila, 
+              error: `Duplicado interno: ya existe otra fila con mismo ${tieneIdprod ? 'idprod' : 'nombre+marca'} en este archivo` 
+            });
+            continue; // Saltar al siguiente producto
           }
           
-          // 1. Si tiene idprod del Excel, buscar directamente por ese ID
-          const idprodLimpio = String(producto.idprod || '').replace(/['"]/g, '').trim();
-          if (!existingIdProd && idprodLimpio && !isNaN(parseInt(idprodLimpio))) {
+          // 1. Si tiene idprod del Excel, buscar directamente por ese ID en la BD
+          if (!existingIdProd && tieneIdprod) {
             const idprodNum = parseInt(idprodLimpio);
             const [byId]: any = await connection.execute(
               'SELECT idprod FROM productos WHERE idprod = ?',
