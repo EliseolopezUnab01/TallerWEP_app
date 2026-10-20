@@ -1,0 +1,99 @@
+Modulo: Compras/Ingreso de productos/etc.
+Los campos o cuadros de texto, combos, y demás controles de selección, llenado y escritura se detallan según el número identificativo.
+Algunos serán omitidos por considerarse obvios de función o entendimiento.
+1. Combo de selección entre Crédito Fiscal, Consumidor Final, Importación, Nota de Crédito, Sujeto Excluido, Gastos.
+2. Este Combo de selección se eliminará y se dejará solo un control que haga lo que hace el número 29, que servirá para determinar el tipo de producto o registro de compra, que se va a ingresar.
+4. Es una opción para indicar donde se desea guardar el registro de este movimiento. Este sistema cuenta con una tabla y módulo conocido como Bancos, donde se crea un registro por cada cuenta bancaría o también incluso cajas chicas, para que el registro del movimiento de esta compra o gasto, sea reflejado y afecte a esa cuenta en particular. Se puede crear y dejar como una “mecha” para usar después ya que no es prioridad, pero si una función importante que puede ayudar al usuario a tener un registro muy importante de ingreso y egresos de dinero. Si desean podemos crear la tabla solo para almacenamiento de registros y al final creamos un módulo de control de ellos.
+5, 6 y 7. Son para almacenar los datos de las facturas electrónicas respectivamente según el nombre de dato indicado.
+8. Número de Factura, que debe aceptar número y letras y tener una extensión de hasta 100 caracteres.
+9. Referencia contable, para almacenar algún dato o número de libro que el contador decida guardar. 30 caracteres.
+10. Número de registro de comercio, para clientes nacionales. 
+10.1. Para la opción de búsqueda de proveedores no olvidar poderlos buscar por alias y por ID de proveedor.
+12.  Condición de la compra, CREDITO o CONTADO. Cuando se seleccione crédito, que permita colocar la cantidad de días de crédito y de hecho sugerir como predeterminado 30 días, al lado que se indique la fecha límite de pago partiendo de la fecha de inicio del crédito. Esto deberá registrarse en el módulo de cuentas por pagar.
+13. Se eliminará ese apartado.
+14. Lo trabajaremos después.
+15. Opción descartada. Se dejó solo como titulación o encabezado del área donde está ubicado.
+16. Botón para abrir cuadro de importación desde Excel o JSON, desde donde se busque la ubicación y se seleccione manualmente. Aunque se debe permitir también que acepte arrastrar y soltar en la zona 30, o si se prefiere, permitir soltar en cualquier zona del módulo.
+17. Cuadro de búsqueda o filtración de los productos listados, que se tienen en inventario y que se muestran en la zona 20.
+18. Control que indica el método u opción de filtrado, por Referencia de proveedor, Codigo de sistema, OEM, Alias, etc. El método debe ser filtrado y no selección.
+19. Control de selección del tipo de artículo que se está ingresando. Tipo de Impuesto / Condición de IVA (Tal como viene documentado en la factura del proveedor)
+- Gravadas/Afectas: son todos los productos que son afectados por el IVA. 
+- Exento: El proveedor vende un producto comercial normal, pero la ley lo liberó de IVA. En la factura del proveedor se indica en la columna "Exentas".
+- No sujeto: Pagos que no tienen relación con la ley del IVA (tasas municipales, aranceles estatales, etc.).
+- Gasto por comprobar: Pagos que no alterarán el total FISCAL de la operación pero que se necesita documentar su movimiento, por control contable interno.
+20. Cuadro, grid, que muestra los datos mas importantes del producto para ayudar a identificarlo. Código, Referencia, OE, Nombre, Costo, Stock, Proveedor, DAI y Código Arancelario, son los datos mas básicos y quizá necesarios. Sin embargo sería muy oportuno y útil agregar un visor de imágenes como se indicará en el grid de abajo.
+21. Orden, para ingresar la información de la orden de trabajo para la que “X” artículo se ha comprado. Habilitada solo con compras nacionales y para inventario express.
+22. Referencia del proveedor, es la que aparecen en la factura de compra. Estrictamente la que el proveedor usa en su sistema. Es la misma del cuadro 20.
+22. ERRORAZO, dos 22 jaja. Pero se trata de la Referencia OE, misma que se use en el cuadro 20.
+23 y 24. Codigo y nombre del producto según sistema. Acostumbro a mostrar los datos del artículo que se ha cargado desde el cuadro de selección 20, ¿por que? Los suelo usar como variables temporales, para asegurar que se ha realizado la “carga” o “toma” del producto seleccionado desde el cuadro 20. Pero también sirve para asignar los valores al registro o tabla que se está construyendo y que luego se enviará a guardar. Pero ustedes deben decidir como usarlos y si en realidad son necesarios. Visualmente me parecen útiles también.
+25. Cantidad que se está ingresando de cada producto según la factura de compra. Y OJO CON ESTO. Algunos proveedores pueden facturar 2 veces el mismo artículo en la misma factura y con diferente precio dado que, el cliente le puede pedir el mismo producto en 2 órdenes diferentes que al final se facturaron juntas. Por lo que en una orden podría haber costado menos que en la otra y por ello el precio podría cambiar. Por ejemplo
+Cant.            Nombre                                 Precio      Subtotal
+2 Pernos Hexagonales de 30x120 mm    5.50          11.00
+5 Pernos Hexagonales de 30x120 mm    3.25          16.25
+Lo anterior también significa que tanto se deberá registrar en el historial de ese artículo que se ha comprado con 2 precios… continua…
+Continuación de 25.
+No es que el control tenga mucho que hacerse en el, pero quise abordar el asunto aquí ya que tiene que ver con la idea de que el sistema permita el ingreso de diferentes líneas con el mismo producto y diferente precio, según lo declare el proveedor en su factura.
+Cuando se guarden los datos en la tabla de los detalles de la compra, no se sumarán los productos con mismo ID ni se promediará el precio, si no que se guardarán los datos en la tabla tal cual la factura del proveedor. También deberá tomarse en cuenta para el historial de precio de este producto. 
+26. Costo o precio sin IVA. Para el caso de las importaciones será el mismo precio mostrado en la factura. 
+27. Costo o precio de compra con IVA incluido. Para el caso de las importaciones se hará el recalculo o retaceo después de ingresar la factura. 
+28. Aquí se debe colocar el porcentaje de descuento en caso sea necesario. Sobre todo, será usado para compras nacionales. Pendiente de explicar más.
+Se consideró no cambiar nada, simplemente se podrá indicar el valor porcentual del descuento que se ha aplicado al valor unitario del producto que se está ingresando.
+29. Este será un control que servirá para determinar el tipo de producto o registro de compra, que se va a ingresar. Destino o Naturaleza del Registro (¿Qué es esto para la empresa?)
+INVENTARIO = Producto que formará parte del inventario.
+EXPRESS = Producto que se guardará como registro de compra, y venta (posterior), pero sin formar parte de un inventario, pues al final no se tendrá en bodega por más de un día.
+ACTIVOS = Compra de equipo, herramientas y otros bienes duraderos que no se venden como inventario, sino que son principalmente de uso operativo de la empresa.
+GASTOS = Artículos que serán de uso o consumo de la empresa. Esta opción deberá contar con el despliegue de opciones adicionales correspondientes.
+29.1 Lista de opciones para GASTOS. Clasificación Contable (Catálogo de Cuentas)
+Este listado solo debe activarse o aparecer, y ser obligatorio, si en el Control 29 el usuario eligió la opción "Gastos" o "Activos". Es una lista desplegable conectada a un catálogo de gastos contables.
+Para gastos, ejemplos de opciones según catálogos respectivos:
+Beneficios a empleados / Uniformes (Para el caso de tus zapatos de regalo)
+Servicios (Agua, Luz, Internet)
+Alquileres / Arrendamientos
+Papelería y Útiles de Oficina
+Mantenimiento y Reparaciones
+Impuestos y Tasas Municipales (Ideal cuando el Selector 2 sea "No Sujeto")
+Si es Activos, ejemplos de opciones según catálogos respectivos:
+Equipo de Cómputo
+Mobiliario y Equipo de Oficina
+Vehículos
+Estos datos pueden mostrarse en un recuadro flotante como pop-up que permita su selección o bien un listado desplegable. Considerar la mejor opción.
+Para cada caso habrá que crear una Tabla que contenga respectivamente los catálogos contables de compra. Los datos de catálogo se verán mas adelante, pero pueden usar los ejemplos, por ahora por ser los mas comunes.
+30. Cuadro que muestra la información del producto que ya forma parte de la lista de ingreso al sistema, pero que obviamente aún no se ha ingresado. Pendiente de mayor orientación.
+Columnas
+No. Número de línea del registro. Es importante indicar en que ubicación está cada registro de la compra en proceso, para guardar el registro de la manera más fiel posible al documento original. 
+Orden. El el ID (caracteres) de la orden para la cual se está registrando la el artículo de la compra. Relación con el control 21, desde donde se asigna el valor. El dato podrá ser actualizable o editable.
+Tipo. Indica como será usado y almacenado el registro, según la selección realizada en el control 29. Este dato podrá ser actualizable o editable.
+Referencia. Es la referencia del proveedor, según como el proveedor identifica el producto.
+Descripción. Nombre del producto, tal cual aparece en el inventario. Este dato no debe ser editable. Salvo que no vean complicado tener que realizar el cambio también en la ficha del producto una vez que se procese o guarde la compra. Si se cambia algo, deberá cambiarse también en la ficha del producto y por lo tanto también registrar el cambio en el historial de cambios. Quizá lo mejor sería dejarlo sin posibilidad y mantener la fidelidad de lo que muestre inventario.
+Cantidad. Valor de la cantidad del producto en ingreso.
+Costo. Valor del costo, debe permitir el uso de hasta 4 decimales, por si acaso. Aunque al final se tome en cuenta solo el uso de 2 decimales en todos los demás módulos, al menos en el de compras sería importante manejar cada decimal. Este valor de costo además debe ser sin IVA para el caso de las compras nacionales y tal cual como aparezca en la factura para los casos de compras internacionales. En esta columna aparecerán los valores que estén indicados como AFECTAS o GRAVADAS según la selección del control 19.
+Subtotal sin IVA.
+IVA. El IVA del producto unitario.
+Subtotal con IVA. La suma del IVA y el costo, por cada producto.
+Exento. Valor exento unitario. Según la selección del control 19. 
+No sujeto. Valor no sujeto unitario. Según la selección del control 19.
+Descuento. Valor del porcentaje del descuento.
+Afectación: El tipo de afectación fiscal o contable según el Control 19. Según cada caso habrá una afectación en el total fiscal y el total contable. Puede ser el texto completo o abreviado de la selección en el control 19.
+Imagen. Una imagen pequeña que se pueda expandir a un tamaño mayor al dar click sobre ella para expandir, y dar click para volverla al estado normal.
+Opciones de uso y edición posibles en las líneas del grid:
+Considerar que algunas celdas puedan tener 2 o mas opciones para aprovechar espacios y por una mejor interfaz visual y de uso. 
+Mover o cambiar de posición las filas (preferiblemente mediante arrastre). O sea, cambiar por ejemplo la última línea al principio o a cualquier posición en la tabla.
+Eliminar la fila completa.
+Editar cualquier dato individual, pero debe pedir confirmación para evitar que por error se cambie algún dato. Podría incluso agregarse un botón que habilite la edición de la celda seleccionada solamente para mayor seguridad.
+Arrastre y soltar para el ingreso mas rápido de información de facturas, principalmente para facturas electrónicas.
+¿Cómo se comportará en cada tipo de selección según el control 19?
+Este ejemplo es sobre el uso de información de controles 19 y 29 que involucran los posibles casos de registros a ingresar en sistema, según los documentos que los proveedores emiten, y sobre como estos afectan los datos y cálculos a tomar en cuenta.
+Los registros que no sean GRAVADOS, no tendrán IVA obviamente.
+Los que se indiquen como XCOMPROBAR, no serán parte de un total que afecte el IVA. Formarán parte del total del documento, pero no deberán afectar el total fiscal que se presenta cada mes en hacienda. Esto queda pendiente de explicar mejor…
+QUEDA PENDIENTE LOS TOTALES A MOSTRAR, EN QUE TABLAS SE GUARDARÁN LOS REGISTROS DE CADA DOCUMENTO Y EL AREA DE RETACEO Y USO PARA IMPORTACIONES, NOTA DE CREDITO Y SUJETO EXCUIDO.
+Una idea general es:
+Guardar lo que se usa mes a mes para el tema del IVA, Fiscalizable, en 2 tablas, Compras1 para encabezados, fechas y datos de proveedor y Compras2 para los detalles de los registros.
+Sin embargo se debe considerar no mezclar los datos que se usarán en “pagos por cuenta ajena” (XCOMPROBAR) para no sumar 2 veces mismos valores y que se afecten los totales finales de mes o de año en la contabilidad.
+No. | Descripción | Cant | Costo | % 
+Descuento | Subtotal sin IVA | IVA | Precio con IVA | Subtotal con IVA | Condición IVA  (19) | Destino Contable (29) | ACTIVO/GASTO
+1 | JGO. DE ANILLOS | 6 | 20.00 | 0 | 120.00 | 2.60 | 22.60 | 135.60 | GRAVADA | INVENTARIO | 
+2 | Acetaminofén 500 | 1 | 50.00 | 10 | 50.00 |  |  |  | EXENTO | GASTO | Medicamentos.
+3 | Impuesto Municipal | 1 | 60.00 | 0 | 60.00 |  |  |  | NO SUJETO | GASTO | Imp. Y Tasas Municipales.
+4 | Pago de Flete Internacional | 1 | 1000.00 | 0 | 1000.00 |  |  |  | XCOMPROBAR | GASTO | Transporte de Mercancías.
+5 | Batería 12V. 180Amp. | 2 | 100.00 | 5 | 200.00 | 13.00 | 113.00 | 226.00 | GRAVADA | EXPRESS | 
+6 | Computadora de Escritorio | 1 | 600.00 | 0 | 600.00 | 78.00 | 678.00 | 678.00 | GRAVADA | ACTIVO | Equipo de cómputo

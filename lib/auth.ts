@@ -18,3 +18,13 @@ export function generateToken(userId: number): string {
 export function verifyToken(token: string): { userId: number } {
   return jwt.verify(token, JWT_SECRET) as { userId: number };
 }
+
+export function getUserIdFromRequest(request: Request): number | null {
+  const auth = request.headers.get('authorization');
+  if (!auth?.startsWith('Bearer ')) return null;
+  try {
+    return verifyToken(auth.slice(7)).userId;
+  } catch {
+    return null;
+  }
+}

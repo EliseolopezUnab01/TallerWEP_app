@@ -1,0 +1,133 @@
+Preguntas para continuar
+Módulo Compras — Taller 
+Fecha: 2 de septiembre de 2026
+Elaborado por: Ricardo Guzman
+Este documento reúne todas las decisiones que necesitamos del cliente para continuar con el módulo de Compras. Las preguntas están ordenadas por prioridad. Las marcadas como CRÍTICAS desbloquean la Fase 4 (encabezado de factura, totales y estados).
+En pocas palabaras he metido todas las dudas que tengo poruqe me estoy enredando bastante 
+A. Preguntas CRÍTICAS — Fase 4 (encabezado y cierre de factura)
+Sin estas respuestas no podemos guardar ni cerrar un documento de compra completo.
+1. Descuento en líneas (Control 28 / 30)
+¿El descuento se resta del subtotal o es solo informativo?
+En su ejemplo (Acetaminofén 10 %, Batería 5 %) el subtotal no refleja el descuento.
+Si es informativo: el costo ya viene descontado y solo guardamos el porcentaje.
+Si se aplica: ¿se resta del costo unitario, del subtotal de línea, o de ambos?
+¿Guardamos también un campo descuento_monto además del porcentaje?
+Nota: Hoy el sistema guarda el % pero no lo resta del subtotal.
+2. Fechas del encabezado de compra (Compras1)
+¿Qué fechas lleva el documento?
+Fecha de emisión de la factura
+Fecha de recepción en bodega
+Fecha de ingreso al sistema
+¿Cuáles son obligatorias para el control fiscal mensual?
+3. Estados del documento y cuándo afecta cada cosa
+¿Qué estados tiene una compra? (Ej.: Borrador → Confirmada → Anulada)
+¿En qué momento la compra afecta el inventario (stock contable / físico)?
+¿En qué momento actualiza los costos del producto?
+¿En qué momento genera o afecta Cuentas por Pagar?
+¿En qué momento entra al reporte fiscal de IVA del mes?
+Nota: Es la decisión estructural más importante del módulo.
+4. Moneda y tipo de cambio (importaciones)
+¿En qué moneda se captura la factura?
+¿Dónde va el tipo de cambio de aduana vs. el costo real pagado al proveedor?
+¿Un documento puede mezclar monedas o siempre es una sola?
+5. Lista exacta de totales a guardar en el encabezado
+Total gravado / afecto
+Total exento
+Total no sujeto
+Total XCOMPROBAR (pagos por cuenta ajena)
+Total IVA
+Total descuentos
+Retenciones (¿cuáles aplican en compras?)
+Total del documento
+Total fiscal (lo que va a Hacienda)
+Total contable (lo que va a contabilidad interna)
+¿Cuáles se muestran en pantalla y cuáles solo se guardan en base de datos?
+6. Diferencia entre total fiscal y total contable
+El cliente indicó que XCOMPROBAR entra al total del documento pero NO al fiscal.
+¿Cuáles son las reglas exactas de cálculo?
+¿Hay otros tipos de línea que sigan reglas similares?
+B. Preguntas IMPORTANTES — Fases 5 a 7
+7. Retaceo de importaciones — gastos a prorratear
+Flete, seguro, DAI/aranceles, almacenaje, transporte interno, otros.
+8. Retaceo — criterio de prorrateo
+Por valor FOB, por peso (libras), por cantidad, por volumen, o combinación.
+9. Retaceo — dónde se guardan los gastos
+¿Como líneas XCOMPROBAR en el detalle?
+¿En tabla aparte (ej. compras_gastos_importacion)?
+¿Ambos?
+10. Nota de crédito
+¿Resta del total fiscal y contable?
+¿Revierte inventario y costos automáticamente?
+¿Se vincula a la factura original?
+11. Sujeto excluido
+¿Mismas reglas que consumidor final?
+¿Tratamiento distinto para IVA e inventario?
+12. Tabla de Aranceles (SAC de Aduana)
+El grid 20 pide DAI y Código arancelario pero hoy no hay origen de datos.
+¿El cliente entrega el catálogo SAC?
+¿Se carga manual por producto o se busca por código?
+13. Cuentas por Pagar
+El control 12 exige registrar crédito/contado en Cuentas por Pagar.
+Los saldos del proveedor (saldo actual, saldo vencido) dependen de ese módulo.
+¿Cuándo se implementa? ¿Campos mínimos que necesitan ya?
+¿Cómo se calculan saldo_actual y saldo_vencido?
+14. Bancos y cajas chicas (Control 4)
+¿Qué campos necesita cada registro de cuenta bancaria o caja chica?
+¿Una compra confirmada siempre afecta una cuenta destino?
+Nota: El cliente indicó que la tabla puede crearse ahora y el módulo de control después.
+C. Costos e inventario — historial y decimales
+Afectan cuándo la compra actualiza precios y el módulo de Gestión de Costos.
+15. Respaldos de costos — contradicción Excel filas 147/149 (BLOQUEANTE)
+¿costo_previo1/2 respalda costo_usd?
+¿costolcl_previo1/2 respalda costo_local?
+En el Excel ambas filas mencionan costo_local; no hemos migrado costos por riesgo contable.
+16. Historial cuando el mismo producto aparece 2 veces con precios distintos
+La tabla costos es 1:1 con el producto.
+¿Les sirve un historial por línea de compra (Control 25)?
+17. Decimales en costos
+¿Costo con 4 decimales solo en compras y redondeo a 2 al pasar a costos?
+¿En qué momento se redondea: al confirmar compra, al promediar, al mostrar?
+18. referencia_costo
+¿Reducir de 50 a 30 caracteres o mantener 50?
+19. Nodocto
+¿Tipo y longitud del campo?
+20. iva_pagado
+¿Se mantiene el campo iva_pagado en la tabla costos?
+D. Confirmaciones — decisiones ya implementadas (validar)
+Estas decisiones ya están en el sistema. Solo necesitamos que el cliente confirme que están bien o indique correcciones.
+21. Código de proveedor
+¿Siguen usando códigos numéricos (275) o migran a tipados (PL0005 / PE0001)?
+Hoy el sistema acepta ambos formatos.
+22. Direcciones de proveedor
+¿2 bloques fijos en la ficha (como sus capturas)?
+¿O tabla direcciones compartida proveedores/clientes con tipo (facturación, entrega, bodega)?
+23. Contactos de proveedor
+¿2 contactos fijos (como captura) o tabla flexible para 2–3 contactos?
+24. Teléfonos y giros
+¿Campos fijos en la ficha o tablas aparte reutilizables?
+25. Vínculo de cuentas bancarias
+¿Vínculo polimórfico (tipo_entidad + id)?
+¿O dos FK (idproveedor, idcliente)?
+Hoy: tabla aparte solo para proveedores.
+26. Catálogo contable — estructura
+¿Una tabla con columna Gasto/Activo o dos tablas separadas?
+Hoy: una tabla + dos vistas (Gastos / Activos).
+27. Catálogo contable — datos reales
+¿Pueden entregar el catálogo definitivo del contador?
+Los 9 rubros actuales son ejemplos del documento.
+28. Catálogo contable — condición IVA sugerida
+¿Al elegir un rubro se debe precargar la condición de IVA?
+Ej.: Impuestos municipales → No sujeto.
+29. Campos marcados con * en productos (Excel)
+¿Entran en esta etapa o quedan para después?
+idcategoria de 6 a 10 caracteres
+Renombrados a Observa / Observa2 — ¿confirman esos nombres?
+E. Resumen corto donde me quede  — mínimo para avanzar
+Si el tiempo es limitado, estas 4 respuestas desbloquean la siguiente fase de desarrollo:
+Las demás preguntas pueden responderse en una segunda ronda (importaciones, nota de crédito, aranceles, cuentas por pagar, bancos, costos).
+— Fin del documento —
+# | Pregunta | Desbloquea
+1 | Descuento: ¿informativo o se resta? | Cálculo de líneas y totales
+3 | Estados y cuándo afecta inventario/costos/CxP | Flujo del documento
+5–6 | Totales exactos + fiscal vs. contable | Cierre de factura
+2 | Fechas obligatorias del encabezado | Control fiscal mensual
