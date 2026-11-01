@@ -71,8 +71,21 @@ export function BarraTotales({ ctx }: { ctx: CompraCtx }) {
           </label>
           <Dato etiqueta="Subtotal" valor={fmt2(subtotal)} />
           <Dato etiqueta="IVA 13%" valor={fmt2(r?.iva)} />
+          {(r?.otros_tributos ?? 0) > 0 && (
+            <Dato etiqueta="Otros tributos" valor={fmt2(r?.otros_tributos)} title="Tributos del DTE distintos del IVA (FOVIAL, COTRANS...)" />
+          )}
 
           <div className="h-8 w-px bg-border self-center hidden xl:block" />
+
+          <button
+            type="button"
+            className={`${UI.denseBtn} h-6 self-end text-[11px]`}
+            disabled={bloqueado}
+            onClick={ctx.sugerirRetenciones}
+            title="Calcula las retenciones según la categoría de la empresa y del proveedor (Configuración > Empresa)"
+          >
+            Sugerir
+          </button>
 
           <Retencion
             etiqueta="IVA percibido"

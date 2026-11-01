@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
        LEFT JOIN proceso_ingreso pi ON pi.idproceso = c.idproceso
        LEFT JOIN duca_detalles dd ON dd.iddetalle = d.iddetalle
        LEFT JOIN costos_productos cp ON cp.iddetalle = d.iddetalle
-       WHERE d.idprod = ? AND c.estado <> 'ANULADA'
+       WHERE d.idprod = ? AND c.estado NOT IN ('ANULADA', 'INVALIDADO')
        ORDER BY c.fecha_emision DESC, c.idcompra DESC LIMIT 100`,
       [idprod]
     );

@@ -26,6 +26,8 @@ export interface ResumenInput {
   iva_retenido?: number;
   iva_percibido?: number;
   retencion_renta?: number;
+  /** Tributos del DTE distintos del IVA (FOVIAL, COTRANS...): suman al monto de la operación. */
+  otros_tributos?: number;
 }
 
 export interface ResumenResult {
@@ -44,6 +46,7 @@ export interface ResumenResult {
   iva_retenido: number;
   iva_percibido: number;
   retencion_renta: number;
+  otros_tributos: number;
   monto_total_operacion: number;
   total_cargos_no_afectos: number;
   total_pagar: number;
@@ -180,8 +183,9 @@ export function calcularResumen(input: ResumenInput): ResumenResult {
   const iva_retenido = r8(aNumero(input.iva_retenido));
   const iva_percibido = r8(aNumero(input.iva_percibido));
   const retencion_renta = r8(aNumero(input.retencion_renta));
+  const otros_tributos = r8(aNumero(input.otros_tributos));
 
-  const monto_total_operacion = r8(sub_total + iva + iva_percibido);
+  const monto_total_operacion = r8(sub_total + iva + otros_tributos + iva_percibido);
   const total_pagar = r8(
     monto_total_operacion - iva_retenido - retencion_renta + total_cargos_no_afectos + total_xcomprobar
   );
@@ -202,6 +206,7 @@ export function calcularResumen(input: ResumenInput): ResumenResult {
     iva_retenido,
     iva_percibido,
     retencion_renta,
+    otros_tributos,
     monto_total_operacion,
     total_cargos_no_afectos,
     total_pagar,

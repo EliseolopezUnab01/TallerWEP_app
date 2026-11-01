@@ -54,6 +54,12 @@ export interface Compra {
   iva_retenido: number;
   iva_percibido: number;
   retencion_renta: number;
+  /** Tributos del DTE distintos del IVA, tal como vinieron en el JSON. */
+  total_otros_tributos?: number;
+  dte_ambiente?: string | null;
+  dte_tipo_operacion?: number | null;
+  motivo_invalidacion?: string | null;
+  fecha_invalidacion?: string | null;
   condicion_operacion: number | null;
   plazo_tipo: string | null;
   plazo_periodo: number | null;

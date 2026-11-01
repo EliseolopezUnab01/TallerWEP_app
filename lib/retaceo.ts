@@ -172,7 +172,7 @@ export async function lineasDelProceso(connection: Conexion, idproceso: number) 
      LEFT JOIN productos p ON p.idprod = d.idprod
      LEFT JOIN duca_detalles dd ON dd.iddetalle = d.iddetalle
      LEFT JOIN costos_productos cp ON cp.iddetalle = d.iddetalle
-     WHERE c.idproceso = ? AND c.estado <> 'ANULADA' AND d.destino = 'INVENTARIO'
+     WHERE c.idproceso = ? AND c.estado NOT IN ('ANULADA', 'INVALIDADO') AND d.destino = 'INVENTARIO'
      ORDER BY c.idcompra, d.numero_linea`,
     [idproceso]
   );
@@ -287,7 +287,7 @@ export async function finalizarRetaceo(connection: Conexion, idproceso: number) 
 
   const [facturas] = await connection.execute<RowDataPacket[]>(
     `SELECT GROUP_CONCAT(DISTINCT COALESCE(numero_factura, numero_interno) SEPARATOR ', ') AS facturas, MAX(fecha_emision) AS fecha
-     FROM compras WHERE idproceso = ? AND estado <> 'ANULADA'`,
+     FROM compras WHERE idproceso = ? AND estado NOT IN ('ANULADA', 'INVALIDADO')`,
     [idproceso]
   );
   const facturaTexto = String(proceso.factura_compra || facturas[0]?.facturas || '').slice(0, 100) || null;

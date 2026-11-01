@@ -10,11 +10,13 @@ import {
   esTipoDteCompra,
   tipoDteRequiereRelacionados,
 } from '@/lib/compras-constantes';
-import { calcularFechaVencimiento, calcularResumen, type LineaResumen } from '@/lib/compras-resumen';
+import { calcularFechaVencimiento } from '@/lib/compras-resumen';
 import { nuevoNodocto, siguienteCorrelativo } from '@/lib/correlativos';
-import { errorDestinoLinea, type CompraReglas } from '@/lib/compras-detalle-db';
+import { errorDestinoLinea, persistirTotales, type CompraReglas } from '@/lib/compras-detalle-db';
 import { aplicarStockAlRegistrar, revertirStockAlAnular } from '@/lib/compras-stock';
 import { erroresTopeNota } from '@/lib/compras-nota';
+import { validarFormatoDte } from '@/lib/dte-validacion';
+import { sugerirRetenciones } from '@/lib/retenciones';
 
 const CLASES_DOCUMENTO = ['DTE', 'IMPORTACION'] as const;
 
@@ -75,71 +77,7 @@ const CAMPOS_ENCABEZADO = [
   'fecha_vencimiento_pago',
 ] as const;
 
-async function recalcularTotales(
-  connection: Awaited<ReturnType<typeof connectDB>>,
-  idcompra: number,
-  extras: {
-    descuento_global_gravado?: number;
-    descuento_global_exento?: number;
-    descuento_global_no_sujeto?: number;
-    porcentaje_descuento?: number;
-    iva_retenido?: number;
-    iva_percibido?: number;
-    retencion_renta?: number;
-  } = {}
-) {
-  const [lineas] = await connection.execute<RowDataPacket[]>(
-    `SELECT condicion_iva, subtotal_sin_iva, iva_unitario, cantidad, costo_unitario,
-            descuento_porcentaje, cargos_no_afectos
-     FROM compras_detalle WHERE idcompra = ?`,
-    [idcompra]
-  );
-
-  const [encabezado]: any = await connection.execute(
-    `SELECT descuento_global_gravado, descuento_global_exento, descuento_global_no_sujeto,
-            porcentaje_descuento, iva_retenido, iva_percibido, retencion_renta
-     FROM compras WHERE idcompra = ?`,
-    [idcompra]
-  );
-
-  const base = encabezado[0] || {};
-  const resumen = calcularResumen({
-    lineas: lineas as LineaResumen[],
-    descuento_global_gravado: extras.descuento_global_gravado ?? aNumero(base.descuento_global_gravado),
-    descuento_global_exento: extras.descuento_global_exento ?? aNumero(base.descuento_global_exento),
-    descuento_global_no_sujeto: extras.descuento_global_no_sujeto ?? aNumero(base.descuento_global_no_sujeto),
-    porcentaje_descuento: extras.porcentaje_descuento ?? aNumero(base.porcentaje_descuento),
-    iva_retenido: extras.iva_retenido ?? aNumero(base.iva_retenido),
-    iva_percibido: extras.iva_percibido ?? aNumero(base.iva_percibido),
-    retencion_renta: extras.retencion_renta ?? aNumero(base.retencion_renta),
-  });
-
-  await connection.execute(
-    `UPDATE compras SET
-       total_gravado = ?, total_exento = ?, total_no_sujeto = ?, total_xcomprobar = ?,
-       suma_operaciones = ?, total_descuento = ?, sub_total = ?, iva = ?,
-       monto_total_operacion = ?, total_cargos_no_afectos = ?, total_pagar = ?,
-       valor_en_letras = ?
-     WHERE idcompra = ?`,
-    [
-      resumen.total_gravado,
-      resumen.total_exento,
-      resumen.total_no_sujeto,
-      resumen.total_xcomprobar,
-      resumen.suma_operaciones,
-      resumen.total_descuento,
-      resumen.sub_total,
-      resumen.iva,
-      resumen.monto_total_operacion,
-      resumen.total_cargos_no_afectos,
-      resumen.total_pagar,
-      resumen.valor_en_letras,
-      idcompra,
-    ]
-  );
-
-  return resumen;
-}
+const recalcularTotales = persistirTotales;
 
 function extraerEncabezado(body: Record<string, unknown>) {
   const datos: Record<string, unknown> = {};
@@ -158,8 +96,8 @@ function extraerEncabezado(body: Record<string, unknown>) {
   }
   if (body.notas !== undefined) datos.notas = limpiar(body.notas);
   if (body.tipo_dte !== undefined) datos.tipo_dte = limpiar(body.tipo_dte);
-  if (body.numero_control !== undefined) datos.numero_control = limpiar(body.numero_control);
-  if (body.codigo_generacion !== undefined) datos.codigo_generacion = limpiar(body.codigo_generacion);
+  if (body.numero_control !== undefined) datos.numero_control = limpiar(body.numero_control)?.toUpperCase() ?? null;
+  if (body.codigo_generacion !== undefined) datos.codigo_generacion = limpiar(body.codigo_generacion)?.toUpperCase() ?? null;
   if (body.sello_recepcion !== undefined) datos.sello_recepcion = limpiar(body.sello_recepcion);
   if (body.numero_factura !== undefined) datos.numero_factura = limpiar(body.numero_factura);
   if (body.referencia_contable !== undefined) {
@@ -398,7 +336,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const accion = body.accion ? String(body.accion) : 'actualizar';
-    if (accion === 'registrar' || accion === 'anular') {
+    if (accion === 'registrar' || accion === 'anular' || accion === 'invalidar') {
       const auth = await requierePermiso(request, 'compras.registrar');
       if (auth instanceof NextResponse) return auth;
     }
@@ -416,14 +354,46 @@ export async function PUT(request: NextRequest) {
 
     const compra = existente[0];
 
+    if (accion === 'retenciones') {
+      const empresa = await leerEmpresa(connection).catch(() => null);
+      const [prov] = compra.idproveedor
+        ? await connection.execute<RowDataPacket[]>(
+            'SELECT categoria_contribuyente FROM proveedores WHERE idproveedor = ?',
+            [compra.idproveedor]
+          )
+        : [[] as RowDataPacket[]];
+      const sugeridas = empresa
+        ? sugerirRetenciones(empresa, prov[0] ? { categoria_contribuyente: prov[0].categoria_contribuyente } : null, {
+            gravado: Math.max(0, Number(compra.total_gravado) - Number(compra.descuento_global_gravado)),
+          })
+        : { iva_retenido: 0, iva_percibido: 0, retencion_renta: 0, motivo: 'Configure los datos de la empresa' };
+      await connection.end();
+      return NextResponse.json({ success: true, retenciones: sugeridas });
+    }
+
     if (accion === 'recalcular') {
       const resumen = await recalcularTotales(connection, Number(body.idcompra));
       await connection.end();
       return NextResponse.json({ success: true, resumen, mensaje: 'Totales recalculados' });
     }
 
-    if (accion === 'anular') {
-      if (compra.estado !== 'REGISTRADA') {
+    if (accion === 'anular' || accion === 'invalidar') {
+      const invalidar = accion === 'invalidar';
+      const motivo = limpiar(body.motivo);
+      if (invalidar) {
+        if (compra.clase_documento !== 'DTE' || !compra.codigo_generacion) {
+          await connection.end();
+          return NextResponse.json({ error: 'Solo un DTE con código de generación puede marcarse invalidado' }, { status: 400 });
+        }
+        if (!motivo) {
+          await connection.end();
+          return NextResponse.json({ error: 'Indique el motivo de la invalidación que hizo el emisor' }, { status: 400 });
+        }
+        if (compra.estado !== 'REGISTRADA' && compra.estado !== 'BORRADOR') {
+          await connection.end();
+          return NextResponse.json({ error: `La compra ya está ${String(compra.estado).toLowerCase()}` }, { status: 400 });
+        }
+      } else if (compra.estado !== 'REGISTRADA') {
         await connection.end();
         return NextResponse.json(
           { error: 'Solo se pueden anular compras en estado REGISTRADA' },
@@ -456,21 +426,28 @@ export async function PUT(request: NextRequest) {
       }
       await connection.beginTransaction();
       await connection.execute('SELECT idcompra FROM compras WHERE idcompra = ? FOR UPDATE', [body.idcompra]);
-      const [marcada] = await connection.execute<ResultSetHeader>(
-        "UPDATE compras SET estado = 'ANULADA' WHERE idcompra = ? AND estado = 'REGISTRADA'",
-        [body.idcompra]
-      );
+      const [marcada] = invalidar
+        ? await connection.execute<ResultSetHeader>(
+            `UPDATE compras SET estado = 'INVALIDADO', motivo_invalidacion = ?, fecha_invalidacion = ?
+             WHERE idcompra = ? AND estado = ?`,
+            [motivo!.slice(0, 250), limpiar(body.fecha_invalidacion) || fechaLocalISO(), body.idcompra, compra.estado]
+          )
+        : await connection.execute<ResultSetHeader>(
+            "UPDATE compras SET estado = 'ANULADA' WHERE idcompra = ? AND estado = 'REGISTRADA'",
+            [body.idcompra]
+          );
       if (marcada.affectedRows !== 1) {
         await connection.rollback();
         await connection.end();
-        return NextResponse.json({ error: 'La compra ya fue anulada desde otra ventana' }, { status: 409 });
+        return NextResponse.json({ error: 'La compra cambió de estado desde otra ventana' }, { status: 409 });
       }
       const productos = await revertirStockAlAnular(connection, Number(body.idcompra));
       await connection.commit();
       await connection.end();
+      const hecho = invalidar ? 'Compra marcada como invalidada por el emisor' : 'Compra anulada';
       return NextResponse.json({
         success: true,
-        mensaje: productos ? `Compra anulada; se revirtió el stock de ${productos} producto(s)` : 'Compra anulada',
+        mensaje: productos ? `${hecho}; se revirtió el stock de ${productos} producto(s)` : hecho,
       });
     }
 
@@ -534,6 +511,43 @@ export async function PUT(request: NextRequest) {
       }
       if (!compra.idproveedor && !body.idproveedor) errores.push('Proveedor');
       if (!compra.fecha_emision && !body.fecha_emision) errores.push('Fecha de emisión');
+
+      if (claseFinal === 'DTE') {
+        const codigoFinal = limpiar(body.codigo_generacion ?? compra.codigo_generacion);
+        const formato = validarFormatoDte({
+          tipo_dte: tipoDteFinal,
+          numero_control: limpiar(body.numero_control ?? compra.numero_control),
+          codigo_generacion: codigoFinal,
+          sello_recepcion: limpiar(body.sello_recepcion ?? compra.sello_recepcion),
+        });
+        if (formato.errores.length > 0) {
+          await connection.end();
+          return NextResponse.json({ error: formato.errores.join('. ') }, { status: 400 });
+        }
+        if (codigoFinal) {
+          const [duplicada] = await connection.execute<RowDataPacket[]>(
+            `SELECT numero_interno, idcompra FROM compras
+             WHERE codigo_generacion = ? AND idcompra <> ? AND estado NOT IN ('ANULADA', 'INVALIDADO') LIMIT 1`,
+            [codigoFinal, body.idcompra]
+          );
+          if (duplicada.length > 0) {
+            await connection.end();
+            return NextResponse.json(
+              { error: `Este DTE ya está ingresado en ${duplicada[0].numero_interno || `la compra #${duplicada[0].idcompra}`}` },
+              { status: 409 }
+            );
+          }
+        }
+      }
+      if (tipoDteRequiereRelacionados(tipoDteFinal)) {
+        const [relInvalidos] = await connection.execute<RowDataPacket[]>(
+          "SELECT numero_documento FROM compras_documentos_rel WHERE idcompra = ? AND tipo_dte_relacionado NOT IN ('03','07')",
+          [body.idcompra]
+        );
+        if (relInvalidos.length > 0) {
+          errores.push(`Documentos relacionados que no son CCF ni retención (${relInvalidos.map((r) => r.numero_documento).join(', ')})`);
+        }
+      }
 
       const [lineas] = await connection.execute<RowDataPacket[]>(
         'SELECT COUNT(*) AS total FROM compras_detalle WHERE idcompra = ?',
@@ -711,6 +725,9 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true, resumen, mensaje: 'Compra actualizada' });
   } catch (error: any) {
     if (connection) await connection.end();
+    if (error?.code === 'ER_DUP_ENTRY' && String(error.message).includes('uq_compras_codigo_generacion')) {
+      return NextResponse.json({ error: 'Ese código de generación ya está en otra compra vigente' }, { status: 409 });
+    }
     console.error('Error al actualizar compra:', error);
     return NextResponse.json(
       { error: 'Error al actualizar compra', detalle: error.message },

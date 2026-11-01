@@ -89,7 +89,7 @@ export async function asignarCadena(connection: Conexion, nodocto: number, idpro
 /** Recalcula total de facturas, suma de documentos (fiscal) y el retaceo sugerido. */
 export async function recalcularProceso(connection: Conexion, idproceso: number) {
   const [fact] = await connection.execute<RowDataPacket[]>(
-    "SELECT COALESCE(SUM(sub_total), 0) AS total FROM compras WHERE idproceso = ? AND estado <> 'ANULADA'",
+    "SELECT COALESCE(SUM(sub_total), 0) AS total FROM compras WHERE idproceso = ? AND estado NOT IN ('ANULADA', 'INVALIDADO')",
     [idproceso]
   );
   const [docs] = await connection.execute<RowDataPacket[]>(
@@ -209,7 +209,7 @@ export async function sincronizarPendientes(connection: Conexion, idproceso: num
             COALESCE(cp.stock_aplicado, 0) AS en_bodega
      FROM compras c JOIN compras_detalle d ON d.idcompra = c.idcompra
      LEFT JOIN costos_productos cp ON cp.iddetalle = d.iddetalle
-     WHERE c.idproceso = ? AND c.estado <> 'ANULADA' AND d.idprod IS NOT NULL
+     WHERE c.idproceso = ? AND c.estado NOT IN ('ANULADA', 'INVALIDADO') AND d.idprod IS NOT NULL
      ORDER BY c.idcompra`,
     [idproceso]
   );

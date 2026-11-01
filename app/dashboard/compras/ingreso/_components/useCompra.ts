@@ -194,13 +194,14 @@ export function useCompra() {
   });
 
   const accionEncabezado = useCallback(
-    async (accion: 'actualizar' | 'registrar' | 'anular') => {
+    async (accion: 'actualizar' | 'registrar' | 'anular' | 'invalidar', motivo?: string) => {
       if (!compra) return false;
       setOcupado(true);
       try {
-        const cuerpo = accion === 'anular'
-          ? { idcompra: compra.idcompra, accion }
-          : { ...cuerpoEncabezado(compra), accion };
+        const cuerpo =
+          accion === 'anular' || accion === 'invalidar'
+            ? { idcompra: compra.idcompra, accion, motivo }
+            : { ...cuerpoEncabezado(compra), accion };
         const data = await pedir('/api/compras', json('PUT', cuerpo));
         notificar('ok', data.mensaje || 'Guardado');
         await cargarTodo(compra.idcompra);
@@ -214,6 +215,23 @@ export function useCompra() {
     },
     [compra, cargarTodo, notificar]
   );
+
+  /** Retenciones según la empresa y el proveedor; solo llena valores distintos de cero. */
+  const sugerirRetenciones = useCallback(async () => {
+    if (!compra) return;
+    try {
+      const data = await pedir('/api/compras', json('PUT', { idcompra: compra.idcompra, accion: 'retenciones' }));
+      const s = data.retenciones as { iva_retenido: number; iva_percibido: number; retencion_renta: number; motivo: string };
+      const cambios: Partial<Compra> = {};
+      if (s.iva_retenido) cambios.iva_retenido = s.iva_retenido;
+      if (s.iva_percibido) cambios.iva_percibido = s.iva_percibido;
+      if (s.retencion_renta) cambios.retencion_renta = s.retencion_renta;
+      if (Object.keys(cambios).length) patch(cambios);
+      notificar('ok', s.motivo);
+    } catch (e) {
+      notificar('error', mensajeError(e));
+    }
+  }, [compra, notificar, patch]);
 
   const eliminarBorrador = useCallback(async () => {
     if (!compra || compra.estado !== 'BORRADOR') return;
@@ -385,6 +403,7 @@ export function useCompra() {
       iva_retenido: Number(compra.iva_retenido) || 0,
       iva_percibido: Number(compra.iva_percibido) || 0,
       retencion_renta: Number(compra.retencion_renta) || 0,
+      otros_tributos: Number(compra.total_otros_tributos) || 0,
     });
   }, [compra, lineas]);
 
@@ -417,6 +436,8 @@ export function useCompra() {
     guardar: () => accionEncabezado('actualizar'),
     registrar: () => accionEncabezado('registrar'),
     anular: () => accionEncabezado('anular'),
+    invalidar: (motivo: string) => accionEncabezado('invalidar', motivo),
+    sugerirRetenciones,
     eliminarBorrador,
     guardarLinea,
     eliminarLinea,

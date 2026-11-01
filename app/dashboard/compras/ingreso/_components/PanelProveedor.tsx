@@ -4,7 +4,7 @@ import { forwardRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Link2, Plus, Search, X } from 'lucide-react';
 import { UI } from '@/lib/ui';
-import { CONDICIONES_OPERACION, PLAZOS, TIPOS_DTE_COMPRAS } from '@/lib/compras-constantes';
+import { CONDICIONES_OPERACION, PLAZOS } from '@/lib/compras-constantes';
 import type { CompraCtx } from './useCompra';
 import { fechaInput, fmt2 } from './tipos';
 import { PanelNota } from './PanelNota';
@@ -444,9 +444,8 @@ export const PanelProveedor = forwardRef<HTMLInputElement, { ctx: CompraCtx }>(f
                     value={formRel.tipo_dte_relacionado}
                     onChange={(e) => setFormRel({ ...formRel, tipo_dte_relacionado: e.target.value })}
                   >
-                    {TIPOS_DTE_COMPRAS.map((t) => (
-                      <option key={t.codigo} value={t.codigo}>{t.abrev}</option>
-                    ))}
+                    <option value="03">CCFE</option>
+                    <option value="07">CRE (retención)</option>
                   </select>
                   <select
                     aria-label="Tipo de generación"

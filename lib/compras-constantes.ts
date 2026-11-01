@@ -13,6 +13,13 @@ export type CodigoDte = (typeof TIPOS_DTE_COMPRAS)[number]['codigo'];
 
 export const DTE_REQUIERE_RELACIONADOS: CodigoDte[] = ['05', '06'];
 
+/** Una nota de crédito o débito solo se emite sobre un crédito fiscal (03) o un comprobante de retención (07). */
+export const TIPOS_ORIGEN_NOTA = ['03', '07'] as const;
+
+export function esOrigenNota(codigo: string | null | undefined): boolean {
+  return (TIPOS_ORIGEN_NOTA as readonly string[]).includes(String(codigo ?? ''));
+}
+
 export const CONDICIONES_OPERACION = [
   { codigo: 1, nombre: 'Contado' },
   { codigo: 2, nombre: 'Crédito' },
@@ -21,7 +28,8 @@ export const CONDICIONES_OPERACION = [
 
 export type CondicionOperacion = (typeof CONDICIONES_OPERACION)[number]['codigo'];
 
-export const ESTADOS_COMPRA = ['BORRADOR', 'REGISTRADA', 'ANULADA'] as const;
+/** INVALIDADO: el emisor invalidó el DTE ante Hacienda; no cuenta para stock, libros ni saldos. */
+export const ESTADOS_COMPRA = ['BORRADOR', 'REGISTRADA', 'ANULADA', 'INVALIDADO'] as const;
 export type EstadoCompra = (typeof ESTADOS_COMPRA)[number];
 
 export const PLAZOS = [
@@ -35,13 +43,14 @@ export const FORMAS_PAGO = [
   { codigo: '02', nombre: 'Tarjeta débito' },
   { codigo: '03', nombre: 'Tarjeta crédito' },
   { codigo: '04', nombre: 'Cheque' },
-  { codigo: '05', nombre: 'Transferencia / Depósito bancario' },
-  { codigo: '06', nombre: 'Vales o cupones' },
+  { codigo: '05', nombre: 'Transferencia / depósito bancario' },
   { codigo: '08', nombre: 'Dinero electrónico' },
-  { codigo: '12', nombre: 'Cuentas por pagar / Intercambio' },
-  { codigo: '13', nombre: 'Dinero electrónico no bancario' },
-  { codigo: '14', nombre: 'Bitcoin' },
-  { codigo: '99', nombre: 'Otro' },
+  { codigo: '09', nombre: 'Monedero electrónico' },
+  { codigo: '11', nombre: 'Bitcoin' },
+  { codigo: '12', nombre: 'Otras criptomonedas' },
+  { codigo: '13', nombre: 'Cuentas por pagar del receptor' },
+  { codigo: '14', nombre: 'Giro bancario' },
+  { codigo: '99', nombre: 'Otros (indicar el medio de pago)' },
 ] as const;
 
 export function esTipoDteCompra(codigo: unknown): codigo is CodigoDte {

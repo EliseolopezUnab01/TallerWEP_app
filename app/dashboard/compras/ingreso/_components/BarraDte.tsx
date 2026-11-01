@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, FilePlus2, FolderOpen, Save, Trash2, XCircle } from 'lucide-react';
+import { AlertTriangle, Ban, CheckCircle2, FilePlus2, FolderOpen, Save, Trash2, XCircle } from 'lucide-react';
 import { UI } from '@/lib/ui';
 import { AVISOS_COMPRA, CATEGORIAS_OPERACION, destinoPermitido, type CategoriaOperacion } from '@/lib/compras-constantes';
 import type { CompraCtx } from './useCompra';
@@ -34,6 +34,7 @@ const ESTILO_ESTADO: Record<string, string> = {
   BORRADOR: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30',
   REGISTRADA: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30',
   ANULADA: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30',
+  INVALIDADO: 'bg-slate-200 text-slate-700 border-slate-400 dark:bg-slate-500/20 dark:text-slate-300 dark:border-slate-500/40 line-through',
 };
 
 const btnIcono =
@@ -231,6 +232,29 @@ export function BarraDte({ ctx, onAbrir }: { ctx: CompraCtx; onAbrir: () => void
             aria-label="Anular"
           >
             <XCircle className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            className={`${btnIcono} border-slate-300 dark:border-slate-500/40 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-500/10`}
+            disabled={
+              !compra ||
+              esImportacion ||
+              !compra.codigo_generacion ||
+              !['BORRADOR', 'REGISTRADA'].includes(compra.estado) ||
+              ocupado
+            }
+            onClick={() => {
+              const motivo = prompt('El proveedor invalidó este DTE ante Hacienda. Motivo de la invalidación:');
+              if (motivo && motivo.trim()) ctx.invalidar(motivo.trim());
+            }}
+            title={
+              compra?.estado === 'INVALIDADO'
+                ? `Invalidado por el emisor${compra.motivo_invalidacion ? `: ${compra.motivo_invalidacion}` : ''}`
+                : 'Marcar como invalidado por el emisor (no cuenta para stock ni libros)'
+            }
+            aria-label="Marcar invalidado"
+          >
+            <Ban className="w-4 h-4" />
           </button>
           <button
             type="button"

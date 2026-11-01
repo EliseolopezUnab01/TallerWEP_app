@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { RowDataPacket } from 'mysql2/promise';
 import { connectDB } from '@/lib/db';
-import { tipoDteRequiereRelacionados } from '@/lib/compras-constantes';
+import { esOrigenNota, tipoDteRequiereRelacionados } from '@/lib/compras-constantes';
 import {
   aNumero,
   insertarLinea,
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         `SELECT idcompra, numero_interno, numero_factura, codigo_generacion, tipo_dte, fecha_emision, total_pagar
          FROM compras
          WHERE idproveedor = ? AND estado = 'REGISTRADA' AND clase_documento = 'DTE'
-           AND tipo_dte NOT IN ('05','06') AND idcompra <> ?
+           AND tipo_dte IN ('03','07') AND idcompra <> ?
            ${q ? 'AND (numero_factura LIKE ? OR numero_interno LIKE ? OR codigo_generacion LIKE ?)' : ''}
          ORDER BY fecha_emision DESC, idcompra DESC LIMIT 50`,
         q ? [nota.idproveedor, idcompra, `%${q}%`, `%${q}%`, `%${q}%`] : [nota.idproveedor, idcompra]
@@ -85,8 +85,11 @@ export async function POST(request: NextRequest) {
       const origen = rows[0];
       if (!origen) return json({ error: 'Factura original no encontrada' }, 404);
       if (origen.estado !== 'REGISTRADA') return json({ error: 'La factura original debe estar registrada' }, 400);
-      if (origen.clase_documento !== 'DTE' || tipoDteRequiereRelacionados(origen.tipo_dte)) {
-        return json({ error: 'La factura original debe ser una factura nacional (no otra nota)' }, 400);
+      if (origen.clase_documento !== 'DTE' || !esOrigenNota(origen.tipo_dte)) {
+        return json(
+          { error: 'Una nota solo se emite sobre un comprobante de crédito fiscal (03) o de retención (07)' },
+          400
+        );
       }
       if (nota.idproveedor && Number(nota.idproveedor) !== Number(origen.idproveedor)) {
         return json({ error: 'La factura original es de otro proveedor' }, 400);

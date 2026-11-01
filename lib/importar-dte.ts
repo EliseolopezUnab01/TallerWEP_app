@@ -10,6 +10,16 @@ export interface LineaDte {
   costo_unitario: number;
   condicion_iva: CondicionIva;
   total: number;
+  /** CAT-014; null si el JSON no la trae. */
+  uni_medida: number | null;
+  /** CAT-011. */
+  tipo_item: number | null;
+}
+
+export interface TributoDte {
+  codigo: string;
+  descripcion: string | null;
+  valor: number;
 }
 
 export interface ApendiceDte {
@@ -26,8 +36,28 @@ export interface DteParseado {
   codigo_generacion: string | null;
   sello_recepcion: string | null;
   fecha_emision: string | null;
-  emisor: { nit: string | null; nrc: string | null; nombre: string };
+  ambiente: string | null;
+  tipo_modelo: number | null;
+  tipo_operacion: number | null;
+  tipo_contingencia: number | null;
+  motivo_contingencia: string | null;
+  emisor: {
+    nit: string | null;
+    nrc: string | null;
+    nombre: string;
+    cod_actividad: string | null;
+    desc_actividad: string | null;
+    departamento: string | null;
+    municipio: string | null;
+  };
   receptor: { nit: string | null; nrc: string | null; nombre: string };
+  /** Descuentos globales del resumen, sin IVA (en la factura 01 se les quita). */
+  descuento_global_gravado: number;
+  descuento_global_exento: number;
+  descuento_global_no_sujeto: number;
+  porcentaje_descuento: number;
+  /** resumen.tributos sin el IVA (código 20). */
+  otros_tributos: TributoDte[];
   /** Null si el JSON no la trae: el usuario debe elegirla antes de registrar. */
   condicion_operacion: number | null;
   iva_retenido: number;
@@ -86,7 +116,14 @@ export function parsearDte(entrada: unknown): DteParseado {
     const cantidad = num(item.cantidad) || 1;
     const descripcion = txt(item.descripcion) || `Ítem ${num(item.numItem)}`;
     const codigo = txt(item.codigo);
-    const base = { numItem: num(item.numItem), cantidad, codigo, descripcion };
+    const base = {
+      numItem: num(item.numItem),
+      cantidad,
+      codigo,
+      descripcion,
+      uni_medida: item.uniMedida == null ? null : num(item.uniMedida) || null,
+      tipo_item: item.tipoItem == null ? null : num(item.tipoItem) || null,
+    };
 
     const tramos: [CondicionIva, number][] = esSujetoExcluido
       ? [['NO_SUJETO', num(item.compra)]]
@@ -140,19 +177,43 @@ export function parsearDte(entrada: unknown): DteParseado {
     return { campo: txt(a.campo) || '', etiqueta: txt(a.etiqueta) || '', valor, monto: montoDeTexto(valor) };
   });
 
+  const sinIva = (monto: number) => (tipo === '01' ? r8(monto / (1 + IVA_TASA)) : r8(monto));
+  const otros_tributos = arr(resumen.tributos)
+    .map((t) => ({ codigo: txt(t.codigo) || '', descripcion: txt(t.descripcion), valor: r8(num(t.valor)) }))
+    .filter((t) => t.codigo && t.codigo !== '20' && t.valor);
+  const direccionEmisor = obj(emisorJson.direccion);
+  const entero = (v: unknown) => (v == null || v === '' ? null : num(v));
+  // En la factura 01 el receptor (consumidor) puede venir solo con numDocumento; 36 = NIT.
+  const nitReceptor =
+    txt(receptorJson.nit) || (txt(receptorJson.tipoDocumento) === '36' ? txt(receptorJson.numDocumento) : null);
+
   return {
     tipo_dte: tipo,
     version: ident.version == null ? null : num(ident.version),
-    numero_control: txt(ident.numeroControl),
-    codigo_generacion: txt(ident.codigoGeneracion),
+    numero_control: txt(ident.numeroControl)?.toUpperCase() ?? null,
+    codigo_generacion: txt(ident.codigoGeneracion)?.toUpperCase() ?? null,
     sello_recepcion: txt(raiz.selloRecepcion) || txt(raiz.selloRecibido) || txt(obj(raiz.responseMH).selloRecibido),
     fecha_emision: txt(ident.fecEmi),
+    ambiente: txt(ident.ambiente),
+    tipo_modelo: entero(ident.tipoModelo),
+    tipo_operacion: entero(ident.tipoOperacion),
+    tipo_contingencia: entero(ident.tipoContingencia),
+    motivo_contingencia: txt(ident.motivoContin) || txt(ident.motivoContigencia),
     emisor: {
       nit: txt(emisorJson.nit) || txt(emisorJson.numDocumento),
       nrc: txt(emisorJson.nrc),
       nombre: txt(emisorJson.nombre) || '',
+      cod_actividad: txt(emisorJson.codActividad),
+      desc_actividad: txt(emisorJson.descActividad),
+      departamento: txt(direccionEmisor.departamento),
+      municipio: txt(direccionEmisor.municipio),
     },
-    receptor: { nit: txt(receptorJson.nit), nrc: txt(receptorJson.nrc), nombre: txt(receptorJson.nombre) || '' },
+    receptor: { nit: nitReceptor, nrc: txt(receptorJson.nrc), nombre: txt(receptorJson.nombre) || '' },
+    descuento_global_gravado: sinIva(num(resumen.descuGravada)),
+    descuento_global_exento: r8(num(resumen.descuExenta)),
+    descuento_global_no_sujeto: r8(num(resumen.descuNoSuj ?? resumen.descu)),
+    porcentaje_descuento: r8(num(resumen.porcentajeDescuento)),
+    otros_tributos,
     condicion_operacion: [1, 2, 3].includes(num(resumen.condicionOperacion)) ? num(resumen.condicionOperacion) : null,
     iva_retenido: num(resumen.ivaRete1 ?? resumen.ivaRete),
     iva_percibido: num(resumen.ivaPerci1 ?? resumen.ivaPerci),

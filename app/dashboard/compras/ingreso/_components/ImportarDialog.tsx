@@ -38,6 +38,8 @@ interface ResultadoJson {
   apendice: ApendiceDte[];
   total_json: number;
   total_compra: number;
+  otros_tributos?: { codigo: string; descripcion: string | null; valor: number }[];
+  avisos?: string[];
 }
 
 interface Props {
@@ -349,6 +351,18 @@ export function ImportarDialog({ abierto, archivoInicial, ctx, onCerrar, onPendi
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 DTE importado: {resJson.lineas_insertadas} líneas ({resJson.lineas_con_producto} de inventario).
               </div>
+              {resJson.avisos?.map((aviso) => (
+                <div key={aviso} className={`${UI.avisoError} px-3 py-2 text-xs flex items-center gap-2`}>
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  {aviso}
+                </div>
+              ))}
+              {resJson.otros_tributos && resJson.otros_tributos.length > 0 && (
+                <div className="text-xs text-muted-foreground px-1">
+                  Otros tributos del DTE (suman al monto de la operación):{' '}
+                  {resJson.otros_tributos.map((t) => `${t.descripcion || t.codigo} $${fmt2(t.valor)}`).join(' · ')}
+                </div>
+              )}
               {resJson.lineas_sin_clasificar > 0 && (
                 <div className={`${UI.avisoError} px-3 py-2 text-xs flex items-center gap-2`}>
                   <AlertTriangle className="w-4 h-4 shrink-0" />

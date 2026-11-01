@@ -13,7 +13,9 @@ import {
   type Conexion,
 } from '@/lib/compras-detalle-db';
 import { parsearDte, soloDigitos } from '@/lib/importar-dte';
-import { destinoPermitido, nombreTipoDte } from '@/lib/compras-constantes';
+import { destinoPermitido, nombreTipoDte, tipoDteRequiereRelacionados, esOrigenNota } from '@/lib/compras-constantes';
+import { validarFormatoDte, validarReceptor } from '@/lib/dte-validacion';
+import { leerEmpresa } from '@/lib/empresa';
 
 interface FilaExcel {
   fila: number;
@@ -169,7 +171,7 @@ async function importarJson(
   if (dte.codigo_generacion) {
     const [duplicada] = await connection.execute<RowDataPacket[]>(
       `SELECT idcompra, numero_interno FROM compras
-       WHERE codigo_generacion = ? AND idcompra <> ? AND estado <> 'ANULADA' LIMIT 1`,
+       WHERE codigo_generacion = ? AND idcompra <> ? AND estado NOT IN ('ANULADA', 'INVALIDADO') LIMIT 1`,
       [dte.codigo_generacion, idcompra]
     );
     if (duplicada.length > 0) {
@@ -179,6 +181,19 @@ async function importarJson(
       };
     }
   }
+
+  const formato = validarFormatoDte(dte);
+  const receptor =
+    dte.tipo_dte === '14'
+      ? { errores: [], avisos: [] }
+      : validarReceptor(await leerEmpresa(connection).catch(() => null), dte.receptor);
+  const errores = [...formato.errores, ...receptor.errores];
+  if (errores.length > 0) {
+    return { status: 400, data: { error: errores.join('. ') } };
+  }
+  const avisos = [...formato.avisos, ...receptor.avisos];
+  if (dte.ambiente === '00') avisos.push('El DTE es del ambiente de pruebas de Hacienda, no tiene validez fiscal');
+  if (dte.tipo_operacion === 2) avisos.push('El DTE se emitió en contingencia');
 
   const nit = soloDigitos(dte.emisor.nit) || '-';
   const nrc = soloDigitos(dte.emisor.nrc) || '-';
@@ -191,6 +206,19 @@ async function importarJson(
   );
   const proveedor = provs[0] || null;
 
+  if (proveedor && dte.numero_control) {
+    const [mismoControl] = await connection.execute<RowDataPacket[]>(
+      `SELECT idcompra, numero_interno FROM compras
+       WHERE numero_control = ? AND idproveedor = ? AND idcompra <> ? AND estado NOT IN ('ANULADA', 'INVALIDADO') LIMIT 1`,
+      [dte.numero_control, proveedor.idproveedor, idcompra]
+    );
+    if (mismoControl.length > 0) {
+      avisos.push(
+        `El proveedor ya tiene el número de control ${dte.numero_control} en ${mismoControl[0].numero_interno || `la compra #${mismoControl[0].idcompra}`}`
+      );
+    }
+  }
+
   const productos = await buscarPorReferencia(
     connection,
     dte.lineas.map((l) => l.codigo || '')
@@ -202,6 +230,8 @@ async function importarJson(
     await connection.execute('DELETE FROM compras_pagos WHERE idcompra = ?', [idcompra]);
     await connection.execute('DELETE FROM compras_documentos_rel WHERE idcompra = ?', [idcompra]);
   }
+  await connection.execute('DELETE FROM compras_tributos WHERE idcompra = ?', [idcompra]);
+  const totalOtrosTributos = dte.otros_tributos.reduce((s, t) => s + t.valor, 0);
 
   const esCredito = dte.condicion_operacion === 2;
   const plazo = dte.pagos.find((p) => p.plazo && p.periodo);
@@ -220,6 +250,21 @@ async function importarJson(
     iva_retenido: dte.iva_retenido,
     iva_percibido: dte.iva_percibido,
     retencion_renta: dte.retencion_renta,
+    descuento_global_gravado: dte.descuento_global_gravado,
+    descuento_global_exento: dte.descuento_global_exento,
+    descuento_global_no_sujeto: dte.descuento_global_no_sujeto,
+    porcentaje_descuento: dte.porcentaje_descuento,
+    total_otros_tributos: totalOtrosTributos,
+    dte_ambiente: dte.ambiente,
+    dte_version: dte.version,
+    dte_tipo_modelo: dte.tipo_modelo,
+    dte_tipo_operacion: dte.tipo_operacion,
+    dte_tipo_contingencia: dte.tipo_contingencia,
+    dte_motivo_contingencia: dte.motivo_contingencia?.slice(0, 500) ?? null,
+    emisor_cod_actividad: dte.emisor.cod_actividad,
+    emisor_desc_actividad: dte.emisor.desc_actividad?.slice(0, 150) ?? null,
+    emisor_departamento: dte.emisor.departamento,
+    emisor_municipio: dte.emisor.municipio,
   };
   if (proveedor) encabezado.idproveedor = proveedor.idproveedor;
   if (dte.observaciones && !limpiar(compra.notas)) encabezado.notas = dte.observaciones.slice(0, 500);
@@ -248,10 +293,19 @@ async function importarJson(
         referencia_proveedor: l.codigo,
         descripcion: l.descripcion,
         cantidad: l.cantidad,
+        uni_medida: l.uni_medida,
+        tipo_item: l.tipo_item,
         costo_unitario: l.costo_unitario,
         condicion_iva: l.condicion_iva,
         imagen_url: p?.imagen ?? null,
       })
+    );
+  }
+
+  for (const t of dte.otros_tributos) {
+    await connection.execute(
+      'INSERT INTO compras_tributos (idcompra, codigo, descripcion, valor) VALUES (?, ?, ?, ?)',
+      [idcompra, t.codigo.slice(0, 4), t.descripcion?.slice(0, 150) ?? null, t.valor]
     );
   }
 
@@ -267,6 +321,9 @@ async function importarJson(
 
   for (const d of dte.documentos_rel) {
     if (!d.numero || !d.fecha) continue;
+    if (tipoDteRequiereRelacionados(dte.tipo_dte) && !esOrigenNota(d.tipo)) {
+      avisos.push(`El documento relacionado ${d.numero} es tipo ${d.tipo}; una nota solo puede relacionar un CCF (03) o un comprobante de retención (07)`);
+    }
     await connection.execute(
       `INSERT INTO compras_documentos_rel (idcompra, tipo_dte_relacionado, tipo_generacion, numero_documento, fecha_generacion)
        VALUES (?, ?, ?, ?, ?)`,
@@ -303,7 +360,9 @@ async function importarJson(
       total_json: dte.total_pagar,
       total_no_gravado_json: dte.total_no_gravado,
       total_compra: resumen.total_pagar,
+      otros_tributos: dte.otros_tributos,
       observaciones: dte.observaciones,
+      avisos,
     },
   };
 }

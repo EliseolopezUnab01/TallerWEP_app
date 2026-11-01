@@ -10,6 +10,7 @@ const ESTILO_ESTADO: Record<string, string> = {
   BORRADOR: 'text-amber-700 dark:text-amber-300',
   REGISTRADA: 'text-emerald-700 dark:text-emerald-300',
   ANULADA: 'text-red-600 dark:text-red-400',
+  INVALIDADO: 'text-slate-500 dark:text-slate-400 line-through',
 };
 
 interface Props {

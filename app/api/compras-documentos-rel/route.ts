@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { tipoDteRequiereRelacionados } from '@/lib/compras-constantes';
+import { esOrigenNota, tipoDteRequiereRelacionados } from '@/lib/compras-constantes';
 
 async function validarBorradorNcNd(
   connection: Awaited<ReturnType<typeof connectDB>>,
@@ -71,6 +71,12 @@ export async function POST(request: NextRequest) {
     if (!body.tipo_dte_relacionado || !body.numero_documento || !body.fecha_generacion) {
       return NextResponse.json(
         { error: 'Faltan tipo_dte_relacionado, numero_documento o fecha_generacion' },
+        { status: 400 }
+      );
+    }
+    if (!esOrigenNota(String(body.tipo_dte_relacionado))) {
+      return NextResponse.json(
+        { error: 'Una nota solo puede relacionar un comprobante de crédito fiscal (03) o de retención (07)' },
         { status: 400 }
       );
     }

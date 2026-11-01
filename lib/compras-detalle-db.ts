@@ -17,6 +17,8 @@ export const CAMPOS_LINEA = [
   'referencia_proveedor',
   'descripcion',
   'cantidad',
+  'uni_medida',
+  'tipo_item',
   'costo_unitario',
   'descuento_porcentaje',
   'subtotal_sin_iva',
@@ -85,6 +87,8 @@ export function normalizarLinea(body: Record<string, unknown>, calcular = true) 
     referencia_proveedor: limpiar(body.referencia_proveedor),
     descripcion: String(body.descripcion || '').trim(),
     cantidad,
+    uni_medida: body.uni_medida ? Number(body.uni_medida) || null : null,
+    tipo_item: body.tipo_item ? Number(body.tipo_item) || null : null,
     costo_unitario,
     descuento_porcentaje,
     ...calculados,
@@ -152,7 +156,18 @@ export async function insertarLinea(connection: Conexion, linea: LineaNormalizad
   return resultado.insertId;
 }
 
-export async function persistirTotales(connection: Conexion, idcompra: number) {
+export interface ValoresEncabezado {
+  descuento_global_gravado?: number;
+  descuento_global_exento?: number;
+  descuento_global_no_sujeto?: number;
+  porcentaje_descuento?: number;
+  iva_retenido?: number;
+  iva_percibido?: number;
+  retencion_renta?: number;
+}
+
+/** Recalcula y guarda el resumen; `extras` reemplaza valores del encabezado aún no guardados. */
+export async function persistirTotales(connection: Conexion, idcompra: number, extras: ValoresEncabezado = {}) {
   const [lineas] = await connection.execute<RowDataPacket[]>(
     `SELECT condicion_iva, subtotal_sin_iva, iva_unitario, cantidad, costo_unitario,
             descuento_porcentaje, cargos_no_afectos
@@ -161,20 +176,22 @@ export async function persistirTotales(connection: Conexion, idcompra: number) {
   );
   const [encabezado] = await connection.execute<RowDataPacket[]>(
     `SELECT descuento_global_gravado, descuento_global_exento, descuento_global_no_sujeto,
-            porcentaje_descuento, iva_retenido, iva_percibido, retencion_renta
+            porcentaje_descuento, iva_retenido, iva_percibido, retencion_renta, total_otros_tributos
      FROM compras WHERE idcompra = ?`,
     [idcompra]
   );
   const base = encabezado[0] || {};
+  const valor = (campo: keyof ValoresEncabezado) => extras[campo] ?? (Number(base[campo]) || 0);
   const resumen = calcularResumen({
     lineas: lineas as unknown as LineaResumen[],
-    descuento_global_gravado: Number(base.descuento_global_gravado) || 0,
-    descuento_global_exento: Number(base.descuento_global_exento) || 0,
-    descuento_global_no_sujeto: Number(base.descuento_global_no_sujeto) || 0,
-    porcentaje_descuento: Number(base.porcentaje_descuento) || 0,
-    iva_retenido: Number(base.iva_retenido) || 0,
-    iva_percibido: Number(base.iva_percibido) || 0,
-    retencion_renta: Number(base.retencion_renta) || 0,
+    descuento_global_gravado: valor('descuento_global_gravado'),
+    descuento_global_exento: valor('descuento_global_exento'),
+    descuento_global_no_sujeto: valor('descuento_global_no_sujeto'),
+    porcentaje_descuento: valor('porcentaje_descuento'),
+    iva_retenido: valor('iva_retenido'),
+    iva_percibido: valor('iva_percibido'),
+    retencion_renta: valor('retencion_renta'),
+    otros_tributos: Number(base.total_otros_tributos) || 0,
   });
 
   await connection.execute(

@@ -26,6 +26,54 @@ if (modo === 'compra') {
   console.log('borrado', d.status);
   process.exit(0);
 }
+if (modo === 'dte') {
+  // Importa un CCF de prueba (descuento global y FOVIAL), lo marca invalidado y consulta el libro.
+  const r = await fetch(`${BASE}/api/compras`, {
+    method: 'POST',
+    headers: { cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clase_documento: 'DTE', tipo_dte: '03', categoria_operacion: 'OTRO' }),
+  });
+  const { idcompra } = await r.json();
+  const dte = (control, receptorNit) => ({
+    identificacion: {
+      version: 3, ambiente: '00', tipoDte: '03', numeroControl: control,
+      codigoGeneracion: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', tipoModelo: 1, tipoOperacion: 1, fecEmi: '2026-11-01',
+    },
+    emisor: { nit: process.env.NIT_PROV || '6655444', nrc: '887765', nombre: 'Proveedor prueba', codActividad: '45301', descActividad: 'Repuestos', direccion: { departamento: '06', municipio: '14' } },
+    receptor: { nit: receptorNit, nrc: '1', nombre: 'Receptor' },
+    cuerpoDocumento: [{ numItem: 1, cantidad: 2.5, codigo: 'ZZ-NO-EXISTE', descripcion: 'Filtro', uniMedida: 59, tipoItem: 1, precioUni: 40, ventaGravada: 100 }],
+    resumen: {
+      descuGravada: 10, porcentajeDescuento: 10, condicionOperacion: 1,
+      tributos: [{ codigo: '20', descripcion: 'IVA', valor: 11.7 }, { codigo: 'D1', descripcion: 'FOVIAL', valor: 2 }],
+      totalPagar: 103.7, montoTotalOperacion: 103.7,
+    },
+  });
+  const importar = async (cuerpo) => {
+    const res = await fetch(`${BASE}/api/compras/importar`, {
+      method: 'POST',
+      headers: { cookie, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idcompra, tipo: 'json', reemplazar: true, dte: cuerpo }),
+    });
+    return [res.status, await res.json()];
+  };
+  let [st, data] = await importar(dte('DTE-03-MAL', '1'));
+  console.log('control mal formado', st, data.error);
+  [st, data] = await importar(dte('DTE-03-M001P001-000000000000001', '1'));
+  console.log('importado', st, 'total', data.total_compra, 'avisos', JSON.stringify(data.avisos));
+  const g = await (await fetch(`${BASE}/api/compras?id=${idcompra}`, { headers: { cookie } })).json();
+  const c = g.compra ?? g;
+  console.log('desc', c.descuento_global_gravado, 'otros', c.total_otros_tributos, 'monto', c.monto_total_operacion, 'ambiente', c.dte_ambiente, 'actividad', c.emisor_cod_actividad);
+  const inv = await fetch(`${BASE}/api/compras`, {
+    method: 'PUT',
+    headers: { cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idcompra, accion: 'invalidar', motivo: 'prueba' }),
+  });
+  console.log('invalidar', inv.status, (await inv.json()).mensaje);
+  const libro = await (await fetch(`${BASE}/api/libro-compras?desde=2026-11-01&hasta=2026-11-30`, { headers: { cookie } })).json();
+  console.log('libro filas', libro.filas?.length, 'con la de prueba', libro.filas?.some((f) => f.idcompra === idcompra));
+  console.log('idcompra', idcompra);
+  process.exit(0);
+}
 if (modo === 'precios') {
   const id = Number(process.argv[3]);
   const calc = await fetch(`${BASE}/api/ajuste-precios`, {
