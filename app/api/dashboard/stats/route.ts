@@ -85,5 +85,7 @@ export async function GET() {
       { error: 'Error al cargar estadísticas', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

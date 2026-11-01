@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Search, DollarSign, Package, Save, RefreshCw, History, TrendingUp, FileText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
+import { SearchFilters, SingleFilterType } from '@/components/search-filters';
+import { useBuscarProductos } from '@/lib/buscar-productos';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 
@@ -41,10 +42,10 @@ interface Costo {
 }
 
 export default function CostosPage() {
-  const [productos, setProductos] = useState<Producto[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { productos: productosFiltrados, total: totalProductos, inicial: loading } =
+    useBuscarProductos<Producto>(searchTerm, selectedFilters);
   const [saving, setSaving] = useState(false);
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
   const [costoData, setCostoData] = useState<Costo | null>(null);
@@ -56,24 +57,6 @@ export default function CostosPage() {
     nofactura: '',
     dt_compra: ''
   });
-
-  useEffect(() => {
-    fetchProductos();
-  }, []);
-
-  const fetchProductos = async () => {
-    try {
-      const response = await fetch('/api/productos');
-      if (response.ok) {
-        const data = await response.json();
-        setProductos(data.products || []);
-      }
-    } catch (error) {
-      console.error('Error al cargar productos:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchCosto = async (idprod: number) => {
     try {
@@ -132,8 +115,6 @@ export default function CostosPage() {
     }
   };
 
-  const productosFiltrados = filterProductos(productos, searchTerm, selectedFilters);
-
   if (loading) {
     return (
       <DashboardLayout>
@@ -169,7 +150,7 @@ export default function CostosPage() {
             </div>
             <Badge variant="outline" className="text-primary border-primary/50">
               <DollarSign className="h-4 w-4 mr-1" />
-              {productos.length} productos
+              {totalProductos} productos
             </Badge>
           </div>
 

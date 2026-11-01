@@ -25,7 +25,8 @@ import {
   parametrosDelProceso,
   reabrirRetaceo,
 } from '@/lib/retaceo';
-import { comparePasswords, getUserIdFromRequest } from '@/lib/auth';
+import { comparePasswords } from '@/lib/auth';
+import { requierePermiso } from '@/lib/sesion';
 
 /** Lo que ya pasó por aduana: no cambia después del primer retaceo aplicado. */
 const CAMPOS_ADUANA = [
@@ -238,8 +239,9 @@ export async function POST(request: NextRequest) {
 
     switch (accion) {
       case 'reabrir': {
-        const idusuario = getUserIdFromRequest(request);
-        if (!idusuario) return json({ error: 'Inicie sesión de nuevo para reabrir el retaceo' }, 401);
+        const auth = await requierePermiso(request, 'compras.reabrir');
+        if (auth instanceof NextResponse) return auth;
+        const idusuario = auth.id;
         const clave = String(body.password || '');
         if (!clave) return json({ error: 'Escriba su contraseña' }, 400);
         const [usuarios] = await connection.execute<RowDataPacket[]>('SELECT password FROM usuarios WHERE id = ?', [idusuario]);
@@ -518,6 +520,8 @@ export async function POST(request: NextRequest) {
       }
 
       case 'finalizar': {
+        const auth = await requierePermiso(request, 'compras.registrar');
+        if (auth instanceof NextResponse) return auth;
         await connection.beginTransaction();
         const calculo = await finalizarRetaceo(connection, idproceso);
         await connection.commit();

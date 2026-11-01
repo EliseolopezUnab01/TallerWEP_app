@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { RowDataPacket } from 'mysql2/promise';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { connectDB } from '@/lib/db';
+import { fechaLocalISO } from '@/lib/fechas';
+import { requierePermiso } from '@/lib/sesion';
 import {
   AVISOS_COMPRA,
   esCategoriaOperacion,
@@ -283,6 +285,8 @@ export async function GET(request: NextRequest) {
       { error: 'Error al obtener compras', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -355,6 +359,8 @@ export async function POST(request: NextRequest) {
       { error: 'Error al crear compra', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -382,6 +388,10 @@ export async function PUT(request: NextRequest) {
     }
 
     const accion = body.accion ? String(body.accion) : 'actualizar';
+    if (accion === 'registrar' || accion === 'anular') {
+      const auth = await requierePermiso(request, 'compras.registrar');
+      if (auth instanceof NextResponse) return auth;
+    }
     connection = await connectDB();
 
     const [existente]: any = await connection.execute(
@@ -435,11 +445,17 @@ export async function PUT(request: NextRequest) {
         );
       }
       await connection.beginTransaction();
-      const productos = await revertirStockAlAnular(connection, Number(body.idcompra));
-      await connection.execute(
-        "UPDATE compras SET estado = 'ANULADA' WHERE idcompra = ?",
+      await connection.execute('SELECT idcompra FROM compras WHERE idcompra = ? FOR UPDATE', [body.idcompra]);
+      const [marcada] = await connection.execute<ResultSetHeader>(
+        "UPDATE compras SET estado = 'ANULADA' WHERE idcompra = ? AND estado = 'REGISTRADA'",
         [body.idcompra]
       );
+      if (marcada.affectedRows !== 1) {
+        await connection.rollback();
+        await connection.end();
+        return NextResponse.json({ error: 'La compra ya fue anulada desde otra ventana' }, { status: 409 });
+      }
+      const productos = await revertirStockAlAnular(connection, Number(body.idcompra));
       await connection.commit();
       await connection.end();
       return NextResponse.json({
@@ -549,7 +565,7 @@ export async function PUT(request: NextRequest) {
       await ajustarNumeroInterno(connection, compra, datos);
 
       if (!datos.fecha_registro) {
-        datos.fecha_registro = new Date().toISOString().slice(0, 10);
+        datos.fecha_registro = fechaLocalISO();
       }
 
       const fechaEmision = (datos.fecha_emision as string) || compra.fecha_emision;
@@ -578,10 +594,16 @@ export async function PUT(request: NextRequest) {
       });
 
       await connection.beginTransaction();
-      await connection.execute(
-        "UPDATE compras SET estado = 'REGISTRADA' WHERE idcompra = ?",
+      await connection.execute('SELECT idcompra FROM compras WHERE idcompra = ? FOR UPDATE', [body.idcompra]);
+      const [marcada] = await connection.execute<ResultSetHeader>(
+        "UPDATE compras SET estado = 'REGISTRADA' WHERE idcompra = ? AND estado = 'BORRADOR'",
         [body.idcompra]
       );
+      if (marcada.affectedRows !== 1) {
+        await connection.rollback();
+        await connection.end();
+        return NextResponse.json({ error: 'La compra ya fue registrada desde otra ventana' }, { status: 409 });
+      }
       const productos = await aplicarStockAlRegistrar(connection, Number(body.idcompra));
       await connection.commit();
 
@@ -684,6 +706,8 @@ export async function PUT(request: NextRequest) {
       { error: 'Error al actualizar compra', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -732,5 +756,7 @@ export async function DELETE(request: NextRequest) {
       { error: 'Error al eliminar compra', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

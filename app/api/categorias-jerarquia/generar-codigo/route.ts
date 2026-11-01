@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 
 // POST: Generar código jerárquico para un nuevo producto
 export async function POST(request: Request) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const body = await request.json();
     const { idcategoria, id_grupo, id_subgrupo } = body;
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Se requiere idcategoria' }, { status: 400 });
     }
 
-    const connection = await connectDB();
+    connection = await connectDB();
 
     // Obtener código del grupo
     let codigoGrupo = '000';
@@ -58,5 +59,7 @@ export async function POST(request: Request) {
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

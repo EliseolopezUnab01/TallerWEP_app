@@ -12,7 +12,8 @@ import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import Image from 'next/image';
-import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
+import { SearchFilters, SingleFilterType } from '@/components/search-filters';
+import { useBuscarProductos } from '@/lib/buscar-productos';
 
 // Tipos de precio según el sistema FoxPro (6 tipos)
 const TIPOS_PRECIO = [
@@ -89,10 +90,10 @@ interface HistorialItem {
 }
 
 export default function AjustePreciosV2Page() {
-  const [productos, setProductos] = useState<ProductoLista[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { productos: productosFiltrados, inicial: loading } =
+    useBuscarProductos<ProductoLista>(searchTerm, selectedFilters);
   const [saving, setSaving] = useState(false);
   
   // Ventanas flotantes
@@ -112,28 +113,6 @@ export default function AjustePreciosV2Page() {
   
   // Historial de ajustes
   const [historial, setHistorial] = useState<HistorialItem[]>([]);
-
-  // Cargar productos al iniciar
-  useEffect(() => {
-    fetchProductos();
-  }, []);
-
-  const fetchProductos = async () => {
-    try {
-      const response = await fetch('/api/productos');
-      if (response.ok) {
-        const data = await response.json();
-        setProductos(data.products || []);
-      }
-    } catch (error) {
-      console.error('Error al cargar productos:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filtrar productos usando el componente SearchFilters
-  const productosFiltrados = filterProductos(productos, searchTerm, selectedFilters);
 
   // Seleccionar producto para ajustar precios
   const seleccionarProducto = async (idprod: number) => {

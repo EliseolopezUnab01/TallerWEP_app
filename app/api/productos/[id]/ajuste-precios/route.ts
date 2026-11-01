@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
+import { usuarioDeRequest } from '@/lib/sesion';
 
 export async function POST(
   request: Request,
@@ -82,8 +83,7 @@ export async function POST(
     console.log('✅ Precios actualizados para producto:', productId);
 
     // TERCERO: Registrar el ajuste con precios anteriores y nuevos
-    // TODO: Obtener idusuario de la sesión actual
-    const idusuario = 1; // Por ahora hardcodeado, después implementar autenticación
+    const idusuario = await usuarioDeRequest(request);
 
     console.log('📝 Insertando ajuste con historial de precios...');
 

@@ -55,5 +55,7 @@ export async function GET(request: Request) {
       error: 'Error al obtener historial de ajustes',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }

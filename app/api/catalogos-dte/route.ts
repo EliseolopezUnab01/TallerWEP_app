@@ -36,5 +36,7 @@ export async function GET() {
       { error: 'Error al obtener catálogos DTE', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

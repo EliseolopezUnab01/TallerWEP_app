@@ -122,6 +122,8 @@ export async function GET(request: NextRequest) {
       { error: 'Error al obtener el catálogo contable', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -181,6 +183,8 @@ export async function POST(request: NextRequest) {
       { error: 'Error al crear el rubro contable', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -235,6 +239,8 @@ export async function PUT(request: NextRequest) {
       { error: 'Error al actualizar el rubro contable', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -275,5 +281,7 @@ export async function DELETE(request: NextRequest) {
       { error: 'Error al eliminar el rubro contable', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
+import { usuarioDeRequest } from '@/lib/sesion';
 
 // Constantes de impuestos (El Salvador)
 const FACTOR_IVA = 0.13; // 13% IVA
@@ -101,6 +102,7 @@ function calcularDesdeGanancia(datos: DatosProducto, ganancia: number): CalculoP
 
 // POST: Calcular precios según el modo seleccionado
 export async function POST(request: Request) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const body = await request.json();
     const { 
@@ -122,7 +124,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    const connection = await connectDB();
+    connection = await connectDB();
 
     // Obtener datos del producto desde la tabla costos
     const [productData]: any = await connection.execute(`
@@ -192,11 +194,14 @@ export async function POST(request: Request) {
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
 // PUT: Guardar los precios calculados
 export async function PUT(request: Request) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const body = await request.json();
     const { 
@@ -211,7 +216,7 @@ export async function PUT(request: Request) {
       }, { status: 400 });
     }
 
-    const connection = await connectDB();
+    connection = await connectDB();
 
     // Verificar que el producto existe
     const [productExists]: any = await connection.execute(
@@ -298,9 +303,10 @@ export async function PUT(request: Request) {
       (idprod, idusuario, razon_justificacion, 
        precio1_anterior, precio2_anterior, precio3_anterior, precio4_anterior, precio5_anterior, precio6_anterior,
        precio1_nuevo, precio2_nuevo, precio3_nuevo, precio4_nuevo, precio5_nuevo, precio6_nuevo)
-      VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       idprod,
+      await usuarioDeRequest(request),
       razon || null,
       historialData.precio1_anterior,
       historialData.precio2_anterior,
@@ -348,11 +354,14 @@ export async function PUT(request: Request) {
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
 // GET: Obtener precios y datos de un producto
 export async function GET(request: Request) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const { searchParams } = new URL(request.url);
     const idprod = searchParams.get('idprod');
@@ -361,7 +370,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Se requiere idprod' }, { status: 400 });
     }
 
-    const connection = await connectDB();
+    connection = await connectDB();
 
     // Primero verificar si existe la columna imagen_principal
     const [cols]: any = await connection.execute(`
@@ -435,5 +444,7 @@ export async function GET(request: Request) {
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

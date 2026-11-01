@@ -6,8 +6,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const idprod = searchParams.get('idprod');
 
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
-    const connection = await connectDB();
+    connection = await connectDB();
 
     if (idprod) {
       // Obtener costo de un producto específico
@@ -48,11 +49,14 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error al obtener costos:', error);
     return NextResponse.json({ error: 'Error al obtener costos' }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
 // POST - Crear o actualizar costo de un producto (con rotación de respaldos)
 export async function POST(request: NextRequest) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const body = await request.json();
     const { 
@@ -68,7 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'idprod es requerido' }, { status: 400 });
     }
 
-    const connection = await connectDB();
+    connection = await connectDB();
 
     // Verificar si ya existe un registro de costo para este producto
     const [existing]: any = await connection.execute(
@@ -143,6 +147,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error al guardar costo:', error);
     return NextResponse.json({ error: 'Error al guardar costo' }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -218,8 +224,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'idprod es requerido' }, { status: 400 });
   }
 
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
-    const connection = await connectDB();
+    connection = await connectDB();
     
     await connection.execute('DELETE FROM costos WHERE idprod = ?', [idprod]);
     
@@ -228,5 +235,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Error al eliminar costo:', error);
     return NextResponse.json({ error: 'Error al eliminar costo' }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }

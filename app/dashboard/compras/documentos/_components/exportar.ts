@@ -1,4 +1,4 @@
-import { EMPRESA } from '@/lib/empresa';
+import { obtenerEmpresa } from '@/lib/empresa-cliente';
 import { etiquetaTipo } from '@/lib/documentos-compras-constantes';
 import { fechaInput, type Documento, type LineaDocumento } from './tipos';
 
@@ -54,18 +54,19 @@ interface ProveedorPdf {
 export async function imprimirOrden(documento: Documento, lineas: LineaDocumento[], proveedor: ProveedorPdf | null) {
   const { default: jsPDF } = await import('jspdf');
   const { default: autoTable } = await import('jspdf-autotable');
+  const empresa = await obtenerEmpresa();
   const doc = new jsPDF();
   const ancho = doc.internal.pageSize.getWidth();
 
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(EMPRESA.nombre, 14, 16);
+  doc.text(empresa?.nombre_comercial || empresa?.nombre || 'Taller', 14, 16);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   const datosEmpresa = [
-    EMPRESA.direccion,
-    [EMPRESA.nit && `NIT ${EMPRESA.nit}`, EMPRESA.nrc && `NRC ${EMPRESA.nrc}`].filter(Boolean).join(' · '),
-    [EMPRESA.telefono, EMPRESA.email].filter(Boolean).join(' · '),
+    empresa?.direccion ?? '',
+    [empresa?.nit && `NIT ${empresa.nit}`, empresa?.nrc && `NRC ${empresa.nrc}`].filter(Boolean).join(' · '),
+    [empresa?.telefono, empresa?.correo].filter(Boolean).join(' · '),
   ].filter(Boolean);
   datosEmpresa.forEach((t, i) => doc.text(t, 14, 21 + i * 4));
 

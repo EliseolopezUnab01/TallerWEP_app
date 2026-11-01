@@ -16,6 +16,7 @@ import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { getCodigoCatalogo } from '@/lib/format-utils';
+import { NIVELES_PRECIO } from '@/lib/precios-niveles';
 import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 import { FichaCompras, GloboStock } from '@/components/ui/globo-stock';
 
@@ -323,16 +324,13 @@ function PerfilProductoPageContent() {
   };
 
   const loadPrecios = (prod: any) => {
-    const preciosFromDB: Precio[] = [
-      { tipo: 'GENERAL', valor: parseFloat(prod.precio1 || '0'), editable: false },
-      { tipo: 'MAYORISTA', valor: parseFloat(prod.precio2 || '0'), editable: false },
-      { tipo: 'CLIENTE', valor: parseFloat(prod.precio3 || '0'), editable: false },
-      { tipo: 'MECÁNICO', valor: parseFloat(prod.precio4 || '0'), editable: false },
-      { tipo: 'MINORISTA', valor: parseFloat(prod.precio5 || '0'), editable: false },
-      { tipo: 'INVERSOR', valor: parseFloat(prod.precio6 || '0'), editable: false },
-      { tipo: 'ESPECIAL', valor: parseFloat(prod.precio7 || '0'), editable: false },
-    ];
-    setPrecios(preciosFromDB);
+    setPrecios(
+      NIVELES_PRECIO.map((n) => ({
+        tipo: n.nombre.toUpperCase(),
+        valor: parseFloat(prod[`precio${n.numero}`] || '0'),
+        editable: false,
+      }))
+    );
   };
 
   // Función para cargar un producto específico por ID (cuando viene de otra página)
@@ -367,14 +365,11 @@ function PerfilProductoPageContent() {
 
   const fetchProducto = async () => {
     try {
-      console.log('Cargando producto con ID:', idParam);
-      const response = await fetch('/api/productos');
-      if (response.ok) {
+      const response = await fetch(`/api/productos/${Number(idParam)}`);
+      if (response.ok || response.status === 404) {
         const data = await response.json();
-        console.log('Productos recibidos:', data.products?.length);
-        const found = data.products?.find((p: any) => p.idprod === Number(idParam));
+        const found = data.product;
         if (found) {
-          console.log('Producto encontrado:', found);
           setProducto(found);
           
           // Agregar automáticamente como pestaña si viene de URL
@@ -392,17 +387,7 @@ function PerfilProductoPageContent() {
           });
           setActiveTabId(found.idprod);
           
-          // Cargar los 7 tipos de precios desde la base de datos
-          const preciosFromDB: Precio[] = [
-            { tipo: 'GENERAL', valor: parseFloat(found.precio1 || '0'), editable: false },
-            { tipo: 'MAYORISTA', valor: parseFloat(found.precio2 || '0'), editable: false },
-            { tipo: 'CLIENTE', valor: parseFloat(found.precio3 || '0'), editable: false },
-            { tipo: 'MECÁNICO', valor: parseFloat(found.precio4 || '0'), editable: false },
-            { tipo: 'MINORISTA', valor: parseFloat(found.precio5 || '0'), editable: false },
-            { tipo: 'INVERSOR', valor: parseFloat(found.precio6 || '0'), editable: false },
-            { tipo: 'ESPECIAL', valor: parseFloat(found.precio7 || '0'), editable: false },
-          ];
-          setPrecios(preciosFromDB);
+          loadPrecios(found);
           
           // Cargar aplicaciones/detalles
           const apps: string[] = [];
@@ -433,21 +418,10 @@ function PerfilProductoPageContent() {
     }
 
     try {
-      const response = await fetch('/api/productos');
+      const response = await fetch(`/api/productos?search=${encodeURIComponent(query)}&limit=30`);
       if (response.ok) {
         const data = await response.json();
-        const results = data.products?.filter((p: any) => {
-          const searchLower = query.toLowerCase();
-          return (
-            p.codigo_barras?.toLowerCase().includes(searchLower) ||
-            p.OE?.toLowerCase().includes(searchLower) ||
-            p.idprodprov?.toLowerCase().includes(searchLower) ||
-            p.idprodpaquete?.toLowerCase().includes(searchLower) ||
-            p.nombre?.toLowerCase().includes(searchLower) ||
-            p.idprod?.toString().includes(searchLower)
-          );
-        }) || [];
-        setSearchResults(results);
+        setSearchResults(data.products || []);
         setShowSearchResults(true);
       }
     } catch (error) {
@@ -459,10 +433,10 @@ function PerfilProductoPageContent() {
   const addProductTab = async (productId: number) => {
     // Buscar el producto en los resultados o cargar
     try {
-      const response = await fetch('/api/productos');
+      const response = await fetch(`/api/productos/${productId}`);
       if (response.ok) {
         const data = await response.json();
-        const found = data.products?.find((p: Producto) => p.idprod === productId);
+        const found: Producto | undefined = data.product;
         if (found) {
           // Agregar pestaña verificando duplicados con el estado más reciente
           setOpenTabs(prev => {
@@ -481,17 +455,7 @@ function PerfilProductoPageContent() {
           setProducto(found);
           setCurrentImageIndex(0);
           
-          // Cargar precios (usando los nombres que vienen de la API)
-          const preciosFromDB: Precio[] = [
-            { tipo: 'GENERAL', valor: parseFloat(found.precio1 || '0'), editable: false },
-            { tipo: 'MAYORISTA', valor: parseFloat(found.precio2 || '0'), editable: false },
-            { tipo: 'CLIENTE', valor: parseFloat(found.precio3 || '0'), editable: false },
-            { tipo: 'MECÁNICO', valor: parseFloat(found.precio4 || '0'), editable: false },
-            { tipo: 'MINORISTA', valor: parseFloat(found.precio5 || '0'), editable: false },
-            { tipo: 'INVERSOR', valor: parseFloat(found.precio6 || '0'), editable: false },
-            { tipo: 'ESPECIAL', valor: parseFloat(found.precio7 || '0'), editable: false },
-          ];
-          setPrecios(preciosFromDB);
+          loadPrecios(found);
         }
       }
     } catch (error) {

@@ -18,14 +18,43 @@ export interface DestinoArchivo {
 
 const MAX_BYTES = 15 * 1024 * 1024;
 
+/** Extensiones aceptadas y el tipo con que se sirven. Nada de html ni svg: el navegador ejecutaría su código. */
+export const TIPOS_ARCHIVO: Record<string, string> = {
+  pdf: 'application/pdf',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  xls: 'application/vnd.ms-excel',
+  json: 'application/json',
+};
+export const EXTENSIONES_IMAGEN = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+export function extensionDe(nombre: string) {
+  return path.extname(nombre).slice(1).toLowerCase();
+}
+
+/** Lanza error si el archivo no es de un tipo permitido (por defecto, cualquiera de TIPOS_ARCHIVO). */
+export function validarArchivo(archivo: File, permitidas: string[] = Object.keys(TIPOS_ARCHIVO)) {
+  if (archivo.size === 0) throw new Error('El archivo está vacío');
+  if (archivo.size > MAX_BYTES) throw new Error('El archivo supera 15 MB');
+  const ext = extensionDe(archivo.name);
+  const mime = (archivo.type || '').toLowerCase();
+  if (!permitidas.includes(ext) || mime.includes('html') || mime.includes('svg') || mime.includes('javascript')) {
+    throw new Error(`Tipo de archivo no permitido (.${ext || '?'}). Acepta: ${permitidas.join(', ')}`);
+  }
+  return ext;
+}
+
 function nombreSeguro(nombre: string) {
   const base = path.basename(nombre).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   return base.replace(/[^\w.-]+/g, '_').slice(-80) || 'archivo';
 }
 
 export async function guardarArchivo(connection: Conexion, archivo: File, destino: DestinoArchivo) {
-  if (archivo.size === 0) throw new Error('El archivo está vacío');
-  if (archivo.size > MAX_BYTES) throw new Error('El archivo supera 15 MB');
+  validarArchivo(archivo);
   const carpeta = path.join(process.cwd(), 'public', 'uploads', destino.carpeta);
   await mkdir(carpeta, { recursive: true });
   const nombre = `${Date.now()}-${nombreSeguro(archivo.name)}`;

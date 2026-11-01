@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { getUserIdFromRequest } from '@/lib/auth';
+import { cargarSesion, olvidarSesiones } from '@/lib/sesion';
 
 export async function GET(request: NextRequest) {
   const userId = getUserIdFromRequest(request);
@@ -8,22 +9,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  let connection;
   try {
-    connection = await connectDB();
-    const [rows]: any = await connection.execute(
-      'SELECT id, nombre, email FROM usuarios WHERE id = ?',
-      [userId]
-    );
-    await connection.end();
-
-    if (rows.length === 0) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    const sesion = await cargarSesion(userId);
+    if (!sesion) {
+      return NextResponse.json({ error: 'Usuario no encontrado o desactivado' }, { status: 401 });
     }
 
-    return NextResponse.json({ success: true, user: rows[0] });
+    return NextResponse.json({ success: true, user: sesion });
   } catch (error: any) {
-    if (connection) await connection.end();
     console.error('Error auth/me GET:', error);
     return NextResponse.json({ error: 'Error al obtener perfil' }, { status: 500 });
   }
@@ -46,6 +39,7 @@ export async function PUT(request: NextRequest) {
 
     connection = await connectDB();
     await connection.execute('UPDATE usuarios SET nombre = ? WHERE id = ?', [nombre, userId]);
+    olvidarSesiones();
 
     const [rows]: any = await connection.execute(
       'SELECT id, nombre, email FROM usuarios WHERE id = ?',
@@ -62,5 +56,7 @@ export async function PUT(request: NextRequest) {
     if (connection) await connection.end();
     console.error('Error auth/me PUT:', error);
     return NextResponse.json({ error: 'Error al actualizar perfil' }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }

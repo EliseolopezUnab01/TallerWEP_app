@@ -111,6 +111,14 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoria, esImportacion]);
 
+  // Destino con que se guardó la línea en edición: una de inventario no puede pasar a express.
+  const [destinoGuardado, setDestinoGuardado] = useState('');
+  useEffect(() => {
+    setDestinoGuardado(form.iddetalle ? form.destino : '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.iddetalle]);
+  const bloqueaExpress = (destino: string) => destinoGuardado === 'INVENTARIO' && destino === 'EXPRESS';
+
   const tomarProducto = (p: ProductoHit, enfocar: boolean) => {
     setSeleccionado(p.idprod);
     onExistencia(p.stock_contable == null ? null : Number(p.stock_contable));
@@ -188,6 +196,10 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
   const set = (parcial: Partial<FormLinea>) => setForm({ ...form, ...parcial });
 
   const cambiarDestino = (destino: string) => {
+    if (bloqueaExpress(destino)) {
+      ctx.notificar('error', 'Una línea de inventario no puede pasar a express; bórrela y agréguela de nuevo');
+      return;
+    }
     if (destino === 'INVENTARIO' && !form.idprod) {
       ctx.notificar('error', 'Para inventario elija el producto en el buscador');
       refFiltro.current?.focus();
@@ -447,7 +459,7 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
             <span className={UI.denseLabel}>Destino</span>
             <div role="radiogroup" aria-label="Destino" className="grid grid-cols-2 md:grid-cols-1 gap-0.5 rounded-md border border-border bg-card px-2 py-1">
               {DESTINOS_UI.map((d) => {
-                const habilitado = permitido(d.valor) && !form.iddetalle_origen;
+                const habilitado = permitido(d.valor) && !form.iddetalle_origen && !bloqueaExpress(d.valor);
                 return (
                   <label
                     key={d.valor}
@@ -455,9 +467,11 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
                     title={
                       habilitado
                         ? undefined
-                        : esImportacion && d.valor === 'EXPRESS'
-                          ? 'Una importación no admite productos express'
-                          : `Un documento ${nombreCategoria} no admite esta línea`
+                        : bloqueaExpress(d.valor)
+                          ? 'Una línea de inventario no puede pasar a express'
+                          : esImportacion && d.valor === 'EXPRESS'
+                            ? 'Una importación no admite productos express'
+                            : `Un documento ${nombreCategoria} no admite esta línea`
                     }
                   >
                     <input

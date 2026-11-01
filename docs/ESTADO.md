@@ -1,6 +1,6 @@
 # Estado del proyecto — Taller Web
 
-**Última actualización:** 2026-10-28 (pulido de Compras listo; menú reordenado con el módulo Catálogos. Sesión pausada)  
+**Última actualización:** 2026-11-01 (plan de mejora integral en curso: fases 0 y 1 listas — respaldo, sesión por cookie con `proxy.ts`, roles, tabla empresa, bugs de datos. Sigue fase 2: costos, descuento y precios)  
 **Propósito:** documento vivo para que Cursor (y cualquier chat nuevo) sepa en qué va el sistema sin depender del historial de Windsurf.
 
 ---

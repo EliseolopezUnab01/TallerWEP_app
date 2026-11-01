@@ -269,7 +269,8 @@ export async function guardarCalculoDuca(connection: Conexion, idproceso: number
  */
 export async function finalizarRetaceo(connection: Conexion, idproceso: number) {
   const [procs] = await connection.execute<RowDataPacket[]>(
-    'SELECT idproceso, nodocto, estado_documento, factura_compra, tipo_cambio_pagado FROM proceso_ingreso WHERE idproceso = ?',
+    // FOR UPDATE: un segundo clic espera aquí y luego ve FINALIZADO, así el stock no se suma dos veces.
+    'SELECT idproceso, nodocto, estado_documento, factura_compra, tipo_cambio_pagado FROM proceso_ingreso WHERE idproceso = ? FOR UPDATE',
     [idproceso]
   );
   const proceso = procs[0];

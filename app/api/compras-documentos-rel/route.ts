@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
       { error: 'Error al obtener documentos relacionados', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -120,6 +122,8 @@ export async function POST(request: NextRequest) {
       { error: 'Error al crear documento relacionado', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -159,5 +163,7 @@ export async function DELETE(request: NextRequest) {
       { error: 'Error al eliminar documento relacionado', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

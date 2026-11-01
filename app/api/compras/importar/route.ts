@@ -361,5 +361,7 @@ export async function POST(request: NextRequest) {
       { error: 'Error al importar', detalle: (error as Error).message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

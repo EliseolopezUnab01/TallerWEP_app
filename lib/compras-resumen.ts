@@ -5,6 +5,7 @@
 
 import { IVA_TASA, descuentoLinea, type CondicionIva } from '@/lib/compras-detalle';
 import { r8 } from '@/lib/decimales';
+import { aFechaLocal, fechaLocalISO } from '@/lib/fechas';
 
 export interface LineaResumen {
   condicion_iva: CondicionIva | string;
@@ -215,7 +216,7 @@ export function calcularFechaVencimiento(
 ): string | null {
   if (!fechaEmision || !plazoTipo || !plazoPeriodo || plazoPeriodo <= 0) return null;
 
-  const fecha = new Date(fechaEmision);
+  const fecha = aFechaLocal(fechaEmision);
   if (Number.isNaN(fecha.getTime())) return null;
 
   if (plazoTipo === '01') fecha.setDate(fecha.getDate() + plazoPeriodo);
@@ -223,5 +224,5 @@ export function calcularFechaVencimiento(
   else if (plazoTipo === '03') fecha.setFullYear(fecha.getFullYear() + plazoPeriodo);
   else return null;
 
-  return fecha.toISOString().slice(0, 10);
+  return fechaLocalISO(fecha);
 }

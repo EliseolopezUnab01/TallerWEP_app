@@ -59,6 +59,8 @@ export async function GET(request: NextRequest) {
       { error: 'Error al obtener pagos', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -116,6 +118,8 @@ export async function POST(request: NextRequest) {
       { error: 'Error al crear pago', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -185,6 +189,8 @@ export async function PUT(request: NextRequest) {
       { error: 'Error al actualizar pago', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -224,5 +230,7 @@ export async function DELETE(request: NextRequest) {
       { error: 'Error al eliminar pago', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

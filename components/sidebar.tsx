@@ -28,9 +28,17 @@ import {
   Calculator,
   FileSpreadsheet,
   Library,
+  Settings,
+  UserCog,
+  Building2,
+  FileSignature,
+  BookMarked,
+  KeyRound,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from './theme-toggle';
+import { permisoPagina } from '@/lib/permisos-constantes';
+import { cerrarSesion, useSesion } from '@/lib/sesion-cliente';
 
 const RUTAS_CATALOGOS = [
   '/dashboard/compras/proveedores',
@@ -51,14 +59,15 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [comprasOpen, setComprasOpen] = useState(false);
   const [tallerOpen, setTallerOpen] = useState(false);
   const [catalogosOpen, setCatalogosOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const { puede } = useSesion();
 
   const isExpanded = !collapsed || hovered || mobileOpen;
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    await cerrarSesion();
     router.push('/');
   };
 
@@ -70,6 +79,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   useEffect(() => {
     const catalogo = RUTAS_CATALOGOS.some((r) => pathname?.startsWith(r));
     if (catalogo) setCatalogosOpen(true);
+    else if (pathname?.startsWith('/dashboard/configuracion')) setConfigOpen(true);
     else if (pathname?.startsWith('/dashboard/inventario')) setInventarioOpen(true);
     else if (pathname?.startsWith('/dashboard/compras')) setComprasOpen(true);
     else if (pathname?.startsWith('/dashboard/taller')) setTallerOpen(true);
@@ -81,13 +91,13 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   };
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard';
+    if (href === '/dashboard' || href === '/dashboard/configuracion') return pathname === href;
     return pathname === href || pathname?.startsWith(`${href}/`);
   };
 
   const closeMobile = () => onMobileClose?.();
 
-  const menuItems = [
+  const menuCompleto = [
     { 
       icon: LayoutDashboard, 
       label: 'Dashboard', 
@@ -105,6 +115,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         { icon: FileInput, label: 'Ingreso de Compras', href: '/dashboard/compras/ingreso' },
         { icon: ClipboardList, label: 'Cotizaciones y Órdenes', href: '/dashboard/compras/documentos' },
         { icon: Ship, label: 'Procesos de Ingreso', href: '/dashboard/compras/procesos' },
+        { icon: FileSignature, label: 'Sujeto Excluido', href: '/dashboard/compras/sujeto-excluido', grupo: 'Hacienda' },
+        { icon: BookMarked, label: 'Libro de Compras', href: '/dashboard/compras/libro' },
       ]
     },
     {
@@ -150,7 +162,28 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         { icon: BookOpen, label: 'Catálogo Contable', href: '/dashboard/compras/catalogo-contable' },
       ]
     },
+    {
+      icon: Settings,
+      label: 'Configuración',
+      href: '#configuracion',
+      type: 'dropdown' as const,
+      isOpen: configOpen,
+      toggle: () => setConfigOpen(!configOpen),
+      children: [
+        { icon: Building2, label: 'Empresa', href: '/dashboard/configuracion/empresa' },
+        { icon: UserCog, label: 'Usuarios y Roles', href: '/dashboard/configuracion/usuarios' },
+        { icon: KeyRound, label: 'Mi Contraseña', href: '/dashboard/configuracion' },
+      ]
+    },
   ];
+
+  const menuItems = menuCompleto
+    .map((item) =>
+      item.type === 'dropdown'
+        ? { ...item, children: item.children.filter((c) => puede(permisoPagina(c.href))) }
+        : item
+    )
+    .filter((item) => item.type === 'link' || item.children.length > 0);
 
   const itemBtn =
     'w-full text-muted-foreground hover:text-primary hover:bg-muted';

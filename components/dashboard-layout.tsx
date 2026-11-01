@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import { useNotifications } from '@/contexts/notification-context';
 import { CheckCircle, AlertTriangle, Clock, X, Menu } from 'lucide-react';
+import { cerrarSesion, useSesion } from '@/lib/sesion-cliente';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -27,17 +28,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const { addNotification } = useNotifications();
 
+  const { sesion } = useSesion();
+
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      router.push('/');
+    if (sesion === undefined) return;
+    if (sesion === null) {
+      cerrarSesion().finally(() => router.push('/'));
       return;
     }
-
     setIsAuthenticated(true);
     setLoading(false);
-  }, [router]);
+  }, [sesion, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (new URLSearchParams(window.location.search).get('sinpermiso') !== '1') return;
+    setToast({ type: 'error', title: 'Sin permiso', message: 'Su rol no tiene acceso a esa pantalla.' });
+    setTimeout(() => setToastVisible(true), 100);
+    router.replace(window.location.pathname);
+  }, [isAuthenticated, router]);
 
   // Verificar hora solo UNA vez por sesión (no en cada cambio de módulo)
   useEffect(() => {

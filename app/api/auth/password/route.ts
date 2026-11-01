@@ -62,5 +62,7 @@ export async function PUT(request: NextRequest) {
     if (connection) await connection.end();
     console.error('Error auth/password:', error);
     return NextResponse.json({ error: 'Error al cambiar contraseña' }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }

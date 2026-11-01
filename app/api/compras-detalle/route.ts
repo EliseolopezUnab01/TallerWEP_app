@@ -152,6 +152,8 @@ export async function GET(request: NextRequest) {
       { error: 'Error al obtener líneas de compra', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -238,6 +240,8 @@ export async function POST(request: NextRequest) {
       { error: 'Error al crear línea de compra', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -270,6 +274,13 @@ export async function PUT(request: NextRequest) {
     }
 
     const merged = { ...actual[0], ...body };
+    if (actual[0].destino === 'INVENTARIO' && merged.destino === 'EXPRESS') {
+      await connection.end();
+      return NextResponse.json(
+        { error: 'Una línea de inventario no puede pasar a express; bórrela y agréguela de nuevo como express' },
+        { status: 400 }
+      );
+    }
     if (actual[0].iddetalle_origen) {
       // Línea de nota: conserva la clasificación de la factura original.
       for (const campo of ['destino', 'idprod', 'idcatalogo', 'numero_orden', 'codigo_express', 'iddetalle_origen', 'ajuste_precio']) {
@@ -335,6 +346,8 @@ export async function PUT(request: NextRequest) {
       { error: 'Error al actualizar línea de compra', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -400,6 +413,8 @@ export async function PATCH(request: NextRequest) {
       { error: 'Error al reordenar líneas', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
@@ -465,5 +480,7 @@ export async function DELETE(request: NextRequest) {
       { error: 'Error al eliminar línea', detalle: error.message },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

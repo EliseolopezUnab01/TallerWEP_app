@@ -5,11 +5,13 @@ import { UserCircle2, Settings, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { UI } from '@/lib/ui';
+import { cerrarSesion, refrescarSesion } from '@/lib/sesion-cliente';
 
 interface UserInfo {
   id?: number;
   nombre: string;
   email: string;
+  rol?: string | null;
 }
 
 function leerUserLocal(): UserInfo | null {
@@ -31,19 +33,9 @@ export function UserDropdown() {
   const cargarUsuario = useCallback(async () => {
     const local = leerUserLocal();
     if (local) setUser(local);
-
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
     try {
-      const res = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
+      const s = await refrescarSesion();
+      if (s) setUser(s);
     } catch {
       /* mantener datos locales */
     }
@@ -63,10 +55,8 @@ export function UserDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('notifications');
+  const handleLogout = async () => {
+    await cerrarSesion();
     router.push('/');
   };
 
@@ -102,6 +92,7 @@ export function UserDropdown() {
               <div className="min-w-0">
                 <p className={`text-sm font-medium truncate ${UI.textPrimary}`}>{nombre}</p>
                 <p className={`text-xs truncate ${UI.textFaint}`}>{email}</p>
+                {user?.rol && <p className="text-[10px] uppercase tracking-wider text-primary">{user.rol}</p>}
               </div>
             </div>
           </div>

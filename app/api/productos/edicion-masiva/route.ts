@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 
 // PUT: Actualizar múltiples productos a la vez
 export async function PUT(request: Request) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const body = await request.json();
     const { ids, campos } = body;
@@ -51,7 +52,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    const connection = await connectDB();
+    connection = await connectDB();
 
     // Construir la consulta UPDATE
     const setClauses: string[] = [];
@@ -91,5 +92,7 @@ export async function PUT(request: Request) {
       { error: error.message || 'Error al realizar la edición masiva' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }

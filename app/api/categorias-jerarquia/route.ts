@@ -3,13 +3,14 @@ import { connectDB } from '@/lib/db';
 
 // GET: Obtener todas las categorías con sus grupos y subgrupos
 export async function GET(request: Request) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const { searchParams } = new URL(request.url);
     const tipo = searchParams.get('tipo'); // 'categorias', 'grupos', 'subgrupos', 'jerarquia'
     const idcategoria = searchParams.get('idcategoria');
     const id_grupo = searchParams.get('id_grupo');
 
-    const connection = await connectDB();
+    connection = await connectDB();
 
     let result;
 
@@ -114,16 +115,19 @@ export async function GET(request: Request) {
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
 // POST: Crear nueva categoría, grupo o subgrupo
 export async function POST(request: Request) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const body = await request.json();
     const { tipo, ...data } = body;
 
-    const connection = await connectDB();
+    connection = await connectDB();
     let result;
 
     if (tipo === 'categoria') {
@@ -230,16 +234,19 @@ export async function POST(request: Request) {
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
 // PUT: Actualizar categoría, grupo o subgrupo
 export async function PUT(request: Request) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const body = await request.json();
     const { tipo, ...data } = body;
 
-    const connection = await connectDB();
+    connection = await connectDB();
 
     if (tipo === 'categoria') {
       const { idcategoria, nombre, descripcion, activo } = data;
@@ -276,11 +283,14 @@ export async function PUT(request: Request) {
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
 // DELETE: Eliminar (desactivar) categoría, grupo o subgrupo
 export async function DELETE(request: Request) {
+  let connection: Awaited<ReturnType<typeof connectDB>> | undefined;
   try {
     const { searchParams } = new URL(request.url);
     const tipo = searchParams.get('tipo');
@@ -290,7 +300,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 });
     }
 
-    const connection = await connectDB();
+    connection = await connectDB();
 
     if (tipo === 'categoria') {
       await connection.execute('UPDATE categorias_nuevo SET activo = 0 WHERE idcategoria = ?', [id]);
@@ -312,5 +322,7 @@ export async function DELETE(request: Request) {
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
