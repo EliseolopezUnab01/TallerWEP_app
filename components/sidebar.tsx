@@ -147,6 +147,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       toggle: () => setTallerOpen(!tallerOpen),
       children: [
         { icon: Car, label: 'Vehículos', href: '/dashboard/taller/vehiculos' },
+        { icon: ClipboardList, label: 'Órdenes de trabajo', href: '/dashboard/taller/ordenes' },
       ]
     },
     {

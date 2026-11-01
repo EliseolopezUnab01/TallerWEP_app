@@ -371,7 +371,7 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
             <Celda
               etiqueta={ordenObligatoria ? 'Orden de trabajo *' : 'Orden de trabajo'}
               className="col-span-3"
-              title="Express: obligatoria para registrar. Gasto: opcional. No aplica a inventario ni a importaciones."
+              title="Express: obligatoria para registrar. Gasto: opcional. El número tiene que existir en Taller > Órdenes de trabajo."
             >
               <input
                 className={`${UI.denseInput} w-full ${ordenObligatoria && !form.numero_orden ? 'border-amber-400 dark:border-amber-500/60' : ''}`}

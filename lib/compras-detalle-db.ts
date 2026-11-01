@@ -11,6 +11,7 @@ export const CAMPOS_LINEA = [
   'idcompra',
   'numero_linea',
   'numero_orden',
+  'idorden',
   'destino',
   'idcatalogo',
   'idprod',
@@ -82,6 +83,7 @@ export function normalizarLinea(body: Record<string, unknown>, calcular = true) 
     idcompra: Number(body.idcompra),
     numero_linea: body.numero_linea ? Number(body.numero_linea) : null,
     numero_orden: destino === 'EXPRESS' || destino === 'GASTOS' ? limpiar(body.numero_orden) : null,
+    idorden: null as number | null,
     destino,
     idcatalogo: destino === 'GASTOS' || destino === 'ACTIVOS' ? (body.idcatalogo ? Number(body.idcatalogo) : null) : null,
     idprod: destino === 'INVENTARIO' && body.idprod ? Number(body.idprod) : null,
@@ -148,7 +150,30 @@ export async function siguienteNumeroLinea(connection: Conexion, idcompra: numbe
   return Number(rows[0].siguiente);
 }
 
+/**
+ * Si la línea trae número de orden, lo amarra a la orden de trabajo.
+ * Con `exigir`, un número que no existe es un error (el usuario lo escribió).
+ * Sin exigir, el texto se conserva y el enlace queda vacío (importaciones y notas).
+ */
+export async function ligarOrden(connection: Conexion, linea: LineaNormalizada, exigir = false) {
+  if ((linea.destino !== 'EXPRESS' && linea.destino !== 'GASTOS') || !linea.numero_orden) {
+    linea.idorden = null;
+    return null;
+  }
+  const [rows] = await connection.execute<RowDataPacket[]>(
+    'SELECT id FROM ordenes_trabajo WHERE numero_orden = ? LIMIT 1',
+    [linea.numero_orden]
+  );
+  if (!rows[0]) {
+    linea.idorden = null;
+    return exigir ? `La orden ${linea.numero_orden} no existe. Créela en Taller > Órdenes de trabajo.` : null;
+  }
+  linea.idorden = Number(rows[0].id);
+  return null;
+}
+
 export async function insertarLinea(connection: Conexion, linea: LineaNormalizada) {
+  await ligarOrden(connection, linea, false);
   const valores = CAMPOS_LINEA.map((c) => linea[c] ?? null);
   const [resultado] = await connection.execute<ResultSetHeader>(
     `INSERT INTO compras_detalle (${CAMPOS_LINEA.join(', ')})

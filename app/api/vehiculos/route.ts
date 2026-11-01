@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
       valores.push(clienteId);
     }
     const [vehiculos] = await connection.execute<RowDataPacket[]>(
-      `SELECT v.id, v.codigo, v.placa, v.anio_placa, v.marca, v.modelo, v.anio_modelo, v.color, v.activo,
+      `SELECT v.id, v.codigo, v.cliente_id, v.placa, v.anio_placa, v.marca, v.modelo, v.anio_modelo, v.color, v.activo,
               v.tarjeta_vencimiento, v.odometro_actual, c.nombre AS cliente_nombre,
               (SELECT COUNT(*) FROM recordatorios_mantenimiento r
                WHERE r.idvehiculo = v.id AND r.activo = 1

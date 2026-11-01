@@ -6,6 +6,7 @@ import {
   asignarCodigoExpress,
   errorDestinoLinea,
   insertarLinea,
+  ligarOrden,
   normalizarLinea,
   persistirTotales,
   siguienteNumeroLinea,
@@ -198,6 +199,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: catalogoOk.error }, { status: catalogoOk.status });
     }
     await asignarCodigoExpress(connection, linea);
+    const errorOrden = await ligarOrden(connection, linea, true);
+    if (errorOrden) {
+      await connection.end();
+      return NextResponse.json({ error: errorOrden }, { status: 400 });
+    }
 
     if (linea.idprod) {
       const [prod]: any = await connection.execute(
@@ -235,6 +241,9 @@ export async function POST(request: NextRequest) {
         { error: 'Ya existe una línea con ese número en la compra' },
         { status: 409 }
       );
+    }
+    if (String(error.message || '').startsWith('La orden')) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
     return NextResponse.json(
       { error: 'Error al crear línea de compra', detalle: error.message },
@@ -318,6 +327,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: catalogoOk.error }, { status: catalogoOk.status });
     }
     await asignarCodigoExpress(connection, linea);
+    const errorOrden = await ligarOrden(connection, linea, !linea.iddetalle_origen);
+    if (errorOrden) {
+      await connection.end();
+      return NextResponse.json({ error: errorOrden }, { status: 400 });
+    }
 
     const camposUpdate = CAMPOS_LINEA.filter((c) => c !== 'idcompra');
     const asignaciones = camposUpdate.map((c) => `${c} = ?`).join(', ');
@@ -341,6 +355,9 @@ export async function PUT(request: NextRequest) {
         { error: 'Ya existe una línea con ese número en la compra' },
         { status: 409 }
       );
+    }
+    if (String(error.message || '').startsWith('La orden')) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
     return NextResponse.json(
       { error: 'Error al actualizar línea de compra', detalle: error.message },

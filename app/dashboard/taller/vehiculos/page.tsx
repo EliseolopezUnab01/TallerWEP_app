@@ -56,6 +56,7 @@ function secciones(clientes: Fila[]): Seccion[] {
         { campo: 'vin', etiqueta: 'VIN' },
         { campo: 'numero_motor', etiqueta: 'N.º de motor' },
         { campo: 'numero_chasis', etiqueta: 'N.º de chasis' },
+        { campo: 'codigo_serie', etiqueta: 'Código de serie' },
       ],
     },
     {
@@ -78,6 +79,7 @@ function secciones(clientes: Fila[]): Seccion[] {
         { campo: 'en_calidad', etiqueta: 'En calidad de' },
         { campo: 'propietario_nombre', etiqueta: 'Propietario', ancho: 2 },
         { campo: 'propietario_dui', etiqueta: 'DUI del propietario' },
+        { campo: 'numero_tarjeta', etiqueta: 'N.º de tarjeta' },
         { campo: 'tarjeta_emision', etiqueta: 'Emisión', tipo: 'date' },
         { campo: 'tarjeta_vencimiento', etiqueta: 'Vencimiento', tipo: 'date' },
         { campo: 'activo', etiqueta: 'Activo', tipo: 'check' },

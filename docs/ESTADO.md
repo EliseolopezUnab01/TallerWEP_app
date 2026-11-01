@@ -1,6 +1,6 @@
 # Estado del proyecto — Taller Web
 
-**Última actualización:** 2026-11-01 (plan de mejora integral en curso. Fases 0 a 4 listas. Fase 5 lista, migración 024: el stock de la ficha y de la importación queda en solo lectura y el inicial entra por Ajuste de inventario; avisos en pantalla en lugar de alert y confirm; pestañas de Administrar legibles en modo claro. Eslint no reportó errores de hooks. Sigue fase 6: taller.)  
+**Última actualización:** 2026-11-01 (plan de mejora integral cerrado. Fase 6, migración 025: el vehículo guarda número de tarjeta y código de serie; las órdenes de trabajo tienen correlativo OT, tareas y repuestos previstos; la línea express o de gastos se enlaza a la orden por `idorden`.)  
 **Propósito:** documento vivo para que Cursor (y cualquier chat nuevo) sepa en qué va el sistema sin depender del historial de Windsurf.
 
 ---
@@ -87,7 +87,10 @@ Archivos originales en [`docs/fuentes/`](fuentes/):
 ## Dónde me quedé
 
 **Fecha:** 2026-11-01
-**Último trabajo:** fase 5 (migración `024_ajuste_inventario.sql`). Nuevo, editar e importar ya no escriben stock; el documento de ajuste suma o resta el contable y el físico. Los `alert` y `confirm` del dashboard pasaron a avisos. Sigue la fase 6 (tarjeta y serie del vehículo, órdenes de trabajo).
+**Último trabajo:** fase 6 (migración `025_taller_ordenes.sql`). Vehículo con número de tarjeta y código de serie. Pantalla Taller > Órdenes de trabajo sobre `ordenes_trabajo`, con tareas en `orden_reparaciones` y repuestos previstos en `orden_repuestos`. El correlativo es `OT`. Al guardar una línea express o de gastos, si el número de orden existe se guarda `compras_detalle.idorden`; si no existe, la API rechaza la línea. Lo que se compra sigue en la línea express y no mueve stock por estar en la orden. Se borraron los usuarios de prueba `zz.admin@local` y `zz.consulta@local`. Queda llenar Empresa y el `.env.local` del DTE, arrancar el firmador y registrar el respaldo diario como administrador (`scripts/registrar-respaldo.ps1`).
+
+**Fecha anterior inmediata:** 2026-11-01
+**Trabajo:** fase 5 (migración `024_ajuste_inventario.sql`). Nuevo, editar e importar ya no escriben stock; el documento de ajuste suma o resta el contable y el físico. Los `alert` y `confirm` del dashboard pasaron a avisos.
 
 **Fecha anterior inmediata:** 2026-11-01
 **Trabajo:** fase 4 de Compras (migración `023_huecos_compras.sql`). El backorder es pedido menos recibido. Lo que está en camino sale de las líneas de inventario de procesos no finalizados que aún no aplicaron stock. El CIF del retaceo suma seguro, flete y gastos declarados.

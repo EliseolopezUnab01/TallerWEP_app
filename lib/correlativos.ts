@@ -14,6 +14,7 @@ export type TipoCorrelativo =
   | 'VH'
   | 'EX'
   | 'AJ'
+  | 'OT'
   | 'DTE14'
   | 'SE';
 
