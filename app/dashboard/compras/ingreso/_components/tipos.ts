@@ -126,6 +126,7 @@ export interface Rubro {
   tipo: string;
   codigo: string;
   nombre: string;
+  condicion_iva_sugerida?: string | null;
 }
 
 export interface FormaPago {
@@ -140,6 +141,9 @@ export interface ProductoHit {
   idprodprov: string | null;
   codigo_barras: string | null;
   marca: string | null;
+  proveedor_nombre?: string | null;
+  imagen_principal?: string | null;
+  imagenes?: string[];
   costo: number | null;
   stock_contable: number | null;
   porcentaje_dai?: number | null;

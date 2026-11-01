@@ -190,7 +190,9 @@ export function GrillaLineas({ documento, lineas, editable, onAgregar, onActuali
                 </th>
               )}
               <th className={UI.denseTh}>Estatus</th>
+              <th className={UI.denseTh}>Producción est.</th>
               <th className={UI.denseTh}>Entrega est.</th>
+              <th className={UI.denseTh}>Comentario usuario</th>
               <th className={UI.denseTh}>Comentario proveedor</th>
               <th className={UI.denseTh} />
             </tr>
@@ -198,7 +200,7 @@ export function GrillaLineas({ documento, lineas, editable, onAgregar, onActuali
           <tbody>
             {lineas.length === 0 ? (
               <tr>
-                <td colSpan={12} className={`${UI.denseTd} py-8 text-center text-muted-foreground`}>
+                <td colSpan={14} className={`${UI.denseTd} py-8 text-center text-muted-foreground`}>
                   {editable ? 'Agregue productos del inventario o escríbalos a mano.' : 'Sin productos.'}
                 </td>
               </tr>
@@ -289,8 +291,10 @@ export function GrillaLineas({ documento, lineas, editable, onAgregar, onActuali
                       ))}
                     </select>
                   </td>
+                  <td className={UI.denseTd}>{celda(l, 'fecha_est_produccion', 'date', 'w-32')}</td>
                   <td className={UI.denseTd}>{celda(l, 'fecha_est_entrega', 'date', 'w-32')}</td>
-                  <td className={UI.denseTd}>{celda(l, 'comentario_proveedor', 'text', 'w-48')}</td>
+                  <td className={UI.denseTd}>{celda(l, 'comentario_usuario', 'text', 'w-40')}</td>
+                  <td className={UI.denseTd}>{celda(l, 'comentario_proveedor', 'text', 'w-40')}</td>
                   <td className={UI.denseTd}>
                     {editable && (
                       <button type="button" className="p-1 text-muted-foreground hover:text-red-600" onClick={() => onEliminar(l)} aria-label="Eliminar línea">
@@ -313,7 +317,7 @@ export function GrillaLineas({ documento, lineas, editable, onAgregar, onActuali
                 </td>
                 {!enUsd && <td className={UI.denseTd} />}
                 <td className={`${UI.denseTd} ${UI.denseMono} text-right`}>USD {fmtMoneda(documento.total_usd)}</td>
-                <td colSpan={conObjetivo ? 5 : 4} className={UI.denseTd} />
+                <td colSpan={conObjetivo ? 7 : 6} className={UI.denseTd} />
               </tr>
             </tfoot>
           )}

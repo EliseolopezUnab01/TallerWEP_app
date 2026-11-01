@@ -8,6 +8,7 @@ export type TipoCorrelativo =
   | 'CT'
   | 'OC'
   | 'PF'
+  | 'GT'
   | 'IMP'
   | 'PT'
   | 'VH'

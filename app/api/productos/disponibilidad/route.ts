@@ -27,12 +27,16 @@ export async function GET(request: NextRequest) {
       ids
     );
     const [camino] = await connection.execute<RowDataPacket[]>(
-      `SELECT pp.idprod, pi.idproceso, pi.codigo, pi.estado_proceso,
-              GREATEST(GREATEST(pp.cant_proforma, pp.cant_ordenado, pp.cant_factura) - pp.cant_recibido, 0) AS cantidad,
-              COALESCE(pp.fecha_estimada_backorder, pp.fecha_proforma, pp.fecha_orden_compra) AS fecha
-       FROM pedido_pendiente pp
-       JOIN proceso_ingreso pi ON pi.idproceso = pp.idproceso
-       WHERE pp.idprod IN (${marcas}) AND pp.estatus_backorder = 'ACTIVO' AND pi.estado_documento = 'BORRADOR'`,
+      `SELECT d.idprod, pi.idproceso, pi.codigo, pi.estado_proceso,
+              SUM(d.cantidad) AS cantidad, MIN(c.fecha_emision) AS fecha
+       FROM compras_detalle d
+       JOIN compras c ON c.idcompra = d.idcompra
+       JOIN proceso_ingreso pi ON pi.idproceso = c.idproceso
+       LEFT JOIN costos_productos cp ON cp.iddetalle = d.iddetalle
+       WHERE d.idprod IN (${marcas}) AND d.destino = 'INVENTARIO'
+         AND c.estado = 'REGISTRADA' AND pi.estado_documento <> 'FINALIZADO'
+         AND COALESCE(cp.stock_aplicado, 0) = 0
+       GROUP BY d.idprod, pi.idproceso, pi.codigo, pi.estado_proceso`,
       ids
     );
     const [compras] = await connection.execute<RowDataPacket[]>(

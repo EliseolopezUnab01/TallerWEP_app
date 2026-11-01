@@ -8,7 +8,7 @@ import { promedioActual, promedioPonderado, registrarCosto } from '@/lib/costos'
 /**
  * Retaceo de un proceso de ingreso.
  *
- * - Base de reparto: CIF de cada línea = costo en dólares de Aduana + parte de seguro y flete declarados.
+ * - Base de reparto: CIF de cada línea = costo en dólares de Aduana + parte de seguro, flete y otros gastos declarados.
  * - DAI: % de cada línea sobre su CIF. Si el DUCA trae el DAI pagado, se reparte ese total con el mismo peso.
  * - IVA: 13% sobre CIF + DAI, ajustado al IVA pagado del DUCA. Es crédito fiscal: no entra al costo.
  * - Gastos (total a retacear del proceso): proporcionales al CIF.
@@ -29,6 +29,8 @@ export interface ParametrosRetaceo {
   tipo_cambio_pagado: number;
   seguro: number;
   flete: number;
+  /** Otros gastos declarados en el DUCA. Entran a la base del CIF junto con seguro y flete. */
+  gastos_declarados: number;
   /** DAI pagado según el DUCA; 0 = usar el calculado. */
   dai_total: number;
   /** IVA pagado según el DUCA; 0 = usar el calculado. */
@@ -92,7 +94,7 @@ export function calcularRetaceo(lineas: LineaRetaceo[], p: ParametrosRetaceo): R
 
   const contables = lineas.map((l) => r8(l.costo_divisa * tcDuca));
   const subtotales = lineas.map((l, i) => r8(contables[i] * l.cantidad));
-  const seguroFlete = repartir(r8(p.seguro + p.flete), subtotales);
+  const seguroFlete = repartir(r8(p.seguro + p.flete + (p.gastos_declarados || 0)), subtotales);
   const cif = subtotales.map((s, i) => r8(s + seguroFlete[i]));
   const totalCif = r8(cif.reduce((a, b) => a + b, 0));
 
@@ -182,7 +184,7 @@ export async function lineasDelProceso(connection: Conexion, idproceso: number) 
 export async function parametrosDelProceso(connection: Conexion, idproceso: number): Promise<ParametrosRetaceo | null> {
   const [rows] = await connection.execute<RowDataPacket[]>(
     `SELECT p.tipo_cambio_pagado, p.total_retaceo, d.tipo_cambio_duca, d.seguro_declarado, d.flete_declarado,
-            d.dai_pagado, d.iva_pagado
+            d.gastos_declarados, d.dai_pagado, d.iva_pagado
      FROM proceso_ingreso p LEFT JOIN datos_duca d ON d.idproceso = p.idproceso
      WHERE p.idproceso = ?`,
     [idproceso]
@@ -194,6 +196,7 @@ export async function parametrosDelProceso(connection: Conexion, idproceso: numb
     tipo_cambio_pagado: Number(r.tipo_cambio_pagado) || 1,
     seguro: Number(r.seguro_declarado) || 0,
     flete: Number(r.flete_declarado) || 0,
+    gastos_declarados: Number(r.gastos_declarados) || 0,
     dai_total: Number(r.dai_pagado) || 0,
     iva_total: Number(r.iva_pagado) || 0,
     gastos: Number(r.total_retaceo) || 0,

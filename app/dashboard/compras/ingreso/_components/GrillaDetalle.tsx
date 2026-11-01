@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, GripVertical, ImageOff, Pencil, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, GripVertical, History, ImageOff, Pencil, Trash2, X } from 'lucide-react';
 import { UI } from '@/lib/ui';
+import { DialogoHistorial } from '@/app/dashboard/compras/procesos/_components/DialogoHistorial';
 import type { CompraCtx } from './useCompra';
 import { CONDICIONES_IVA_UI, DESTINOS_UI, fmt2, fmt4, type FormLinea, type Linea } from './tipos';
 
@@ -48,9 +49,9 @@ export function lineaAForm(l: Linea): FormLinea {
   };
 }
 
-function Resumen({ etiqueta, valor, pendiente = false }: { etiqueta: string; valor: string; pendiente?: boolean }) {
+function Resumen({ etiqueta, valor, pendiente = false, title }: { etiqueta: string; valor: string; pendiente?: boolean; title?: string }) {
   return (
-    <label className={`flex flex-col gap-0.5 ${pendiente ? UI.densePending : ''}`} title={pendiente ? 'Pendiente: importaciones (B3)' : undefined}>
+    <label className={`flex flex-col gap-0.5 ${pendiente ? UI.densePending : ''}`} title={title}>
       <span className={UI.denseLabel}>{etiqueta}</span>
       <input
         readOnly
@@ -72,6 +73,7 @@ interface Props {
 export function GrillaDetalle({ ctx, editandoId, existencia, onEditar }: Props) {
   const { lineas, esBorrador } = ctx;
   const [imagen, setImagen] = useState<{ url: string; titulo: string } | null>(null);
+  const [historial, setHistorial] = useState<number | null>(null);
   const [arrastre, setArrastre] = useState<{ desde: number; sobre: number } | null>(null);
 
   const soltar = (hasta: number) => {
@@ -81,6 +83,13 @@ export function GrillaDetalle({ ctx, editandoId, existencia, onEditar }: Props) 
 
   const articulos = lineas.reduce((s, l) => s + (Number(l.cantidad) || 0), 0);
   const subtotal = lineas.reduce((s, l) => s + (Number(l.subtotal_sin_iva) || 0), 0);
+  const hayCif = lineas.some((l) => l.imp_subtotal_cif != null);
+  const cifTotal = hayCif
+    ? lineas.reduce((s, l) => s + (Number(l.imp_subtotal_cif) || 0), 0)
+    : subtotal;
+  const subtotalDivisa = ctx.esImportacion
+    ? lineas.reduce((s, l) => s + (Number(l.costo_unitario) || 0) * (Number(l.cantidad) || 0), 0)
+    : null;
 
   return (
     <div className={`${UI.densePanel} flex flex-col flex-1 min-h-0`}>
@@ -93,11 +102,19 @@ export function GrillaDetalle({ ctx, editandoId, existencia, onEditar }: Props) 
             <span>[ F4 Anular documento ]</span>
           </span>
         </div>
-        <Resumen etiqueta="CIF total" valor="0.00" pendiente />
+        <Resumen
+          etiqueta="CIF total"
+          valor={fmt2(cifTotal)}
+          title={hayCif ? 'Suma del CIF calculado en el retaceo' : 'Aún sin retaceo: se muestra el subtotal sin IVA'}
+        />
         <Resumen etiqueta="Existencia" valor={existencia == null ? '—' : String(existencia)} />
         <Resumen etiqueta="Artículos" valor={String(articulos)} />
         <Resumen etiqueta="Subtotal $" valor={fmt2(subtotal)} />
-        <Resumen etiqueta="Subtotal €" valor="0.00" pendiente />
+        <Resumen
+          etiqueta="Subtotal €"
+          valor={subtotalDivisa == null ? '—' : fmt2(subtotalDivisa)}
+          title={subtotalDivisa == null ? 'Solo en importaciones: suma del costo en la moneda del documento' : 'Suma del costo unitario por la cantidad, en la moneda del documento'}
+        />
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto">
@@ -112,10 +129,10 @@ export function GrillaDetalle({ ctx, editandoId, existencia, onEditar }: Props) 
               <th className={`${UI.denseTh} text-right`}>Cant.</th>
               <th className={`${UI.denseTh} text-right`}>Costo</th>
               <th className={`${UI.denseTh} text-right`}>Subt. s/IVA</th>
-              <th className={`${UI.denseTh} text-right`}>IVA</th>
+              <th className={`${UI.denseTh} text-right`} title="IVA por unidad">IVA u.</th>
               <th className={`${UI.denseTh} text-right`}>Subt. c/IVA</th>
-              <th className={`${UI.denseTh} text-right`}>Exentas</th>
-              <th className={`${UI.denseTh} text-right`}>No sujetas</th>
+              <th className={`${UI.denseTh} text-right`} title="Exento por unidad">Exento u.</th>
+              <th className={`${UI.denseTh} text-right`} title="No sujeto por unidad">No sujeto u.</th>
               <th className={`${UI.denseTh} text-right`}>Desc.%</th>
               <th className={UI.denseTh}>Afectación</th>
               <th className={`${UI.denseTh} text-center`}>Imagen</th>
@@ -131,9 +148,9 @@ export function GrillaDetalle({ ctx, editandoId, existencia, onEditar }: Props) 
             {lineas.map((l, i) => {
               const cant = Number(l.cantidad) || 0;
               const subt = Number(l.subtotal_sin_iva) || 0;
-              const exento = l.condicion_iva === 'EXENTO' ? subt : 0;
-              const noSujeto = l.condicion_iva === 'NO_SUJETO' ? subt : 0;
-              const iva = Number(l.iva_unitario) * cant;
+              const exento = Number(l.exento_unitario) || 0;
+              const noSujeto = Number(l.no_sujeto_unitario) || 0;
+              const iva = Number(l.iva_unitario) || 0;
               const activa = editandoId === l.iddetalle;
               const afectacion = CONDICIONES_IVA_UI.find((c) => c.valor === l.condicion_iva)?.etiqueta || l.condicion_iva;
               const destinoArrastre =
@@ -197,7 +214,22 @@ export function GrillaDetalle({ ctx, editandoId, existencia, onEditar }: Props) 
                     </span>
                   </td>
                   <td className={`${UI.denseTd} ${UI.denseMono}`} title={l.codigo_express ? 'Código express' : undefined}>
-                    {l.codigo_express || l.idprod || '—'}
+                    <span className="inline-flex items-center gap-1">
+                      {l.codigo_express || l.idprod || '—'}
+                      {l.idprod ? (
+                        <button
+                          type="button"
+                          className="text-primary hover:underline"
+                          title="Historial del producto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setHistorial(l.idprod);
+                          }}
+                        >
+                          <History className="h-3 w-3" />
+                        </button>
+                      ) : null}
+                    </span>
                   </td>
                   <td className={`${UI.denseTd} ${UI.denseMono} max-w-[8rem] truncate`} title={l.referencia_proveedor || ''}>
                     {l.referencia_proveedor || '—'}
@@ -282,6 +314,7 @@ export function GrillaDetalle({ ctx, editandoId, existencia, onEditar }: Props) 
         </table>
       </div>
 
+      <DialogoHistorial idprod={historial} onCerrar={() => setHistorial(null)} />
       {imagen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 cursor-zoom-out"

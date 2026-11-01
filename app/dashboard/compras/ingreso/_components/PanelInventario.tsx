@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Eraser, FileUp, Plus, Save, Search } from 'lucide-react';
+import { Eraser, FileUp, Plus, Save, Search, X } from 'lucide-react';
 import { UI } from '@/lib/ui';
 import { IVA_TASA, calcularLinea, requiereCatalogo, tipoCatalogoEsperado, type CondicionIva } from '@/lib/compras-detalle';
 import { AVISOS_COMPRA, CATEGORIAS_OPERACION, destinoPermitido, destinosDeCategoria } from '@/lib/compras-constantes';
@@ -54,6 +54,7 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
   const [cargando, setCargando] = useState(false);
   const [seleccionado, setSeleccionado] = useState<number | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [imagen, setImagen] = useState<{ url: string; titulo: string } | null>(null);
   const refCantidad = useRef<HTMLInputElement>(null);
   const refFiltro = useRef<HTMLInputElement>(null);
 
@@ -65,7 +66,7 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
     const t = setTimeout(async () => {
       setCargando(true);
       try {
-        const params = new URLSearchParams({ search: q, limit: '40' });
+        const params = new URLSearchParams({ search: q, limit: '40', con_proveedor: '1' });
         if (filtros) params.set('filters', filtros);
         const res = await fetch(`/api/productos?${params}`);
         const data = await res.json();
@@ -208,7 +209,8 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
       destino,
       idcatalogo: requiereCatalogo(destino) ? form.idcatalogo : '',
       numero_orden: destino === 'EXPRESS' || destino === 'GASTOS' ? form.numero_orden : '',
-      ...(destino !== 'INVENTARIO' ? { idprod: '', referencia_oem: '' } : {}),
+      ...(destino === 'INVENTARIO' ? {} : { idprod: '' }),
+      ...(destino === 'EXPRESS' || destino === 'GASTOS' || destino === 'INVENTARIO' ? {} : { referencia_oem: '' }),
     });
   };
   const ordenHabilitada = (form.destino === 'EXPRESS' || form.destino === 'GASTOS') && !esImportacion;
@@ -291,9 +293,10 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
               <th className={`${UI.denseTh} w-full`}>Descripción</th>
               <th className={`${UI.denseTh} text-right`}>Costo</th>
               <th className={`${UI.denseTh} text-right`}>Stock</th>
-              <th className={UI.denseTh} title="Proveedor del producto aún no se guarda en inventario; se muestra la marca">
-                Prov. / Marca
+              <th className={UI.denseTh} title="Proveedor de la última compra registrada">
+                Proveedor
               </th>
+              <th className={`${UI.denseTh} text-center`}>Imagen</th>
               <th className={`${UI.denseTh} text-right`} title="% DAI de la ficha del producto">DAI</th>
               <th className={UI.denseTh} title="Partida arancelaria de la ficha">Cód. aranc.</th>
             </tr>
@@ -317,7 +320,24 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
                     {Number(p.stock_contable || 0)}
                   </span>
                 </td>
-                <td className={`${UI.denseTd} max-w-[7rem] truncate`}>{p.marca || '—'}</td>
+                <td className={`${UI.denseTd} max-w-[7rem] truncate`} title={p.marca ? `Marca: ${p.marca}` : undefined}>
+                  {p.proveedor_nombre || '—'}
+                </td>
+                <td className={`${UI.denseTd} text-center`} onClick={(e) => e.stopPropagation()}>
+                  {p.imagen_principal ? (
+                    <button
+                      type="button"
+                      className="inline-block h-7 w-7 overflow-hidden rounded border border-border"
+                      onClick={() => setImagen({ url: p.imagen_principal as string, titulo: p.nombre })}
+                      aria-label="Ver imagen"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.imagen_principal} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
                 <td className={`${UI.denseTd} ${UI.denseMono} text-right text-muted-foreground`}>
                   {p.porcentaje_dai == null ? '—' : `${Number(p.porcentaje_dai)} %`}
                 </td>
@@ -326,7 +346,7 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
             ))}
             {productos.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-[11px] text-muted-foreground">
+                <td colSpan={10} className="px-3 py-6 text-center text-[11px] text-muted-foreground">
                   {cargando
                     ? 'Buscando…'
                     : filtro.trim().length < 2
@@ -368,7 +388,13 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
               />
             </Celda>
             <Celda etiqueta="Rf. OEM" className="col-span-5">
-              <input className={`${UI.denseInput} ${UI.denseMono} w-full`} disabled value={form.referencia_oem} />
+              <input
+                className={`${UI.denseInput} ${UI.denseMono} w-full`}
+                disabled={bloqueado || (form.destino !== 'EXPRESS' && form.destino !== 'GASTOS')}
+                placeholder={form.destino === 'EXPRESS' || form.destino === 'GASTOS' ? 'Referencia OEM' : 'De la ficha'}
+                value={form.referencia_oem}
+                onChange={(e) => set({ referencia_oem: e.target.value })}
+              />
             </Celda>
 
             <Celda etiqueta={form.destino === 'EXPRESS' ? 'Cód. express' : 'Código'} className="col-span-2">
@@ -492,7 +518,13 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
               className={`${UI.denseSelect} w-full`}
               disabled={!conRubro}
               value={form.idcatalogo}
-              onChange={(e) => set({ idcatalogo: e.target.value })}
+              onChange={(e) => {
+                const rubro = rubrosDestino.find((r) => String(r.idcatalogo) === e.target.value);
+                set({
+                  idcatalogo: e.target.value,
+                  ...(rubro?.condicion_iva_sugerida ? { condicion_iva: rubro.condicion_iva_sugerida } : {}),
+                });
+              }}
               title="Rubro contable (29.1)"
             >
               <option value="">{conRubro ? 'Rubro contable…' : 'Rubro: no aplica'}</option>
@@ -520,6 +552,23 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
           </button>
         </div>
       </fieldset>
+      {imagen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 cursor-zoom-out"
+          onClick={() => setImagen(null)}
+          role="dialog"
+          aria-label={imagen.titulo}
+        >
+          <div className={`${UI.densePanel} max-w-3xl p-2 relative`}>
+            <button type="button" className="absolute top-1 right-1 p-1 rounded bg-card/80 text-muted-foreground" aria-label="Cerrar imagen">
+              <X className="w-4 h-4" />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imagen.url} alt={imagen.titulo} className="max-h-[75vh] max-w-full object-contain rounded" />
+            <p className="mt-1 text-xs text-muted-foreground truncate">{imagen.titulo}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

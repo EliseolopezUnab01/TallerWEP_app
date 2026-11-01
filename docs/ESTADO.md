@@ -1,6 +1,6 @@
 # Estado del proyecto — Taller Web
 
-**Última actualización:** 2026-11-01 (plan de mejora integral en curso: fases 0, 1 y 2 listas — respaldo, sesión por cookie con `proxy.ts`, roles, tabla empresa, bugs de datos, `lib/costos.ts` con la escalera de respaldos, descuento informativo o que baja el costo, 7 niveles de precio con un solo editor. Fase 3 recepción lista (migración 021): validación de formato y receptor del DTE, código de generación único entre compras vigentes, estado INVALIDADO, descuentos y otros tributos del JSON, notas solo sobre 03/07, Libro de Compras con Excel y PDF, botón Sugerir retenciones. Fase 3 emisión lista (migración 022): pantalla Sujeto excluido, JSON fe-fse-v1, firma local, envío a Hacienda, sello, PDF con QR e invalidación; al aceptarse crea la compra tipo 14. Sigue fase 4: huecos de Compras)  
+**Última actualización:** 2026-11-01 (plan de mejora integral en curso. Fases 0 a 3 listas, incluida la emisión de factura de sujeto excluido, migración 022. Fase 4 lista, migración 023: OE digitable en express, proveedor e imagen en la grilla de control, totales fiscal y contable, CIF con gastos declarados, CIF grupo por partida, costo corregido, IVA y exento unitarios, backorder calculado, en camino hasta que entra el stock, número de cotización del proveedor, tipo de documento Gastos e historial desde el producto y la compra. Sigue fase 5: inventario y pulido.)  
 **Propósito:** documento vivo para que Cursor (y cualquier chat nuevo) sepa en qué va el sistema sin depender del historial de Windsurf.
 
 ---
@@ -86,7 +86,10 @@ Archivos originales en [`docs/fuentes/`](fuentes/):
 
 ## Dónde me quedé
 
-**Fecha:** 2026-10-28 (tarde)
+**Fecha:** 2026-11-01
+**Último trabajo:** fase 4 de Compras (migración `023_huecos_compras.sql`). El backorder es pedido menos recibido. Lo que está en camino sale de las líneas de inventario de procesos no finalizados que aún no aplicaron stock. El CIF del retaceo suma seguro, flete y gastos declarados. Sigue la fase 5 (stock de solo lectura, modo claro, toasts, eslint).
+
+**Fecha anterior:** 2026-10-28 (tarde)
 **Último trabajo:** pulido de Compras implementado completo (fases 0–7 del plan). Migración `017_pulido_compras.sql` aplicada.
 
 - **Decimales y stock.** Montos de compras con 8 decimales; se imprime a 2 o 4. La factura nacional suma stock y actualiza `costos` al registrar (`lib/compras-stock.ts`); anular la revierte. La NC resta solo las líneas que vienen de la factura origen y entraron a inventario (`ajuste_precio = 0`). La importación suma al aplicar el retaceo.

@@ -61,7 +61,8 @@ type FormEncabezado = Record<
   | 'fecha_est_entrega'
   | 'condicion_pago'
   | 'acuerdo_pago'
-  | 'comentarios',
+  | 'comentarios'
+  | 'numero_proveedor',
   string
 >;
 
@@ -80,6 +81,7 @@ function aForm(d: Documento): FormEncabezado {
     condicion_pago: d.condicion_pago,
     acuerdo_pago: d.acuerdo_pago ?? '',
     comentarios: d.comentarios ?? '',
+    numero_proveedor: d.numero_proveedor ?? '',
   };
 }
 
@@ -319,7 +321,7 @@ export default function DocumentosCompraPage() {
           <div className="flex items-center gap-3">
             <span className={UI.navLabel}>Compras</span>
             <span className={UI.navDivider} />
-            <span className={UI.navTitle}>Solicitudes, cotizaciones, órdenes y proformas</span>
+            <span className={UI.navTitle}>Solicitudes, cotizaciones, órdenes, proformas y gastos</span>
           </div>
           <div className="flex items-center gap-3">
             <NotificationDropdown />
@@ -572,6 +574,19 @@ export default function DocumentosCompraPage() {
                         ))}
                       </select>
                     </label>
+                    {(documento.tipo_documento === 'COTIZACION' || documento.tipo_documento === 'PROFORMA') && (
+                      <label className="flex flex-col gap-1">
+                        <span className={UI.denseLabel}>
+                          {documento.tipo_documento === 'PROFORMA' ? 'Nº proforma del proveedor' : 'Nº cotización del proveedor'}
+                        </span>
+                        <input
+                          className={UI.denseInput}
+                          disabled={!editable}
+                          value={form.numero_proveedor}
+                          onChange={(e) => campo('numero_proveedor', e.target.value)}
+                        />
+                      </label>
+                    )}
                     <label className="flex flex-col gap-1">
                       <span className={UI.denseLabel}>Fecha</span>
                       <input type="date" className={UI.denseInput} disabled={!editable} value={form.fecha_documento} onChange={(e) => campo('fecha_documento', e.target.value)} />

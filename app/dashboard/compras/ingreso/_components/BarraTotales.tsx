@@ -128,13 +128,13 @@ export function BarraTotales({ ctx }: { ctx: CompraCtx }) {
           )}
           <div
             className="flex flex-col items-end rounded-md border border-border px-2.5 py-0.5"
-            title={compra?.tipo_dte === '03' ? 'Compra total sin el IVA acreditable ni las retenciones' : 'Compra total sin retenciones (el IVA no es acreditable)'}
+            title={compra?.tipo_dte === '03' ? 'Total contable: compra sin el IVA acreditable ni las retenciones' : 'Total contable: compra sin retenciones (el IVA no es acreditable)'}
           >
-            <span className={UI.denseLabel}>Total inversión</span>
+            <span className={UI.denseLabel}>Total contable</span>
             <span className={`${UI.denseMono} text-sm font-semibold`}>${fmt2(inversion)}</span>
           </div>
-          <div className="flex flex-col items-end rounded-md border border-primary/40 bg-primary/10 px-2.5 py-0.5">
-            <span className={`${UI.denseLabel} text-primary`}>Compra total</span>
+          <div className="flex flex-col items-end rounded-md border border-primary/40 bg-primary/10 px-2.5 py-0.5" title="Total fiscal del documento">
+            <span className={`${UI.denseLabel} text-primary`}>Total fiscal</span>
             <span className={`${UI.denseMono} text-base font-bold text-primary`}>${fmt2(compraTotal)}</span>
           </div>
         </div>

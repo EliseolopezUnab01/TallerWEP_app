@@ -291,7 +291,7 @@ export async function sincronizarPendientes(connection: Conexion, idproceso: num
     );
     if (id[0]) vigentes.push(Number(id[0].idpendiente));
   }
-  // Productos que ya no están en ningún documento: se borran si no tienen backorder capturado.
+  // Productos que ya no están en ningún documento: se borran si el backorder calculado quedó en cero.
   await connection.execute(
     `DELETE FROM pedido_pendiente
      WHERE idproceso = ? AND backorder_total = 0 AND backorder_pagado = 0 AND backorder_por_pagar = 0
@@ -302,5 +302,11 @@ export async function sincronizarPendientes(connection: Conexion, idproceso: num
     `UPDATE pedido_pendiente SET cant_cotizado = 0, cant_ordenado = 0, cant_proforma = 0, cant_factura = 0, cant_recibido = 0
      WHERE idproceso = ? ${vigentes.length ? `AND idpendiente NOT IN (${vigentes.map(() => '?').join(',')})` : ''}`,
     [idproceso, ...vigentes]
+  );
+  await connection.execute(
+    `UPDATE pedido_pendiente
+     SET backorder_por_pagar = GREATEST(0, backorder_total - backorder_pagado)
+     WHERE idproceso = ?`,
+    [idproceso]
   );
 }

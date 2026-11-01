@@ -24,6 +24,7 @@ const CAMPOS_ENCABEZADO = [
   'ambito_operacion',
   'fecha_documento',
   'comentarios',
+  'numero_proveedor',
   'moneda_documento',
   'tipo_cambio',
   'incoterm',
@@ -216,9 +217,9 @@ export async function GET(request: NextRequest) {
       valores.push(idproceso);
     }
     if (q) {
-      filtros.push('(d.id_documento LIKE ? OR p.nombre_legal LIKE ? OR p.alias LIKE ? OR p.codigo LIKE ? OR d.nodocto = ?)');
+      filtros.push('(d.id_documento LIKE ? OR d.numero_proveedor LIKE ? OR p.nombre_legal LIKE ? OR p.alias LIKE ? OR p.codigo LIKE ? OR d.nodocto = ?)');
       const like = `%${q}%`;
-      valores.push(like, like, like, like, /^\d+$/.test(q) ? Number(q) : -1);
+      valores.push(like, like, like, like, like, /^\d+$/.test(q) ? Number(q) : -1);
     }
     const [documentos] = await connection.execute<RowDataPacket[]>(
       `SELECT d.iddocumento, d.nodocto, d.id_documento, d.tipo_documento, d.estado_documento, d.fecha_documento,

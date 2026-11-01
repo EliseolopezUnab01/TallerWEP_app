@@ -26,6 +26,7 @@ export interface Documento extends DocumentoLista {
   idcontacto: number | null;
   contacto_nombre: string | null;
   comentarios: string | null;
+  numero_proveedor: string | null;
   tipo_cambio: number;
   incoterm: string | null;
   fecha_est_entrega: string | null;

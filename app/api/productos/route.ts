@@ -14,6 +14,7 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || '';
     const categoria = searchParams.get('categoria') || '';
     const filters = searchParams.get('filters') || ''; // Filtros múltiples separados por coma
+    const conProveedor = searchParams.get('con_proveedor') === '1';
     const offset = (page - 1) * limit;
     
     connection = await connectDB();
@@ -112,6 +113,11 @@ export async function GET(request: Request) {
         co.costo_promedio,
         co.costo_proveedor,
         (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY es_principal DESC, orden ASC LIMIT 1) as imagen_principal
+        ${conProveedor ? `, (SELECT pr.nombre_legal FROM compras_detalle cd
+            JOIN compras c2 ON c2.idcompra = cd.idcompra AND c2.estado = 'REGISTRADA'
+            JOIN proveedores pr ON pr.idproveedor = c2.idproveedor
+            WHERE cd.idprod = p.idprod AND cd.destino = 'INVENTARIO'
+            ORDER BY c2.fecha_emision DESC, c2.idcompra DESC LIMIT 1) AS proveedor_nombre` : ''}
       FROM productos p
       LEFT JOIN categorias_nuevo cn ON p.idcategoria_nuevo = cn.idcategoria
       LEFT JOIN grupos g ON p.id_grupo = g.id_grupo

@@ -83,11 +83,11 @@ export function PanelPendientes({ detalle, accion, onHistorial }: Props) {
                     {fmt(p.cant_factura, 0)}
                   </td>
                   <td className={`${UI.denseTd} ${UI.denseMono} text-right`}>{fmt(p.cant_recibido, 0)}</td>
-                  <td className={UI.denseTd}>
-                    <InputBlur tipo="number" valor={p.backorder_reservado} className="w-20" onGuardar={(v) => guardar(p, { backorder_reservado: v })} />
+                  <td className={`${UI.denseTd} ${UI.denseMono} text-right text-muted-foreground`} title="Ya no define el backorder">
+                    {fmt(p.backorder_reservado, 0)}
                   </td>
-                  <td className={UI.denseTd}>
-                    <InputBlur tipo="number" valor={p.backorder_enproceso} className="w-20" onGuardar={(v) => guardar(p, { backorder_enproceso: v })} />
+                  <td className={`${UI.denseTd} ${UI.denseMono} text-right text-muted-foreground`} title="Ya no define el backorder">
+                    {fmt(p.backorder_enproceso, 0)}
                   </td>
                   <td className={`${UI.denseTd} ${UI.denseMono} text-right font-semibold`}>{fmt(p.backorder_total, 0)}</td>
                   <td className={UI.denseTd}>
@@ -114,7 +114,7 @@ export function PanelPendientes({ detalle, accion, onHistorial }: Props) {
         </tbody>
       </table>
       <p className="px-3 py-2 text-[11px] text-muted-foreground">
-        Backorder total = reservado + en proceso = pagado + por pagar. Lo por pagar se calcula solo.
+        Backorder total = lo pedido (orden, proforma o factura, el mayor) menos lo recibido. Reservado y en proceso ya no se digitan. Lo por pagar se calcula solo.
       </p>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Package } from 'lucide-react';
+import { DialogoHistorial } from '@/app/dashboard/compras/procesos/_components/DialogoHistorial';
 import type { Disponibilidad } from '@/lib/disponibilidad';
 
 const VIGENCIA_MS = 60_000;
@@ -60,7 +61,9 @@ function color(d: Disponibilidad | undefined) {
 /** Bloque para la ficha del producto: última compra y lo que viene en camino. */
 export function FichaCompras({ idprod }: { idprod: number }) {
   const d = useDisponibilidad([idprod])[idprod];
+  const [historial, setHistorial] = useState(false);
   return (
+    <>
     <div className="grid grid-cols-2 border-b border-slate-200 dark:border-secondary text-sm">
       <div className="p-4 border-r border-slate-200 dark:border-secondary">
         <div className="text-xs text-slate-500 dark:text-slate-400 uppercase">Última compra</div>
@@ -93,8 +96,13 @@ export function FichaCompras({ idprod }: { idprod: number }) {
         ) : (
           <div className="text-muted-foreground">Nada en procesos abiertos</div>
         )}
+        <button type="button" className="mt-2 text-xs text-primary hover:underline" onClick={() => setHistorial(true)}>
+          Ver historial de compras
+        </button>
       </div>
     </div>
+    <DialogoHistorial idprod={historial ? idprod : null} onCerrar={() => setHistorial(false)} />
+    </>
   );
 }
 

@@ -389,7 +389,27 @@ export async function POST(request: NextRequest) {
           [iddetalle, idproceso]
         );
         if (!linea[0]) return json({ error: 'La línea no pertenece a este proceso' }, 400);
-        if (Number(linea[0].aplicada)) return json({ error: 'La partida y el DAI de esa línea ya pasaron por aduana; no se cambian' }, 400);
+        if (Number(linea[0].aplicada)) {
+          return json(
+            {
+              error:
+                body.costo_corregido !== undefined
+                  ? 'Esa línea ya entró a inventario; el costo corregido no se cambia'
+                  : 'La partida y el DAI de esa línea ya pasaron por aduana; no se cambian',
+            },
+            400
+          );
+        }
+        if (body.costo_corregido !== undefined && body.codigo_arancelario === undefined) {
+          const corregido = body.costo_corregido === null || body.costo_corregido === '' ? null : Math.max(0, aNumero(body.costo_corregido));
+          await connection.execute(
+            `INSERT INTO costos_productos (idproceso, iddetalle, idprod, costo_corregido)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE costo_corregido = VALUES(costo_corregido)`,
+            [idproceso, iddetalle, linea[0].idprod, corregido]
+          );
+          return json({ success: true });
+        }
         const valorDai = Math.max(0, aNumero(body.valor_dai));
         await connection.execute(
           `INSERT INTO duca_detalles (idproceso, iddetalle, idprod, codigo_arancelario, valor_dai, dai_preferente)
@@ -524,6 +544,15 @@ export async function POST(request: NextRequest) {
         const auth = await requierePermiso(request, 'compras.registrar');
         if (auth instanceof NextResponse) return auth;
         await connection.beginTransaction();
+        const nota = limpiar(body.comentario);
+        if (nota) {
+          await connection.execute(
+            `UPDATE proceso_ingreso
+             SET comentarios = CONCAT(COALESCE(comentarios, ''), IF(comentarios IS NULL OR comentarios = '', '', '\n'), ?)
+             WHERE idproceso = ?`,
+            [nota.slice(0, 500), idproceso]
+          );
+        }
         const calculo = await finalizarRetaceo(connection, idproceso);
         await connection.commit();
         return json({
@@ -541,19 +570,21 @@ export async function POST(request: NextRequest) {
 
       case 'pendiente': {
         const idpendiente = Number(body.idpendiente);
-        const reservado = Math.max(0, aNumero(body.backorder_reservado));
-        const enproceso = Math.max(0, aNumero(body.backorder_enproceso));
-        const total = reservado + enproceso;
-        const pagado = Math.max(0, aNumero(body.backorder_pagado));
-        if (pagado > total + 0.00005) return json({ error: 'Lo pagado no puede superar el backorder total' }, 400);
-        const estatus = ['ACTIVO', 'CANCELADO', 'FINALIZADO'].includes(String(body.estatus_backorder)) ? body.estatus_backorder : 'ACTIVO';
-        const [res] = await connection.execute<ResultSetHeader>(
-          `UPDATE pedido_pendiente SET backorder_reservado = ?, backorder_enproceso = ?, backorder_pagado = ?,
-             backorder_por_pagar = ?, fecha_estimada_backorder = ?, estatus_backorder = ?
-           WHERE idpendiente = ? AND idproceso = ?`,
-          [reservado, enproceso, pagado, r8(total - pagado), limpiar(body.fecha_estimada_backorder), estatus, idpendiente, idproceso]
+        const [filas] = await connection.execute<RowDataPacket[]>(
+          `SELECT backorder_total AS total FROM pedido_pendiente WHERE idpendiente = ? AND idproceso = ?`,
+          [idpendiente, idproceso]
         );
-        if (!res.affectedRows) return json({ error: 'Fila no encontrada' }, 404);
+        if (!filas[0]) return json({ error: 'Fila no encontrada' }, 404);
+        const total = Number(filas[0].total) || 0;
+        const pagado = Math.max(0, aNumero(body.backorder_pagado));
+        if (pagado > total + 0.00005) return json({ error: 'Lo pagado no puede superar el backorder (pedido menos recibido)' }, 400);
+        const estatus = ['ACTIVO', 'CANCELADO', 'FINALIZADO'].includes(String(body.estatus_backorder)) ? body.estatus_backorder : 'ACTIVO';
+        await connection.execute(
+          `UPDATE pedido_pendiente SET backorder_pagado = ?, backorder_por_pagar = ?,
+             fecha_estimada_backorder = ?, estatus_backorder = ?
+           WHERE idpendiente = ? AND idproceso = ?`,
+          [pagado, r8(Math.max(0, total - pagado)), limpiar(body.fecha_estimada_backorder), estatus, idpendiente, idproceso]
+        );
         return json({ success: true });
       }
 
