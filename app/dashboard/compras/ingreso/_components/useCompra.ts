@@ -183,6 +183,7 @@ export function useCompra() {
     descuento_global_exento: c.descuento_global_exento,
     descuento_global_no_sujeto: c.descuento_global_no_sujeto,
     porcentaje_descuento: c.porcentaje_descuento,
+    descuento_afecta_costo: Number(c.descuento_afecta_costo) ? 1 : 0,
     iva_retenido: c.iva_retenido,
     iva_percibido: c.iva_percibido,
     retencion_renta: c.retencion_renta,

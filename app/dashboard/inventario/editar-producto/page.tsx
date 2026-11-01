@@ -57,39 +57,6 @@ interface Producto {
   codigo_jerarquico?: string | number;
 }
 
-interface Precios {
-  precio1: number;
-  precio2: number;
-  precio3: number;
-  precio4: number;
-  precio5: number;
-  precio6: number;
-  precio7: number;
-}
-
-interface HistorialAjuste {
-  idajuste: number;
-  idusuario: number;
-  fecha: string;
-  razon_justificacion: string;
-  created_at: string;
-  nombre_usuario: string;
-  precio1_anterior: number | null;
-  precio2_anterior: number | null;
-  precio3_anterior: number | null;
-  precio4_anterior: number | null;
-  precio5_anterior: number | null;
-  precio6_anterior: number | null;
-  precio7_anterior: number | null;
-  precio1_nuevo: number | null;
-  precio2_nuevo: number | null;
-  precio3_nuevo: number | null;
-  precio4_nuevo: number | null;
-  precio5_nuevo: number | null;
-  precio6_nuevo: number | null;
-  precio7_nuevo: number | null;
-}
-
 function EditarProductoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -112,13 +79,7 @@ function EditarProductoContent() {
   const [isEditing, setIsEditing] = useState(!!idParam);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
-  // Estados para precios
-  const [precios, setPrecios] = useState<Precios>({ precio1: 0, precio2: 0, precio3: 0, precio4: 0, precio5: 0, precio6: 0, precio7: 0 });
-  const [preciosDesbloqueado, setPreciosDesbloqueado] = useState(false);
-  const [justificacionPrecio, setJustificacionPrecio] = useState('');
-  const [historialPrecios, setHistorialPrecios] = useState<HistorialAjuste[]>([]);
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
-  const [savingPrecios, setSavingPrecios] = useState(false);
 
   // Estados para el sistema de categorías jerárquico
   const [categoriasNuevo, setCategoriasNuevo] = useState<{idcategoria: number, nombre: string}[]>([]);
@@ -259,53 +220,28 @@ function EditarProductoContent() {
   };
 
   useEffect(() => {
-    if (idParam && allProductos.length > 0) {
-      const found = allProductos.find(p => p.idprod === Number(idParam)) as any;
-      if (found) {
-        setProducto(found);
-        setIsEditing(true);
-        const idx = productosFiltrados.findIndex(p => p.idprod === Number(idParam));
-        if (idx >= 0) setSelectedIndex(idx);
-        fetchPrecios(Number(idParam));
-        fetchHistorialPrecios(Number(idParam));
-        // Inicializar valores de categoría jerárquica (convertir a números)
-        if (found.idcategoria_nuevo) setSelectedCategoria(Number(found.idcategoria_nuevo));
-        if (found.id_grupo) setSelectedGrupo(Number(found.id_grupo));
-        if (found.id_subgrupo) setSelectedSubgrupo(Number(found.id_subgrupo));
-      }
+    if (!idParam || producto?.idprod === Number(idParam)) return;
+    let vigente = true;
+    const abrir = (found: any) => {
+      setProducto(found);
+      setIsEditing(true);
+      const idx = productosFiltrados.findIndex(p => p.idprod === Number(idParam));
+      if (idx >= 0) setSelectedIndex(idx);
+      if (found.idcategoria_nuevo) setSelectedCategoria(Number(found.idcategoria_nuevo));
+      if (found.id_grupo) setSelectedGrupo(Number(found.id_grupo));
+      if (found.id_subgrupo) setSelectedSubgrupo(Number(found.id_subgrupo));
+    };
+    const enLista = allProductos.find(p => p.idprod === Number(idParam));
+    if (enLista) abrir(enLista);
+    else {
+      // La lista trae como máximo 500; el producto pedido puede no estar en ella.
+      fetch(`/api/productos/${Number(idParam)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => { if (vigente && data?.product) abrir(data.product); })
+        .catch(() => {});
     }
+    return () => { vigente = false; };
   }, [idParam, allProductos]);
-
-  const fetchPrecios = (idprod: number) => {
-    // Los precios vienen en el objeto producto desde /api/productos
-    const prod = allProductos.find(p => p.idprod === idprod) as any;
-    console.log('📊 Cargando precios para producto:', idprod, prod);
-    if (prod) {
-      const nuevosPrecios = {
-        precio1: Number(prod.precio1) || 0,
-        precio2: Number(prod.precio2) || 0,
-        precio3: Number(prod.precio3) || 0,
-        precio4: Number(prod.precio4) || 0,
-        precio5: Number(prod.precio5) || 0,
-        precio6: Number(prod.precio6) || 0,
-        precio7: Number(prod.precio7) || 0,
-      };
-      console.log('📊 Precios cargados:', nuevosPrecios);
-      setPrecios(nuevosPrecios);
-    }
-  };
-
-  const fetchHistorialPrecios = async (idprod: number) => {
-    try {
-      const response = await fetch(`/api/productos/${idprod}/historial-precios`);
-      if (response.ok) {
-        const data = await response.json();
-        setHistorialPrecios(data.historial || []);
-      }
-    } catch (error) {
-      console.error('Error al cargar historial:', error);
-    }
-  };
 
   const fetchAllProductos = async () => {
     setLoadingList(true);
@@ -313,7 +249,7 @@ function EditarProductoContent() {
       // Cargar TODOS los productos (limit alto para traer todos)
       const params = new URLSearchParams({
         page: '1',
-        limit: '10000' // Traer todos los productos
+        limit: '500'
       });
       if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim());
       if (selectedFilters.length > 0) params.append('filters', selectedFilters.join(','));
@@ -374,11 +310,7 @@ function EditarProductoContent() {
       setCurrentImageIndex(0);
       setNewImages([]);
       setImagesToDelete([]);
-      setPreciosDesbloqueado(false);
-      setJustificacionPrecio('');
       setMostrarHistorial(false);
-      fetchPrecios(idprod);
-      fetchHistorialPrecios(idprod);
       // Inicializar valores de categoría jerárquica (convertir a números)
       if (prod.idcategoria_nuevo) setSelectedCategoria(Number(prod.idcategoria_nuevo));
       else setSelectedCategoria(null);
@@ -394,8 +326,6 @@ function EditarProductoContent() {
     setProducto(null);
     setNewImages([]);
     setImagesToDelete([]);
-    setPreciosDesbloqueado(false);
-    setJustificacionPrecio('');
     setMostrarHistorial(false);
   };
 
@@ -489,73 +419,6 @@ function EditarProductoContent() {
       alert('Error al realizar la edición masiva');
     } finally {
       setSavingMasivo(false);
-    }
-  };
-
-  const updatePrecioField = (field: keyof Precios, value: number) => {
-    setPrecios(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleGuardarPrecios = async () => {
-    if (!producto) return;
-    if (!justificacionPrecio.trim()) {
-      alert('⚠️ Debes ingresar una justificación para el ajuste de precios');
-      return;
-    }
-
-    setSavingPrecios(true);
-    try {
-      const response = await fetch(`/api/productos/${producto.idprod}/ajuste-precios`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...precios,
-          justificacion: justificacionPrecio
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Actualizar el producto en las ventanas flotantes con los nuevos precios
-        if (data.product) {
-          updateProductInWindows({
-            idprod: data.product.idprod,
-            nombre: data.product.nombre,
-            descripcion: data.product.descripcion,
-            imagen_principal: data.product.imagen_principal,
-            stock_contable: data.product.stock_contable,
-            costo: data.product.costo,
-            OE: data.product.OE,
-            marca: data.product.marca,
-            categoria_nombre: data.product.categoria_nombre,
-            idcategoria: data.product.idcategoria,
-            idprodprov: data.product.idprodprov,
-            idprodpaquete: data.product.idprodpaquete,
-            codigo_barras: data.product.codigo_barras,
-            precio1: data.product.precio1,
-            precio2: data.product.precio2,
-            precio3: data.product.precio3,
-            precio4: data.product.precio4,
-            precio5: data.product.precio5,
-            precio6: data.product.precio6,
-            precio7: data.product.precio7,
-          });
-        }
-        
-        alert('✅ Precios actualizados correctamente');
-        setPreciosDesbloqueado(false);
-        setJustificacionPrecio('');
-        await fetchHistorialPrecios(producto.idprod);
-      } else {
-        const data = await response.json();
-        alert(`❌ Error: ${data.error || 'No se pudo guardar'}`);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('❌ Error al conectar con el servidor');
-    } finally {
-      setSavingPrecios(false);
     }
   };
 

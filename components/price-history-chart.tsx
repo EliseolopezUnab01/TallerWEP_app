@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, memo, useRef, lazy, Suspense } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { NIVELES_PRECIO } from '@/lib/precios-niveles';
 
 // Cache global para la librería recharts - evita múltiples imports
 let rechartsCache: any = null;
@@ -18,42 +19,24 @@ const loadRecharts = () => {
   return rechartsPromise;
 };
 
-interface HistorialEntry {
-  idajuste: number;
-  fecha: string;
-  precio1_anterior: number;
-  precio2_anterior: number;
-  precio3_anterior: number;
-  precio4_anterior: number;
-  precio5_anterior: number;
-  precio6_anterior: number;
-  precio1_nuevo: number;
-  precio2_nuevo: number;
-  precio3_nuevo: number;
-  precio4_nuevo: number;
-  precio5_nuevo: number;
-  precio6_nuevo: number;
-}
+type HistorialEntry = { idajuste: number; fecha: string } & Record<string, number | string>;
 
-const PRICE_CONFIG = [
-  { key: 'general', label: 'GEN', fullLabel: 'General', color: '#0e88c9', anteriorKey: 'precio1_anterior', nuevoKey: 'precio1_nuevo', priceKey: 'precio1' },
-  { key: 'mayorista', label: 'MAY', fullLabel: 'Mayorista', color: '#10b981', anteriorKey: 'precio2_anterior', nuevoKey: 'precio2_nuevo', priceKey: 'precio2' },
-  { key: 'cliente', label: 'CLI', fullLabel: 'Cliente', color: '#f59e0b', anteriorKey: 'precio3_anterior', nuevoKey: 'precio3_nuevo', priceKey: 'precio3' },
-  { key: 'mecanico', label: 'MEC', fullLabel: 'Mecánico', color: '#8b5cf6', anteriorKey: 'precio4_anterior', nuevoKey: 'precio4_nuevo', priceKey: 'precio4' },
-  { key: 'minorista', label: 'MIN', fullLabel: 'Minorista', color: '#ef4444', anteriorKey: 'precio5_anterior', nuevoKey: 'precio5_nuevo', priceKey: 'precio5' },
-  { key: 'especial', label: 'ESP', fullLabel: 'Especial', color: '#06b6d4', anteriorKey: 'precio6_anterior', nuevoKey: 'precio6_nuevo', priceKey: 'precio6' },
-];
+const ABREVIATURAS = ['G.A', 'GEN', 'CLI', 'MEC', 'MAY', 'INV', 'ESP'];
+const COLORES = ['#0369a1', '#0e88c9', '#f59e0b', '#8b5cf6', '#10b981', '#ef4444', '#06b6d4'];
+const PRICE_CONFIG = NIVELES_PRECIO.map((n, i) => ({
+  key: n.clave,
+  label: ABREVIATURAS[i],
+  fullLabel: n.nombre,
+  color: COLORES[i],
+  anteriorKey: `precio${n.numero}_anterior`,
+  nuevoKey: `precio${n.numero}_nuevo`,
+  priceKey: `precio${n.numero}`,
+}));
 
 interface PriceHistoryChartProps {
   idprod: number;
-  currentPrices: {
-    precio1?: string | number;
-    precio2?: string | number;
-    precio3?: string | number;
-    precio4?: string | number;
-    precio5?: string | number;
-    precio6?: string | number;
-  };
+  /** precio1..precio7 en el orden de NIVELES_PRECIO. */
+  currentPrices: Record<string, string | number | undefined>;
 }
 
 // AreaChart con recharts - Optimizado con cache global y dimensiones fijas

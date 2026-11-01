@@ -1,6 +1,6 @@
 # Estado del proyecto — Taller Web
 
-**Última actualización:** 2026-11-01 (plan de mejora integral en curso: fases 0 y 1 listas — respaldo, sesión por cookie con `proxy.ts`, roles, tabla empresa, bugs de datos. Sigue fase 2: costos, descuento y precios)  
+**Última actualización:** 2026-11-01 (plan de mejora integral en curso: fases 0, 1 y 2 listas — respaldo, sesión por cookie con `proxy.ts`, roles, tabla empresa, bugs de datos, `lib/costos.ts` con la escalera de respaldos, descuento informativo o que baja el costo, 7 niveles de precio con un solo editor. Sigue fase 3: Hacienda)  
 **Propósito:** documento vivo para que Cursor (y cualquier chat nuevo) sepa en qué va el sistema sin depender del historial de Windsurf.
 
 ---

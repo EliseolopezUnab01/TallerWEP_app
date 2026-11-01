@@ -3,6 +3,7 @@ import type { Conexion } from '@/lib/compras-detalle-db';
 import { IVA_TASA } from '@/lib/compras-detalle';
 import { r8 } from '@/lib/decimales';
 import { sincronizarPendientes } from '@/lib/procesos';
+import { promedioActual, promedioPonderado, registrarCosto } from '@/lib/costos';
 
 /**
  * Retaceo de un proceso de ingreso.
@@ -153,7 +154,9 @@ export function calcularRetaceo(lineas: LineaRetaceo[], p: ParametrosRetaceo): R
 export async function lineasDelProceso(connection: Conexion, idproceso: number) {
   const [rows] = await connection.execute<RowDataPacket[]>(
     `SELECT d.iddetalle, d.idcompra, d.numero_linea, d.idprod, d.referencia_proveedor, d.descripcion, d.destino,
-            d.cantidad, d.costo_unitario AS costo_divisa, d.imagen_url,
+            d.cantidad,
+            IF(c.descuento_afecta_costo = 1 AND d.cantidad > 0, d.subtotal_sin_iva / d.cantidad, d.costo_unitario) AS costo_divisa,
+            d.imagen_url,
             c.numero_interno, c.numero_factura, c.fecha_emision, c.estado AS estado_compra,
             pr.nombre_legal AS proveedor_nombre,
             COALESCE(dd.codigo_arancelario, p.codarancel) AS codigo_arancelario,
@@ -303,16 +306,17 @@ export async function finalizarRetaceo(connection: Conexion, idproceso: number) 
   );
   const yaEnStock = new Set(registradas.map((r) => Number(r.iddetalle)));
 
-  type Acumulado = { cantidad: number; nueva: number; previa: number; total: number; iva: number; pagado: number };
+  type Acumulado = { cantidad: number; nueva: number; previa: number; total: number; divisa: number; iva: number; pagado: number };
   const porProducto = new Map<number, Acumulado>();
   for (const l of calculo.lineas) {
-    const acc = porProducto.get(l.idprod!) ?? { cantidad: 0, nueva: 0, previa: 0, total: 0, iva: 0, pagado: 0 };
+    const acc = porProducto.get(l.idprod!) ?? { cantidad: 0, nueva: 0, previa: 0, total: 0, divisa: 0, iva: 0, pagado: 0 };
     acc.cantidad += l.cantidad;
     if (!aplicada.has(l.iddetalle)) {
       if (yaEnStock.has(l.iddetalle)) acc.previa += l.cantidad;
       else acc.nueva += l.cantidad;
     }
     acc.total += l.costo_destino * l.cantidad;
+    acc.divisa += l.costo_divisa * l.cantidad;
     acc.iva += l.iva_linea;
     acc.pagado += (l.costo_corregido ?? l.costo_pagado_usd) * l.cantidad;
     porProducto.set(l.idprod!, acc);
@@ -322,54 +326,38 @@ export async function finalizarRetaceo(connection: Conexion, idproceso: number) 
   const anteriores = new Map<number, { promedio: number; stock: number }>();
   for (const [idprod, acc] of porProducto) {
     const [datos] = await connection.execute<RowDataPacket[]>(
-      `SELECT p.stock_contable, c.idcosto, c.costo_local, c.costo_local_promedio
-       FROM productos p LEFT JOIN costos c ON c.idprod = p.idprod WHERE p.idprod = ? LIMIT 1`,
+      'SELECT stock_contable FROM productos WHERE idprod = ?',
       [idprod]
     );
-    const d = datos[0] ?? {};
     const guardado = [...aplicada.values()].find((p) => Number(p.idprod) === idprod);
     const reaplicacion = Boolean(guardado);
     const stockPrevio = reaplicacion
       ? Number(guardado!.stock_anterior) || 0
-      : Math.max((Number(d.stock_contable) || 0) - acc.previa, 0);
+      : Math.max((Number(datos[0]?.stock_contable) || 0) - acc.previa, 0);
     const promPrevio = reaplicacion
       ? Number(guardado!.costo_prom_anterior) || 0
-      : Number(d.costo_local_promedio) || Number(d.costo_local) || 0;
+      : await promedioActual(connection, idprod);
     anteriores.set(idprod, { promedio: promPrevio, stock: stockPrevio });
 
-    const promedio = r8(
-      stockPrevio > 0 && promPrevio > 0
-        ? (stockPrevio * promPrevio + acc.total) / (stockPrevio + acc.cantidad)
-        : acc.total / acc.cantidad
-    );
+    const promedio = promedioPonderado(stockPrevio, promPrevio, acc.cantidad, acc.total);
     promedios.set(idprod, promedio);
 
     if (acc.nueva > 0) {
       await connection.execute('UPDATE productos SET stock_contable = stock_contable + ? WHERE idprod = ?', [acc.nueva, idprod]);
     }
 
-    const local = r8(acc.total / acc.cantidad);
-    const ivaUnit = r8(acc.iva / acc.cantidad);
-    const proveedor = r8(acc.pagado / acc.cantidad);
-    const rotar = reaplicacion
-      ? ''
-      : `costo_previo2 = costo_previo1, costo_previo1 = costo_local,
-         costolcl_previo2 = costolcl_previo1, costolcl_previo1 = costo_local,`;
-    if (d.idcosto) {
-      await connection.execute(
-        `UPDATE costos SET ${rotar}
-           costo_local = ?, costo_local_promedio = ?, costo_proveedor = ?, iva_pagado = ?,
-           nofactura = ?, nodocto = ?, dt_compra = ?
-         WHERE idcosto = ?`,
-        [local, promedio, proveedor, ivaUnit, facturaTexto, proceso.nodocto, fechaCompra, d.idcosto]
-      );
-    } else {
-      await connection.execute(
-        `INSERT INTO costos (idprod, nofactura, nodocto, dt_compra, costo_local, costo_local_promedio, costo_proveedor, iva_pagado)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [idprod, facturaTexto, proceso.nodocto, fechaCompra, local, promedio, proveedor, ivaUnit]
-      );
-    }
+    await registrarCosto(connection, {
+      idprod,
+      costoFactura: acc.divisa / acc.cantidad,
+      costoLocal: acc.total / acc.cantidad,
+      promedio,
+      costoProveedor: acc.pagado / acc.cantidad,
+      ivaUnitario: acc.iva / acc.cantidad,
+      nofactura: facturaTexto,
+      nodocto: proceso.nodocto,
+      dtCompra: fechaCompra,
+      rotar: !reaplicacion,
+    });
   }
 
   const tcPagado = Number(proceso.tipo_cambio_pagado) || 1;

@@ -54,6 +54,21 @@ export function BarraTotales({ ctx }: { ctx: CompraCtx }) {
         <div className="flex-1 min-w-0 flex flex-wrap items-end gap-x-3 gap-y-1">
           <Dato etiqueta="Sumas" valor={fmt2(sumas)} title="Gravado antes del descuento" />
           <Dato etiqueta="Descuento" valor={fmt2(descuento)} />
+          <label
+            className="flex flex-col items-start"
+            title="Informativo: el costo que entra a inventario es el de antes del descuento. Baja el costo: entra el neto. Los totales fiscales siempre restan el descuento."
+          >
+            <span className={UI.denseLabel}>El descuento</span>
+            <select
+              className={`${UI.denseSelect} h-6 text-xs`}
+              disabled={bloqueado}
+              value={Number(compra?.descuento_afecta_costo) ? '1' : '0'}
+              onChange={(e) => ctx.patch({ descuento_afecta_costo: Number(e.target.value) })}
+            >
+              <option value="0">Es informativo</option>
+              <option value="1">Baja el costo</option>
+            </select>
+          </label>
           <Dato etiqueta="Subtotal" valor={fmt2(subtotal)} />
           <Dato etiqueta="IVA 13%" valor={fmt2(r?.iva)} />
 

@@ -14,16 +14,23 @@ import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import Image from 'next/image';
 import { SearchFilters, SingleFilterType } from '@/components/search-filters';
 import { useBuscarProductos } from '@/lib/buscar-productos';
+import { NIVELES_PRECIO } from '@/lib/precios-niveles';
 
-// Tipos de precio según el sistema FoxPro (6 tipos)
-const TIPOS_PRECIO = [
-  { key: 'general', label: 'GENERAL', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  { key: 'cliente', label: 'CLIENTE', color: 'bg-green-500/20 text-green-400 border-green-500/30' },
-  { key: 'mecanico', label: 'MECÁNICO', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
-  { key: 'minorista', label: 'MINORISTA', color: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
-  { key: 'mayorista', label: 'MAYORISTA', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
-  { key: 'especial', label: 'ESPECIAL', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
+const COLORES_NIVEL = [
+  'bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30',
+  'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30',
+  'bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30',
+  'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
+  'bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30',
+  'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30',
+  'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30',
 ];
+const TIPOS_PRECIO = NIVELES_PRECIO.map((n, i) => ({
+  key: n.clave,
+  numero: n.numero,
+  label: n.nombre.toUpperCase(),
+  color: COLORES_NIVEL[i],
+}));
 
 type ModoCalculo = 'porcentaje' | 'precio' | 'ganancia';
 
@@ -102,7 +109,7 @@ export default function AjustePreciosV2Page() {
   // Producto seleccionado para ajustar precios
   const [productoSeleccionado, setProductoSeleccionado] = useState<ProductoSeleccionado | null>(null);
   
-  // Estado de los 6 precios
+  // Estado de los 7 niveles
   const [precios, setPrecios] = useState<PrecioRow[]>([]);
   
   // Justificación del ajuste
@@ -767,14 +774,11 @@ export default function AjustePreciosV2Page() {
                             </tr>
                           </thead>
                           <tbody>
-                            {[
-                              { nombre: 'General', anterior: item.precio1_anterior, nuevo: item.precio1_nuevo },
-                              { nombre: 'Cliente', anterior: item.precio2_anterior, nuevo: item.precio2_nuevo },
-                              { nombre: 'Mecánico', anterior: item.precio3_anterior, nuevo: item.precio3_nuevo },
-                              { nombre: 'Minorista', anterior: item.precio4_anterior, nuevo: item.precio4_nuevo },
-                              { nombre: 'Mayorista', anterior: item.precio5_anterior, nuevo: item.precio5_nuevo },
-                              { nombre: 'Especial', anterior: item.precio6_anterior, nuevo: item.precio6_nuevo },
-                            ].map((precio, idx) => {
+                            {NIVELES_PRECIO.map((n) => ({
+                              nombre: n.nombre,
+                              anterior: item[`precio${n.numero}_anterior` as keyof HistorialItem],
+                              nuevo: item[`precio${n.numero}_nuevo` as keyof HistorialItem],
+                            })).map((precio, idx) => {
                               const anteriorNum = Number(precio.anterior) || 0;
                               const nuevoNum = Number(precio.nuevo) || 0;
                               const diff = nuevoNum - anteriorNum;

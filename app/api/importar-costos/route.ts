@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
+import { promedioActual, registrarCosto } from '@/lib/costos';
 import * as XLSX from 'xlsx';
 
 // Mapeo de columnas del Excel a campos de la base de datos
@@ -56,10 +57,14 @@ const COLUMN_MAPPING: { [key: string]: string } = {
   'costo previo1': 'costo_previo1',
   'costo_previo2': 'costo_previo2',
   'costo previo2': 'costo_previo2',
-  'costolcl_previo1': 'costop_previo1',
-  'costolcl previo1': 'costop_previo1',
-  'costolcl_previo2': 'costop_previo2',
-  'costolcl previo2': 'costop_previo2',
+  'costolcl_previo1': 'costolcl_previo1',
+  'costolcl previo1': 'costolcl_previo1',
+  'costolcl_previo2': 'costolcl_previo2',
+  'costolcl previo2': 'costolcl_previo2',
+  'costop_previo1': 'costop_previo1',
+  'costop previo1': 'costop_previo1',
+  'costop_previo2': 'costop_previo2',
+  'costop previo2': 'costop_previo2',
 };
 
 function normalizeColumnName(name: string): string {
@@ -230,6 +235,8 @@ export async function POST(request: NextRequest) {
       costoData.costo_previo2 = parseFloat(costoData.costo_previo2) || 0;
       costoData.costop_previo1 = parseFloat(costoData.costop_previo1) || 0;
       costoData.costop_previo2 = parseFloat(costoData.costop_previo2) || 0;
+      costoData.costolcl_previo1 = parseFloat(costoData.costolcl_previo1) || 0;
+      costoData.costolcl_previo2 = parseFloat(costoData.costolcl_previo2) || 0;
       costoData._fila = i + 1;
 
       costos.push(costoData);
@@ -303,102 +310,52 @@ export async function POST(request: NextRequest) {
             continue;
           }
 
-          // Verificar si ya existe registro de costo para este producto
-          const [existing]: any = await connection.execute(
-            'SELECT idcosto, costo_local FROM costos WHERE idprod = ?',
-            [idprod]
-          );
+          const [existing]: any = await connection.execute('SELECT idcosto FROM costos WHERE idprod = ?', [idprod]);
+          const promedio =
+            costoData.costo_lclpromedio || costoData.costo_promedio || (await promedioActual(connection, idprod)) || costoData.costo_local;
+          const traeRespaldos =
+            costoData.costo_previo1 > 0 || costoData.costo_previo2 > 0 ||
+            costoData.costolcl_previo1 > 0 || costoData.costolcl_previo2 > 0;
 
-          if (existing.length > 0) {
-            // Actualizar - Si el Excel trae campos de respaldo, usarlos; si no, rotar
-            const usarRespaldosExcel = costoData.costo_previo1 > 0 || costoData.costo_previo2 > 0;
-            
-            if (usarRespaldosExcel) {
-              // Importación con datos completos del cliente
-              await connection.execute(`
-                UPDATE costos SET
-                  costo = ?,
-                  costo_proveedor = ?,
-                  costo_promedio = ?,
-                  costo_local = ?,
-                  iva_pagado = ?,
-                  costo_previo1 = ?,
-                  costo_previo2 = ?,
-                  costop_previo1 = ?,
-                  costop_previo2 = ?,
-                  nofactura = ?,
-                  dt_compra = ?
-                WHERE idprod = ?
-              `, [
-                costoData.costo,
-                costoData.costo_proveedor,
-                costoData.costo_promedio,
-                costoData.costo_local,
-                costoData.iva_pagado,
-                costoData.costo_previo1,
-                costoData.costo_previo2,
-                costoData.costop_previo1,
-                costoData.costop_previo2,
-                costoData.nofactura || null,
-                costoData.dt_compra || null,
-                idprod
-              ]);
+          if (traeRespaldos) {
+            // Carga inicial desde el sistema anterior: los respaldos vienen en el Excel y se guardan tal cual.
+            const valores = [
+              costoData.costo, costoData.costo_proveedor, promedio, costoData.costo_local, promedio, costoData.iva_pagado,
+              costoData.costo_previo1, costoData.costo_previo2, costoData.costolcl_previo1, costoData.costolcl_previo2,
+              costoData.costop_previo1, costoData.costop_previo2, costoData.nofactura || null, costoData.dt_compra || null,
+            ];
+            if (existing.length > 0) {
+              await connection.execute(
+                `UPDATE costos SET costo = ?, costo_proveedor = ?, costo_promedio = ?, costo_local = ?, costo_local_promedio = ?,
+                   iva_pagado = ?, costo_previo1 = ?, costo_previo2 = ?, costolcl_previo1 = ?, costolcl_previo2 = ?,
+                   costop_previo1 = ?, costop_previo2 = ?, nofactura = ?, dt_compra = ?
+                 WHERE idprod = ?`,
+                [...valores, idprod]
+              );
             } else {
-              // Rotación automática de respaldos
-              await connection.execute(`
-                UPDATE costos SET
-                  costo_previo2 = costo_previo1,
-                  costo_previo1 = costo_local,
-                  costop_previo2 = costop_previo1,
-                  costop_previo1 = costo_proveedor,
-                  costo = ?,
-                  costo_proveedor = ?,
-                  costo_promedio = ?,
-                  costo_local = ?,
-                  iva_pagado = ?,
-                  nofactura = ?,
-                  dt_compra = ?
-                WHERE idprod = ?
-              `, [
-                costoData.costo,
-                costoData.costo_proveedor,
-                costoData.costo_promedio || existing[0].costo_local,
-                costoData.costo_local,
-                costoData.iva_pagado,
-                costoData.nofactura || null,
-                costoData.dt_compra || null,
-                idprod
-              ]);
+              await connection.execute(
+                `INSERT INTO costos (costo, costo_proveedor, costo_promedio, costo_local, costo_local_promedio, iva_pagado,
+                   costo_previo1, costo_previo2, costolcl_previo1, costolcl_previo2, costop_previo1, costop_previo2,
+                   nofactura, dt_compra, idprod)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [...valores, idprod]
+              );
             }
-            actualizados++;
+            await connection.execute('UPDATE productos SET costo = ? WHERE idprod = ?', [costoData.costo_local, idprod]);
           } else {
-            // Crear nuevo registro con todos los campos
-            await connection.execute(`
-              INSERT INTO costos (idprod, costo, costo_proveedor, costo_promedio, costo_local, iva_pagado, 
-                costo_previo1, costo_previo2, costop_previo1, costop_previo2, nofactura, dt_compra)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
+            await registrarCosto(connection, {
               idprod,
-              costoData.costo,
-              costoData.costo_proveedor,
-              costoData.costo_promedio || costoData.costo,
-              costoData.costo_local,
-              costoData.iva_pagado,
-              costoData.costo_previo1,
-              costoData.costo_previo2,
-              costoData.costop_previo1,
-              costoData.costop_previo2,
-              costoData.nofactura || null,
-              costoData.dt_compra || null
-            ]);
-            creados++;
+              costoFactura: costoData.costo,
+              costoLocal: costoData.costo_local,
+              promedio,
+              costoProveedor: costoData.costo_proveedor || null,
+              ivaUnitario: costoData.iva_pagado,
+              nofactura: costoData.nofactura || null,
+              dtCompra: costoData.dt_compra || null,
+            });
           }
-
-          // También actualizar el costo en la tabla productos (para compatibilidad)
-          await connection.execute(
-            'UPDATE productos SET costo = ? WHERE idprod = ?',
-            [costoData.costo, idprod]
-          );
+          if (existing.length > 0) actualizados++;
+          else creados++;
 
         } catch (error: any) {
           erroresImport.push({ fila: costoData._fila, error: error.message });

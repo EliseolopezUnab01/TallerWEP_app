@@ -65,6 +65,14 @@ interface Precio {
   editable: boolean;
 }
 
+function preciosDe(prod: any): Precio[] {
+  return NIVELES_PRECIO.map((n) => ({
+    tipo: n.nombre.toUpperCase(),
+    valor: parseFloat(prod?.[`precio${n.numero}`] || '0'),
+    editable: false,
+  }));
+}
+
 // Interface para pestañas de productos
 interface ProductTab {
   id: number;
@@ -250,16 +258,7 @@ function PerfilProductoPageContent() {
       setProducto(found);
       setCurrentImageIndex(0);
       
-      const preciosFromDB: Precio[] = [
-        { tipo: 'GENERAL', valor: parseFloat((found as any).precio1 || '0'), editable: false },
-        { tipo: 'MAYORISTA', valor: parseFloat((found as any).precio2 || '0'), editable: false },
-        { tipo: 'CLIENTE', valor: parseFloat((found as any).precio3 || '0'), editable: false },
-        { tipo: 'MECÁNICO', valor: parseFloat((found as any).precio4 || '0'), editable: false },
-        { tipo: 'MINORISTA', valor: parseFloat((found as any).precio5 || '0'), editable: false },
-        { tipo: 'INVERSOR', valor: parseFloat((found as any).precio6 || '0'), editable: false },
-        { tipo: 'ESPECIAL', valor: parseFloat((found as any).precio7 || '0'), editable: false },
-      ];
-      setPrecios(preciosFromDB);
+      setPrecios(preciosDe(found));
     }
   }, [allProductos]);
 
@@ -323,15 +322,7 @@ function PerfilProductoPageContent() {
     }
   };
 
-  const loadPrecios = (prod: any) => {
-    setPrecios(
-      NIVELES_PRECIO.map((n) => ({
-        tipo: n.nombre.toUpperCase(),
-        valor: parseFloat(prod[`precio${n.numero}`] || '0'),
-        editable: false,
-      }))
-    );
-  };
+  const loadPrecios = (prod: any) => setPrecios(preciosDe(prod));
 
   // Función para cargar un producto específico por ID (cuando viene de otra página)
   const fetchProductoById = async (id: number) => {
@@ -491,18 +482,7 @@ function PerfilProductoPageContent() {
     setProducto(tab.producto);
     setCurrentImageIndex(0);
     
-    // Cargar precios del producto (usando los nombres que vienen de la API)
-    const p = tab.producto as any;
-    const preciosFromDB: Precio[] = [
-      { tipo: 'GENERAL', valor: parseFloat(p.precio1 || '0'), editable: false },
-      { tipo: 'MAYORISTA', valor: parseFloat(p.precio2 || '0'), editable: false },
-      { tipo: 'CLIENTE', valor: parseFloat(p.precio3 || '0'), editable: false },
-      { tipo: 'MECÁNICO', valor: parseFloat(p.precio4 || '0'), editable: false },
-      { tipo: 'MINORISTA', valor: parseFloat(p.precio5 || '0'), editable: false },
-      { tipo: 'INVERSOR', valor: parseFloat(p.precio6 || '0'), editable: false },
-      { tipo: 'ESPECIAL', valor: parseFloat(p.precio7 || '0'), editable: false },
-    ];
-    setPrecios(preciosFromDB);
+    setPrecios(preciosDe(tab.producto));
   };
 
   const selectProduct = (productId: number) => {

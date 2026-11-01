@@ -440,8 +440,9 @@ export async function POST(request: NextRequest) {
         const { codigo } = await siguienteCorrelativo(connection, nacional ? 'CP' : 'CI');
         const [res] = await connection.execute<ResultSetHeader>(
           `INSERT INTO compras (estado, nodocto, numero_interno, clase_documento, tipo_dte, categoria_operacion, idproveedor,
-                                fecha_emision, numero_factura, idproceso)
-           VALUES ('BORRADOR', ?, ?, ?, ?, 'CONTABLE', ?, CURDATE(), ?, ?)`,
+                                fecha_emision, numero_factura, idproceso, descuento_afecta_costo)
+           VALUES ('BORRADOR', ?, ?, ?, ?, 'CONTABLE', ?, CURDATE(), ?, ?,
+                   COALESCE((SELECT descuento_modo = 'COSTO' FROM empresa WHERE activo = 1 ORDER BY idempresa LIMIT 1), 0))`,
           [nodocto, codigo, nacional ? 'DTE' : 'IMPORTACION', nacional ? '03' : null, doc.idproveedor, limpiar(body.numero_factura), idproceso]
         );
         const idcompra = res.insertId;

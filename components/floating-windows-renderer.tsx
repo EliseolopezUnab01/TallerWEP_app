@@ -265,14 +265,9 @@ export function FloatingWindowsRenderer() {
               {/* Gráfica de Evolución de Precios */}
               <PriceHistoryChart
                 idprod={win.producto.idprod}
-                currentPrices={{
-                  precio1: (win.producto as any).precio1 || 0,
-                  precio2: (win.producto as any).precio2 || 0,
-                  precio3: (win.producto as any).precio3 || 0,
-                  precio4: (win.producto as any).precio4 || 0,
-                  precio5: (win.producto as any).precio5 || 0,
-                  precio6: (win.producto as any).precio6 || 0,
-                }}
+                currentPrices={Object.fromEntries(
+                  [1, 2, 3, 4, 5, 6, 7].map((n) => [`precio${n}`, (win.producto as any)[`precio${n}`] || 0])
+                )}
               />
 
               {/* Botones de acción */}

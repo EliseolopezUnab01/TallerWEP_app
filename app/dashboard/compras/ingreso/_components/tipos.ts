@@ -49,6 +49,8 @@ export interface Compra {
   descuento_global_exento: number;
   descuento_global_no_sujeto: number;
   porcentaje_descuento: number;
+  /** 0: el descuento solo se informa; 1: baja el costo que va a inventario. */
+  descuento_afecta_costo: number;
   iva_retenido: number;
   iva_percibido: number;
   retencion_renta: number;

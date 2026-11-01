@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { connectDB } from '@/lib/db';
 import { fechaLocalISO } from '@/lib/fechas';
+import { leerEmpresa } from '@/lib/empresa';
 import { requierePermiso } from '@/lib/sesion';
 import {
   AVISOS_COMPRA,
@@ -64,6 +65,7 @@ const CAMPOS_ENCABEZADO = [
   'descuento_global_exento',
   'descuento_global_no_sujeto',
   'porcentaje_descuento',
+  'descuento_afecta_costo',
   'iva_retenido',
   'iva_percibido',
   'retencion_renta',
@@ -178,6 +180,9 @@ function extraerEncabezado(body: Record<string, unknown>) {
   ] as const;
   for (const campo of numericos) {
     if (body[campo] !== undefined) datos[campo] = aNumero(body[campo]);
+  }
+  if (body.descuento_afecta_costo !== undefined) {
+    datos.descuento_afecta_costo = body.descuento_afecta_costo === true || Number(body.descuento_afecta_costo) === 1 ? 1 : 0;
   }
 
   if (body.condicion_operacion !== undefined) {
@@ -324,6 +329,11 @@ export async function POST(request: NextRequest) {
         datos.plazo_tipo as string | null,
         datos.plazo_periodo as number | null
       );
+    }
+
+    if (datos.descuento_afecta_costo === undefined) {
+      const empresa = await leerEmpresa(connection).catch(() => null);
+      datos.descuento_afecta_costo = empresa?.descuento_modo === 'COSTO' ? 1 : 0;
     }
 
     datos.nodocto = await nuevoNodocto(connection);

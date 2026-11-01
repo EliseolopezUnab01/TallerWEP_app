@@ -1,6 +1,7 @@
 import type { RowDataPacket } from 'mysql2/promise';
 import type { Conexion } from '@/lib/compras-detalle-db';
 import { r8 } from '@/lib/decimales';
+import { promedioActual, promedioPonderado, registrarCosto } from '@/lib/costos';
 
 /**
  * Stock y costos de compras nacionales.
@@ -21,11 +22,13 @@ interface CompraStock {
   tipo_dte: string | null;
   idproceso: number | null;
   stock_aplicado: number;
+  descuento_afecta_costo: number;
 }
 
 async function leerCompra(connection: Conexion, idcompra: number): Promise<CompraStock | null> {
   const [rows] = await connection.execute<RowDataPacket[]>(
-    `SELECT idcompra, nodocto, numero_factura, numero_interno, fecha_emision, clase_documento, tipo_dte, idproceso, stock_aplicado
+    `SELECT idcompra, nodocto, numero_factura, numero_interno, fecha_emision, clase_documento, tipo_dte, idproceso,
+            stock_aplicado, descuento_afecta_costo
      FROM compras WHERE idcompra = ?`,
     [idcompra]
   );
@@ -62,7 +65,10 @@ async function lineasConStock(connection: Conexion, idcompra: number, esNota: bo
   return porProducto;
 }
 
-/** Actualiza `costos` con el costo de la factura; rota los respaldos y pondera el promedio con el stock previo. */
+/**
+ * Costo de la factura nacional: `costo` y `costo_local` reciben el mismo unitario.
+ * Con el descuento informativo el unitario es el de antes del descuento; si el descuento baja el costo, el neto.
+ */
 async function actualizarCostos(
   connection: Conexion,
   compra: CompraStock,
@@ -70,40 +76,20 @@ async function actualizarCostos(
   acc: { cantidad: number; neto: number; iva: number; bruto: number },
   stockPrevio: number
 ) {
-  const [rows] = await connection.execute<RowDataPacket[]>(
-    'SELECT idcosto, costo, costo_promedio, costo_local, costo_local_promedio FROM costos WHERE idprod = ? ORDER BY idcosto LIMIT 1',
-    [idprod]
-  );
-  const c = rows[0];
-  const unitario = r8(acc.neto / acc.cantidad);
-  const promPrevio = Number(c?.costo_local_promedio) || Number(c?.costo_promedio) || Number(c?.costo_local) || Number(c?.costo) || 0;
-  const promedio = r8(
-    stockPrevio > 0 && promPrevio > 0 ? (stockPrevio * promPrevio + acc.neto) / (stockPrevio + acc.cantidad) : unitario
-  );
-  const proveedor = r8(acc.bruto / acc.cantidad);
-  const ivaUnit = r8(acc.iva / acc.cantidad);
-  const factura = String(compra.numero_factura || compra.numero_interno || '').slice(0, 50) || null;
-  const fecha = compra.fecha_emision ?? null;
-
-  if (c) {
-    await connection.execute(
-      `UPDATE costos SET
-         costo_previo2 = costo_previo1, costo_previo1 = costo,
-         costop_previo2 = costop_previo1, costop_previo1 = costo_promedio,
-         costolcl_previo2 = costolcl_previo1, costolcl_previo1 = costo_local,
-         costo = ?, costo_promedio = ?, costo_local = ?, costo_local_promedio = ?,
-         costo_proveedor = ?, iva_pagado = ?, nofactura = ?, nodocto = ?, dt_compra = ?
-       WHERE idcosto = ?`,
-      [unitario, promedio, unitario, promedio, proveedor, ivaUnit, factura, compra.nodocto, fecha, c.idcosto]
-    );
-  } else {
-    await connection.execute(
-      `INSERT INTO costos (idprod, nofactura, nodocto, dt_compra, costo, costo_promedio, costo_local, costo_local_promedio,
-                           costo_proveedor, iva_pagado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [idprod, factura, compra.nodocto, fecha, unitario, promedio, unitario, promedio, proveedor, ivaUnit]
-    );
-  }
+  const total = Number(compra.descuento_afecta_costo) ? acc.neto : acc.bruto;
+  const unitario = r8(total / acc.cantidad);
+  const promedio = promedioPonderado(stockPrevio, await promedioActual(connection, idprod), acc.cantidad, total);
+  await registrarCosto(connection, {
+    idprod,
+    costoFactura: unitario,
+    costoLocal: unitario,
+    promedio,
+    costoProveedor: acc.bruto / acc.cantidad,
+    ivaUnitario: acc.iva / acc.cantidad,
+    nofactura: compra.numero_factura || compra.numero_interno || null,
+    nodocto: compra.nodocto,
+    dtCompra: compra.fecha_emision ?? null,
+  });
 }
 
 /** Aplica el efecto del documento al registrarlo. Devuelve cuántos productos movió. */

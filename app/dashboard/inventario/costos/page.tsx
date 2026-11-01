@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { SearchFilters, SingleFilterType } from '@/components/search-filters';
 import { useBuscarProductos } from '@/lib/buscar-productos';
+import { useSesion } from '@/lib/sesion-cliente';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 
@@ -38,12 +39,16 @@ interface Costo {
   costo_previo2: string;
   costop_previo1: string;
   costop_previo2: string;
+  costolcl_previo1: string;
+  costolcl_previo2: string;
+  costo_local_promedio: string;
   producto_nombre?: string;
 }
 
 export default function CostosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
+  const { puede } = useSesion();
   const { productos: productosFiltrados, total: totalProductos, inicial: loading } =
     useBuscarProductos<Producto>(searchTerm, selectedFilters);
   const [saving, setSaving] = useState(false);
@@ -94,6 +99,7 @@ export default function CostosPage() {
         body: JSON.stringify({
           idprod: productoSeleccionado.idprod,
           costo: parseFloat(formData.costo) || 0,
+          costo_local: parseFloat(formData.costo_local) || parseFloat(formData.costo) || 0,
           costo_proveedor: parseFloat(formData.costo_proveedor) || 0,
           iva_pagado: parseFloat(formData.iva_pagado) || 0,
           nofactura: formData.nofactura || null,
@@ -302,37 +308,42 @@ export default function CostosPage() {
                         <span className="text-sm font-medium text-slate-300">Historial de Respaldos</span>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        {[
+                          ['Costo promedio', costoData.costo_local_promedio || costoData.costo_promedio],
+                          ['Costo previo 1', costoData.costo_previo1],
+                          ['Costo previo 2', costoData.costo_previo2],
+                          ['Promedio previo 1', costoData.costop_previo1],
+                          ['Local previo 1', costoData.costolcl_previo1],
+                          ['Local previo 2', costoData.costolcl_previo2],
+                          ['Promedio previo 2', costoData.costop_previo2],
+                        ].map(([etiqueta, valor]) => (
+                          <div key={etiqueta}>
+                            <span className="text-slate-800 dark:text-slate-500">{etiqueta}:</span>
+                            <span className="text-slate-700 dark:text-slate-300 ml-2 font-mono">${parseFloat(valor || '0').toFixed(4)}</span>
+                          </div>
+                        ))}
                         <div>
-                          <span className="text-slate-800 dark:text-slate-500">Costo Promedio:</span>
-                          <span className="text-emerald-400 ml-2 font-mono">${parseFloat(costoData.costo_promedio || '0').toFixed(2)}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-800 dark:text-slate-500">Previo 1:</span>
-                          <span className="text-slate-300 ml-2 font-mono">${parseFloat(costoData.costo_previo1 || '0').toFixed(2)}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-800 dark:text-slate-500">Previo 2:</span>
-                          <span className="text-slate-300 ml-2 font-mono">${parseFloat(costoData.costo_previo2 || '0').toFixed(2)}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-800 dark:text-slate-500">Última actualización:</span>
-                          <span className="text-slate-300 ml-2">{costoData.dt_compra ? new Date(costoData.dt_compra).toLocaleDateString() : '-'}</span>
+                          <span className="text-slate-800 dark:text-slate-500">Última compra:</span>
+                          <span className="text-slate-700 dark:text-slate-300 ml-2">{costoData.dt_compra ? new Date(costoData.dt_compra).toLocaleDateString() : '-'}</span>
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* Botón guardar */}
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-end gap-3">
+                    <span className="text-xs text-slate-500">
+                      Las compras y el retaceo actualizan el costo solos. Corregir a mano deja el costo actual como respaldo.
+                    </span>
                     <Button
                       onClick={handleSave}
-                      disabled={saving}
+                      disabled={saving || !puede('costos.editar')}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white"
                     >
                       {saving ? (
                         <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Guardando...</>
                       ) : (
-                        <><Save className="h-4 w-4 mr-2" /> Guardar Costos</>
+                        <><Save className="h-4 w-4 mr-2" /> Corregir costo</>
                       )}
                     </Button>
                   </div>
