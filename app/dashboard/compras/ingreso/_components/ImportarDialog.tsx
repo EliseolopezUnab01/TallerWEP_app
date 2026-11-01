@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FileJson, FileSpreadsheet, Upload, X } from 'lucide-react';
+import { confirmar } from '@/components/ui/avisos';
 import { UI } from '@/lib/ui';
 import { CATEGORIAS_OPERACION, nombreTipoDte } from '@/lib/compras-constantes';
 import { parsearDte, type ApendiceDte, type DteParseado } from '@/lib/importar-dte';
@@ -180,7 +181,7 @@ export function ImportarDialog({ abierto, archivoInicial, ctx, onCerrar, onPendi
       const { status, data } = await enviar({ tipo: 'json', dte: vista.crudo, reemplazar });
       if (status === 409 && data.requiere_confirmacion) {
         setEnviando(false);
-        if (confirm(`La compra ya tiene ${data.lineas} línea(s). ¿Reemplazarlas con las del DTE?`)) {
+        if (await confirmar(`La compra ya tiene ${data.lineas} línea(s). ¿Reemplazarlas con las del DTE?`)) {
           await importarJson(true);
         }
         return;

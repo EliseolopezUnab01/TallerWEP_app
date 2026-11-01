@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
@@ -37,8 +38,8 @@ export function PendientesImportacion({ filas, usadas, onCargar, onCerrar }: Pro
         <button
           type="button"
           className="p-0.5 rounded text-muted-foreground hover:bg-muted"
-          onClick={() => {
-            if (restantes.length === 0 || confirm('¿Cerrar la lista? Las líneas pendientes no se agregarán.')) onCerrar();
+          onClick={async () => {
+            if (restantes.length === 0 || (await confirmar('¿Cerrar la lista? Las líneas pendientes no se agregarán.'))) onCerrar();
           }}
           title="Cerrar"
         >

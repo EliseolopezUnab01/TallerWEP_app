@@ -5,6 +5,7 @@ import { ThemeProvider } from "./theme-provider";
 import { NotificationProvider } from "@/contexts/notification-context";
 import { FloatingWindowsProvider } from "@/contexts/floating-windows-context";
 import { FloatingWindowsRenderer } from "@/components/floating-windows-renderer";
+import { Avisos } from "@/components/ui/avisos";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,6 +44,7 @@ export default function RootLayout({
             <FloatingWindowsProvider>
               {children}
               <FloatingWindowsRenderer />
+              <Avisos />
             </FloatingWindowsProvider>
           </NotificationProvider>
         </ThemeProvider>

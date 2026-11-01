@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Plus, Save, Search, Trash2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard-layout';
+import { confirmar } from '@/components/ui/avisos';
 import { UI } from '@/lib/ui';
 import {
   BarraTaller,
@@ -106,7 +107,7 @@ export function CatalogoFicha({ config }: { config: ConfigCatalogo }) {
   };
 
   const eliminar = async () => {
-    if (!fila || !confirm(`¿Eliminar ${config.titulo_ficha(fila)}?`)) return;
+    if (!fila || !(await confirmar(`¿Eliminar ${config.titulo_ficha(fila)}?`))) return;
     try {
       const data = await pedir(`${config.api}?id=${fila.id}`, 'DELETE');
       notificar('ok', data.mensaje);

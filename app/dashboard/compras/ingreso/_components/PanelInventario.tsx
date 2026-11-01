@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Eraser, FileUp, Plus, Save, Search, X } from 'lucide-react';
@@ -176,7 +177,7 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
       ctx.notificar('error', `Seleccione el rubro contable para ${form.destino === 'GASTOS' ? 'gasto' : 'activo'}`);
       return;
     }
-    if (form.iddetalle && !confirm(AVISOS_COMPRA.confirmarCambios)) return;
+    if (form.iddetalle && !(await confirmar(AVISOS_COMPRA.confirmarCambios))) return;
     setGuardando(true);
     const ok = await ctx.guardarLinea({ ...form, costo_unitario: String(costoNeto), iva_incluido: false });
     setGuardando(false);

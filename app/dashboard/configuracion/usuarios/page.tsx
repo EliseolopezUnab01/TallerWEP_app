@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Save, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
@@ -97,7 +98,7 @@ export default function UsuariosPage() {
 
   const borrarRol = async () => {
     if (!rolSel || !rolActual) return;
-    if (!window.confirm(`¿Eliminar el rol ${rolActual.nombre}?`)) return;
+    if (!(await confirmar(`¿Eliminar el rol ${rolActual.nombre}?`))) return;
     try {
       const r = await pedir(`/api/roles?id=${rolSel}`, 'DELETE');
       notificar('ok', r.mensaje);

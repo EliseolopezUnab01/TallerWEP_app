@@ -130,6 +130,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         { icon: List, label: 'Productos', href: '/dashboard/inventario/administrar' },
         { icon: Plus, label: 'Nuevo Producto', href: '/dashboard/inventario/nuevo' },
         { icon: Edit, label: 'Editar Producto', href: '/dashboard/inventario/editar-producto' },
+        { icon: ClipboardList, label: 'Ajuste de inventario', href: '/dashboard/inventario/ajuste-stock' },
         { icon: FileText, label: 'Perfil del Producto', href: '/dashboard/inventario/perfil' },
         { icon: Tags, label: 'Ajuste de Precios', href: '/dashboard/inventario/ajuste-precios', grupo: 'Precios y costos' },
         { icon: Calculator, label: 'Gestión de Costos', href: '/dashboard/inventario/costos' },

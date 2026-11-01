@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useState } from 'react';
 import { ClipboardCheck, Trash2 } from 'lucide-react';
@@ -241,7 +242,7 @@ export function PanelEstados({
                         className={UI.denseBtnDanger}
                         aria-label="Eliminar revisión"
                         onClick={async () => {
-                          if (confirm('¿Eliminar esta revisión?')) await accion(`/api/estado-partes?id=${e.idestado}`, 'DELETE');
+                          if ((await confirmar('¿Eliminar esta revisión?'))) await accion(`/api/estado-partes?id=${e.idestado}`, 'DELETE');
                         }}
                       >
                         <Trash2 className="h-3 w-3" />

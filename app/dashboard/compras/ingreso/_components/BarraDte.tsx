@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Ban, CheckCircle2, FilePlus2, FolderOpen, Save, Trash2, XCircle } from 'lucide-react';
@@ -68,13 +69,13 @@ export function BarraDte({ ctx, onAbrir }: { ctx: CompraCtx; onAbrir: () => void
     );
   };
 
-  const cambiarCategoria = (categoria: CategoriaOperacion) => {
+  const cambiarCategoria = async (categoria: CategoriaOperacion) => {
     const conflicto = lineasEnConflicto(categoria, esImportacion);
     if (conflicto.length) {
       avisarConflicto(conflicto, `La categoría ${CATEGORIAS_OPERACION.find((c) => c.valor === categoria)?.etiqueta}`);
       return;
     }
-    if (ctx.lineas.length && !confirm(AVISOS_COMPRA.confirmarCambios)) return;
+    if (ctx.lineas.length && !(await confirmar(AVISOS_COMPRA.confirmarCambios))) return;
     ctx.patch({ categoria_operacion: categoria });
   };
 
@@ -213,8 +214,8 @@ export function BarraDte({ ctx, onAbrir }: { ctx: CompraCtx; onAbrir: () => void
             type="button"
             className={`${btnIcono} border-emerald-400 dark:border-emerald-500/50 bg-emerald-500 text-white hover:bg-emerald-600`}
             disabled={bloqueado || ocupado}
-            onClick={() => {
-              if (confirm('¿Registrar esta compra? Ya no se podrá editar.')) ctx.registrar();
+            onClick={async () => {
+              if (await confirmar('¿Registrar esta compra? Ya no se podrá editar.')) ctx.registrar();
             }}
             title="Finalizar / registrar documento (F2)"
             aria-label="Registrar"
@@ -225,8 +226,8 @@ export function BarraDte({ ctx, onAbrir }: { ctx: CompraCtx; onAbrir: () => void
             type="button"
             className={`${btnIcono} border-red-300 dark:border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10`}
             disabled={compra?.estado !== 'REGISTRADA' || ocupado}
-            onClick={() => {
-              if (confirm('¿Anular esta compra registrada?')) ctx.anular();
+            onClick={async () => {
+              if (await confirmar('¿Anular esta compra registrada?')) ctx.anular();
             }}
             title="Anular documento (F4)"
             aria-label="Anular"

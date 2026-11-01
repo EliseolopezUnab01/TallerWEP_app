@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useRef, useState } from 'react';
 import { FileText, Trash2, Upload } from 'lucide-react';
@@ -45,7 +46,7 @@ export function PanelTarjeta({
   };
 
   const eliminar = async (id: unknown) => {
-    if (!confirm('¿Eliminar esta foto?')) return;
+    if (!(await confirmar('¿Eliminar esta foto?'))) return;
     const res = await fetch(`/api/archivos?id=${id}`, { method: 'DELETE' });
     if (!res.ok) notificar('error', 'No se pudo eliminar la foto');
     await onCambio();

@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useState } from 'react';
 import { Calculator, CheckCheck, History, Lock, RotateCcw, Save } from 'lucide-react';
@@ -230,12 +231,12 @@ export function PanelDuca({ detalle, editable, accion, onHistorial }: Props) {
                 type="button"
                 className={UI.denseBtnPrimary}
                 disabled={lineas.length === 0}
-                onClick={() => {
+                onClick={async () => {
                   const resumen = proceso.fecha_retaceo
                     ? `¿Volver a aplicar el retaceo de ${proceso.codigo}? Se recalcula el costo sin duplicar el stock ya ingresado; solo entran las líneas nuevas.`
                     : `¿Aplicar el retaceo de ${proceso.codigo}? Entra al stock lo de ${new Set(lineas.map((l) => l.idprod)).size} producto(s), se actualizan sus costos y el proceso queda cerrado.`;
                   const nota = window.prompt('Comentario del retaceo (puede quedar vacío). Cancelar aborta.', '');
-                  if (nota === null || !confirm(resumen)) return;
+                  if (nota === null || !(await confirmar(resumen))) return;
                   accion({ accion: 'finalizar', comentario: nota.trim() });
                 }}
               >

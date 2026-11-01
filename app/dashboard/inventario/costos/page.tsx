@@ -1,4 +1,5 @@
 'use client';
+import { avisar } from '@/components/ui/avisos';
 
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -108,14 +109,14 @@ export default function CostosPage() {
       });
 
       if (response.ok) {
-        alert('Costo actualizado correctamente');
+        avisar('Costo actualizado correctamente');
         fetchCosto(productoSeleccionado.idprod);
       } else {
-        alert('Error al guardar el costo');
+        avisar('Error al guardar el costo');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al guardar el costo');
+      avisar('Error al guardar el costo');
     } finally {
       setSaving(false);
     }

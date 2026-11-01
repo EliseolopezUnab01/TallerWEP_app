@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useState } from 'react';
 import { Ban, FileText, Loader2, Plus, Send, Save } from 'lucide-react';
@@ -186,7 +187,7 @@ export default function SujetoExcluidoPage() {
   };
 
   const emitirDte = async () => {
-    if (!confirm(`Se enviará a Hacienda en ambiente ${ambiente === '01' ? 'PRODUCCIÓN' : 'de pruebas'}. ¿Continuar?`)) return;
+    if (!(await confirmar(`Se enviará a Hacienda en ambiente ${ambiente === '01' ? 'PRODUCCIÓN' : 'de pruebas'}. ¿Continuar?`))) return;
     setOcupado(true);
     try {
       const id = await persistir();

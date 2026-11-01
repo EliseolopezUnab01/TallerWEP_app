@@ -1,6 +1,6 @@
 # Estado del proyecto — Taller Web
 
-**Última actualización:** 2026-11-01 (plan de mejora integral en curso. Fases 0 a 3 listas, incluida la emisión de factura de sujeto excluido, migración 022. Fase 4 lista, migración 023: OE digitable en express, proveedor e imagen en la grilla de control, totales fiscal y contable, CIF con gastos declarados, CIF grupo por partida, costo corregido, IVA y exento unitarios, backorder calculado, en camino hasta que entra el stock, número de cotización del proveedor, tipo de documento Gastos e historial desde el producto y la compra. Sigue fase 5: inventario y pulido.)  
+**Última actualización:** 2026-11-01 (plan de mejora integral en curso. Fases 0 a 4 listas. Fase 5 lista, migración 024: el stock de la ficha y de la importación queda en solo lectura y el inicial entra por Ajuste de inventario; avisos en pantalla en lugar de alert y confirm; pestañas de Administrar legibles en modo claro. Eslint no reportó errores de hooks. Sigue fase 6: taller.)  
 **Propósito:** documento vivo para que Cursor (y cualquier chat nuevo) sepa en qué va el sistema sin depender del historial de Windsurf.
 
 ---
@@ -87,7 +87,10 @@ Archivos originales en [`docs/fuentes/`](fuentes/):
 ## Dónde me quedé
 
 **Fecha:** 2026-11-01
-**Último trabajo:** fase 4 de Compras (migración `023_huecos_compras.sql`). El backorder es pedido menos recibido. Lo que está en camino sale de las líneas de inventario de procesos no finalizados que aún no aplicaron stock. El CIF del retaceo suma seguro, flete y gastos declarados. Sigue la fase 5 (stock de solo lectura, modo claro, toasts, eslint).
+**Último trabajo:** fase 5 (migración `024_ajuste_inventario.sql`). Nuevo, editar e importar ya no escriben stock; el documento de ajuste suma o resta el contable y el físico. Los `alert` y `confirm` del dashboard pasaron a avisos. Sigue la fase 6 (tarjeta y serie del vehículo, órdenes de trabajo).
+
+**Fecha anterior inmediata:** 2026-11-01
+**Trabajo:** fase 4 de Compras (migración `023_huecos_compras.sql`). El backorder es pedido menos recibido. Lo que está en camino sale de las líneas de inventario de procesos no finalizados que aún no aplicaron stock. El CIF del retaceo suma seguro, flete y gastos declarados.
 
 **Fecha anterior:** 2026-10-28 (tarde)
 **Último trabajo:** pulido de Compras implementado completo (fases 0–7 del plan). Migración `017_pulido_compras.sql` aplicada.

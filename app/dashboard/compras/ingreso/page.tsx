@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, FilePlus2, FolderOpen } from 'lucide-react';
@@ -61,17 +62,17 @@ export default function IngresoCompraPage() {
   };
 
   const atajos = useCallback(
-    (e: KeyboardEvent) => {
+    async (e: KeyboardEvent) => {
       if (dialogo || importando) return;
       if (e.key === 'F2') {
         e.preventDefault();
-        if (ctx.esBorrador && confirm('¿Registrar esta compra? Ya no se podrá editar.')) ctx.registrar();
+        if (ctx.esBorrador && (await confirmar('¿Registrar esta compra? Ya no se podrá editar.'))) ctx.registrar();
       } else if (e.key === 'F3') {
         e.preventDefault();
         refProveedor.current?.focus();
       } else if (e.key === 'F4') {
         e.preventDefault();
-        if (compra?.estado === 'REGISTRADA' && confirm('¿Anular esta compra registrada?')) ctx.anular();
+        if (compra?.estado === 'REGISTRADA' && (await confirmar('¿Anular esta compra registrada?'))) ctx.anular();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         if (ctx.esBorrador) ctx.guardar();

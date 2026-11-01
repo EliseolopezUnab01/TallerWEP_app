@@ -1,4 +1,5 @@
 'use client';
+import { avisar } from '@/components/ui/avisos';
 
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -290,7 +291,7 @@ export default function AjustePreciosV2Page() {
     if (!productoSeleccionado) return;
     
     if (!razon.trim()) {
-      alert('⚠️ Debes proporcionar una razón/justificación para el ajuste');
+      avisar('⚠️ Debes proporcionar una razón/justificación para el ajuste');
       return;
     }
     
@@ -314,17 +315,17 @@ export default function AjustePreciosV2Page() {
       });
       
       if (response.ok) {
-        alert('✅ Precios guardados correctamente');
+        avisar('✅ Precios guardados correctamente');
         setRazon('');
         // Recargar datos del producto
         seleccionarProducto(productoSeleccionado.idprod);
       } else {
         const data = await response.json();
-        alert(`❌ Error: ${data.error}`);
+        avisar(`❌ Error: ${data.error}`);
       }
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert('❌ Error al conectar con el servidor');
+      avisar('❌ Error al conectar con el servidor');
     } finally {
       setSaving(false);
     }

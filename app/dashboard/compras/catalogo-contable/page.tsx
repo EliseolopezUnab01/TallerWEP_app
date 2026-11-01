@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -177,7 +178,7 @@ export default function CatalogoContablePage() {
   const cambiarEstado = async (r: Rubro) => {
     // Baja lógica: los rubros quedan referenciados por compras históricas
     if (r.activo) {
-      const ok = confirm(`¿Desactivar "${r.nombre}"?\n\nDejará de aparecer en el desplegable de compras, pero se conserva en el historial.`);
+      const ok = (await confirmar(`¿Desactivar "${r.nombre}"?\n\nDejará de aparecer en el desplegable de compras, pero se conserva en el historial.`));
       if (!ok) return;
 
       try {

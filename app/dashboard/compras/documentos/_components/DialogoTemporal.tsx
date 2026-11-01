@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -128,7 +129,7 @@ export function DialogoTemporal({ idtemporal, onCerrar, onCambio, onError }: Pro
   };
 
   const quitarImagen = async (id: number) => {
-    if (!confirm('¿Eliminar esta imagen?')) return;
+    if (!(await confirmar('¿Eliminar esta imagen?'))) return;
     const res = await fetch(`/api/archivos?id=${id}`, { method: 'DELETE' });
     if (res.ok) await cargar();
     else onError('No se pudo eliminar la imagen');
@@ -264,8 +265,8 @@ export function DialogoTemporal({ idtemporal, onCerrar, onCambio, onError }: Pro
                     type="button"
                     className={UI.denseBtnPrimary}
                     disabled={!destino || ocupado}
-                    onClick={() => {
-                      if (destino && confirm(`¿Enlazar ${temporal.codigo} con ${destino.idprod} — ${destino.nombre}?`)) {
+                    onClick={async () => {
+                      if (destino && (await confirmar(`¿Enlazar ${temporal.codigo} con ${destino.idprod} — ${destino.nombre}?`))) {
                         enviar({ accion: 'convertir', idprod: destino.idprod });
                       }
                     }}
@@ -291,7 +292,7 @@ export function DialogoTemporal({ idtemporal, onCerrar, onCambio, onError }: Pro
                   type="button"
                   className={UI.denseBtnDanger}
                   disabled={ocupado}
-                  onClick={() => confirm(`¿Descartar ${temporal.codigo}?`) && enviar({ accion: 'descartar' })}
+                  onClick={async () => (await confirmar(`¿Descartar ${temporal.codigo}?`)) && enviar({ accion: 'descartar' })}
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Descartar
                 </button>

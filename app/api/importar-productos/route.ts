@@ -280,8 +280,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Valores por defecto
-      producto.stock_contable = parseInt(producto.stock_contable) || 0;
-      producto.stock_fisico = parseInt(producto.stock_fisico) || 0;
+      producto.stock_contable = 0;
+      producto.stock_fisico = 0;
       producto.costo = parseFloat(producto.costo) || 0;
       producto.exento = producto.exento === true || producto.exento === 'true' || producto.exento === '1' || producto.exento === 1;
       producto._fila = i + 1;
@@ -406,7 +406,7 @@ export async function POST(request: NextRequest) {
 
             const fieldsToUpdate = ['nombre', 'descripcion', 'marca', 'etiquetas', 'peso', 
               'lado', 'modelo', 'clase', 'estilo', 'giro', 'capacidad', 'unimedida',
-              'codigo_barras', 'stock_contable', 'stock_fisico', 'costo', 'aplicacion_marcas',
+              'codigo_barras', 'costo', 'aplicacion_marcas',
               'idprodprov', 'idprodpaquete', 'idprodfisico', 'OE'];
 
             fieldsToUpdate.forEach(field => {
@@ -475,8 +475,8 @@ export async function POST(request: NextRequest) {
                   producto.info_referencias_directas || null,
                   producto.info_referencias_indirectas || null,
                   producto.exento ? 1 : 0,
-                  producto.stock_contable,
-                  producto.stock_fisico,
+                  0,
+                  0,
                   producto.costo,
                   producto.aplicacion_marcas || null
                 ]
@@ -517,8 +517,8 @@ export async function POST(request: NextRequest) {
                   producto.info_referencias_directas || null,
                   producto.info_referencias_indirectas || null,
                   producto.exento ? 1 : 0,
-                  producto.stock_contable,
-                  producto.stock_fisico,
+                  0,
+                  0,
                   producto.costo,
                   producto.aplicacion_marcas || null
                 ]

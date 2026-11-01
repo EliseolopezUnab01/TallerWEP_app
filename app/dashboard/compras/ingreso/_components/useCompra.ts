@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { calcularFechaVencimiento, calcularResumen, type LineaResumen } from '@/lib/compras-resumen';
@@ -99,7 +100,7 @@ export function useCompra() {
 
   const abrir = useCallback(
     async (id: number) => {
-      if (sucio && !confirm('Hay cambios sin guardar en el encabezado. ¿Descartarlos?')) return;
+      if (sucio && !(await confirmar('Hay cambios sin guardar en el encabezado. ¿Descartarlos?'))) return;
       setCargando(true);
       await cargarTodo(id);
       setCargando(false);
@@ -147,7 +148,7 @@ export function useCompra() {
   }, []);
 
   const crear = useCallback(async () => {
-    if (sucio && !confirm('Hay cambios sin guardar en el encabezado. ¿Descartarlos?')) return;
+    if (sucio && !(await confirmar('Hay cambios sin guardar en el encabezado. ¿Descartarlos?'))) return;
     try {
       const ahora = new Date();
       const hoy = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -235,7 +236,7 @@ export function useCompra() {
 
   const eliminarBorrador = useCallback(async () => {
     if (!compra || compra.estado !== 'BORRADOR') return;
-    if (!confirm(`¿Eliminar el borrador #${compra.idcompra}?`)) return;
+    if (!(await confirmar(`¿Eliminar el borrador #${compra.idcompra}?`))) return;
     try {
       await pedir(`/api/compras?id=${compra.idcompra}`, { method: 'DELETE' });
       cerrar();
@@ -289,7 +290,7 @@ export function useCompra() {
 
   const eliminarLinea = useCallback(
     async (iddetalle: number) => {
-      if (!compra || !confirm(AVISOS_COMPRA.eliminarItem)) return;
+      if (!compra || !(await confirmar(AVISOS_COMPRA.eliminarItem))) return;
       try {
         await pedir(`/api/compras-detalle?id=${iddetalle}`, { method: 'DELETE' });
         await cargarLineas(compra.idcompra);

@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -493,8 +494,8 @@ export default function DocumentosCompraPage() {
                       <button
                         type="button"
                         className={UI.denseBtnDanger}
-                        onClick={() =>
-                          confirm(`¿Anular ${documento.id_documento}?`) &&
+                        onClick={async () =>
+                          (await confirmar(`¿Anular ${documento.id_documento}?`)) &&
                           accion(() => pedir('/api/documentos-compras', 'PUT', { iddocumento: documento.iddocumento, accion: 'anular' }))
                         }
                       >
@@ -506,7 +507,7 @@ export default function DocumentosCompraPage() {
                         type="button"
                         className={UI.denseBtnDanger}
                         onClick={async () => {
-                          if (!confirm(`¿Eliminar el borrador ${documento.id_documento}?`)) return;
+                          if (!(await confirmar(`¿Eliminar el borrador ${documento.id_documento}?`))) return;
                           try {
                             await pedir(`/api/documentos-compras?id=${documento.iddocumento}`, 'DELETE');
                             notificar('ok', 'Borrador eliminado');
@@ -682,8 +683,8 @@ export default function DocumentosCompraPage() {
                   }}
                   onActualizar={(iddetalle, cambios) => accion(() => pedir('/api/documentos-compras-detalle', 'PUT', { iddetalle, ...cambios }))}
                   onReordenar={(orden) => accion(() => pedir('/api/documentos-compras-detalle', 'PUT', { iddocumento: documento.iddocumento, orden }))}
-                  onEliminar={(l) =>
-                    confirm(`¿Quitar la línea ${l.linea_visual}?`) &&
+                  onEliminar={async (l) =>
+                    (await confirmar(`¿Quitar la línea ${l.linea_visual}?`)) &&
                     accion(() => pedir(`/api/documentos-compras-detalle?id=${l.iddetalle}`, 'DELETE'))
                   }
                   onTemporal={setTemporal}

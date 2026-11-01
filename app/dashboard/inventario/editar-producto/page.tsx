@@ -1,4 +1,5 @@
 'use client';
+import { avisar } from '@/components/ui/avisos';
 
 import { useState, useEffect, Suspense, useRef, useCallback, memo, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -360,7 +361,7 @@ function EditarProductoContent() {
   // Función para guardar edición masiva
   const handleGuardarEdicionMasiva = async () => {
     if (productosSeleccionados.size === 0) {
-      alert('No hay productos seleccionados');
+      avisar('No hay productos seleccionados');
       return;
     }
 
@@ -375,7 +376,7 @@ function EditarProductoContent() {
     if (edicionMasivaData.exento !== '') camposAActualizar.exento = edicionMasivaData.exento === 'true';
 
     if (Object.keys(camposAActualizar).length === 0) {
-      alert('No hay campos para actualizar. Selecciona al menos un campo.');
+      avisar('No hay campos para actualizar. Selecciona al menos un campo.');
       return;
     }
 
@@ -412,11 +413,11 @@ function EditarProductoContent() {
         });
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error || 'No se pudo completar la edición masiva'}`);
+        avisar(`Error: ${error.error || 'No se pudo completar la edición masiva'}`);
       }
     } catch (error) {
       console.error('Error en edición masiva:', error);
-      alert('Error al realizar la edición masiva');
+      avisar('Error al realizar la edición masiva');
     } finally {
       setSavingMasivo(false);
     }
@@ -453,7 +454,7 @@ function EditarProductoContent() {
       const files = Array.from(e.target.files);
       const totalImages = allImages.length + newImages.length + files.length;
       if (totalImages > 10) {
-        alert('Máximo 10 imágenes permitidas');
+        avisar('Máximo 10 imágenes permitidas');
         return;
       }
       setNewImages(prev => [...prev, ...files]);
@@ -1103,13 +1104,15 @@ function EditarProductoContent() {
                     <div className="grid grid-cols-4 gap-4">
                       <div className="space-y-2">
                         <Label>Stock Contable</Label>
-                        <Input type="number" value={producto.stock_contable || 0} onChange={(e) => updateProductField('stock_contable', Number(e.target.value))}
-                          className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100" />
+                        <Input type="number" readOnly value={producto.stock_contable || 0}
+                          title="Se mueve con compras o con un ajuste de inventario"
+                          className="bg-slate-100 dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-500" />
                       </div>
                       <div className="space-y-2">
                         <Label>Stock Físico</Label>
-                        <Input type="number" value={producto.stock_fisico || 0} onChange={(e) => updateProductField('stock_fisico', Number(e.target.value))}
-                          className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100" />
+                        <Input type="number" readOnly value={producto.stock_fisico || 0}
+                          title="Se mueve con un ajuste de inventario"
+                          className="bg-slate-100 dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-500" />
                       </div>
                       <div className="space-y-2">
                         <Label>Costo</Label>

@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { Fragment, useState } from 'react';
 import { Paperclip, Plus, Trash2 } from 'lucide-react';
@@ -146,7 +147,7 @@ export function PanelGastos({ detalle, editable, accion }: Props) {
                             type="button"
                             className="p-1 text-muted-foreground hover:text-red-600"
                             aria-label="Eliminar gasto"
-                            onClick={() => confirm('¿Eliminar este gasto y sus archivos?') && accion({ accion: 'quitar_gasto', idgasto: g.idgasto })}
+                            onClick={async () => (await confirmar('¿Eliminar este gasto y sus archivos?')) && accion({ accion: 'quitar_gasto', idgasto: g.idgasto })}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

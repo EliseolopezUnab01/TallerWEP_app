@@ -1,4 +1,5 @@
 'use client';
+import { avisar, confirmar } from '@/components/ui/avisos';
 
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -207,7 +208,7 @@ export default function AdministrarProductoPage() {
   };
 
   const handleEliminar = async (idprod: number) => {
-    if (!confirm('¿Está seguro de que desea eliminar este producto?')) {
+    if (!(await confirmar('¿Está seguro de que desea eliminar este producto?'))) {
       return;
     }
 
@@ -217,16 +218,16 @@ export default function AdministrarProductoPage() {
       });
 
       if (response.ok) {
-        alert('Producto eliminado exitosamente');
+        avisar('Producto eliminado exitosamente');
         cargarDatos();
       } else {
         const text = await response.text();
         const data = text ? JSON.parse(text) : { error: 'Error desconocido' };
-        alert(`Error: ${data.error}`);
+        avisar(`Error: ${data.error}`);
       }
     } catch (error) {
       console.error('Error al eliminar producto:', error);
-      alert('Error al conectar con el servidor');
+      avisar('Error al conectar con el servidor');
     }
   };
 
@@ -236,7 +237,7 @@ export default function AdministrarProductoPage() {
       await generateCatalogPDF(productos as any);
     } catch (error) {
       console.error('Error al generar catálogo:', error);
-      alert('Error al generar el catálogo PDF');
+      avisar('Error al generar el catálogo PDF');
     } finally {
       setGenerandoPDF(false);
     }
@@ -248,7 +249,7 @@ export default function AdministrarProductoPage() {
     // Usar el código auto-generado
     const codigo = parseInt(categoriaForm.idcategoria || getSiguienteCodigoCategoria());
     if (isNaN(codigo) || codigo < 10 || codigo > 99) {
-      alert('No hay códigos de categoría disponibles (10-99 agotados)');
+      avisar('No hay códigos de categoría disponibles (10-99 agotados)');
       return;
     }
     
@@ -272,16 +273,16 @@ export default function AdministrarProductoPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Categoría creada exitosamente');
+        avisar('Categoría creada exitosamente');
         setShowModalCategoria(false);
         setCategoriaForm({ idcategoria: '', nombre: '', descripcion: '' });
         cargarDatos();
       } else {
-        alert(`Error: ${data.error}`);
+        avisar(`Error: ${data.error}`);
       }
     } catch (error) {
       console.error('Error al crear categoría:', error);
-      alert('Error al conectar con el servidor');
+      avisar('Error al conectar con el servidor');
     } finally {
       setLoadingCategoria(false);
     }
@@ -291,7 +292,7 @@ export default function AdministrarProductoPage() {
   const handleCrearGrupo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!grupoForm.idcategoria) {
-      alert('Debe seleccionar una categoría');
+      avisar('Debe seleccionar una categoría');
       return;
     }
     setLoadingGrupo(true);
@@ -312,16 +313,16 @@ export default function AdministrarProductoPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Grupo creado exitosamente');
+        avisar('Grupo creado exitosamente');
         setShowModalGrupo(false);
         setGrupoForm({ codigo: '', nombre: '', descripcion: '', idcategoria: 0 });
         cargarDatos();
       } else {
-        alert(`Error: ${data.error}`);
+        avisar(`Error: ${data.error}`);
       }
     } catch (error) {
       console.error('Error al crear grupo:', error);
-      alert('Error al conectar con el servidor');
+      avisar('Error al conectar con el servidor');
     } finally {
       setLoadingGrupo(false);
     }
@@ -331,7 +332,7 @@ export default function AdministrarProductoPage() {
   const handleCrearSubgrupo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subgrupoForm.id_grupo) {
-      alert('Debe seleccionar un grupo');
+      avisar('Debe seleccionar un grupo');
       return;
     }
     setLoadingSubgrupo(true);
@@ -352,16 +353,16 @@ export default function AdministrarProductoPage() {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Subgrupo creado exitosamente');
+        avisar('Subgrupo creado exitosamente');
         setShowModalSubgrupo(false);
         setSubgrupoForm({ codigo: '', nombre: '', descripcion: '', id_grupo: 0 });
         cargarDatos();
       } else {
-        alert(`Error: ${data.error}`);
+        avisar(`Error: ${data.error}`);
       }
     } catch (error) {
       console.error('Error al crear subgrupo:', error);
-      alert('Error al conectar con el servidor');
+      avisar('Error al conectar con el servidor');
     } finally {
       setLoadingSubgrupo(false);
     }
@@ -376,55 +377,55 @@ export default function AdministrarProductoPage() {
   const handleEliminarCategoria = async (idcategoria: number) => {
     const gruposEnCategoria = gruposDB.filter(g => g.idcategoria === idcategoria).length;
     if (gruposEnCategoria > 0) {
-      alert(`No se puede eliminar esta categoría porque tiene ${gruposEnCategoria} grupos asociados. Elimine primero los grupos.`);
+      avisar(`No se puede eliminar esta categoría porque tiene ${gruposEnCategoria} grupos asociados. Elimine primero los grupos.`);
       return;
     }
-    if (!confirm('¿Está seguro de eliminar esta categoría?')) return;
+    if (!(await confirmar('¿Está seguro de eliminar esta categoría?'))) return;
     try {
       const response = await fetch(`/api/categorias-jerarquia?tipo=categoria&id=${idcategoria}`, { method: 'DELETE' });
       if (response.ok) {
-        alert('Categoría eliminada');
+        avisar('Categoría eliminada');
         cargarDatos();
       } else {
         const data = await response.json();
-        alert(`Error: ${data.error}`);
+        avisar(`Error: ${data.error}`);
       }
     } catch (error) {
-      alert('Error al eliminar');
+      avisar('Error al eliminar');
     }
   };
 
   // Función para eliminar grupo
   const handleEliminarGrupo = async (id_grupo: number) => {
-    if (!confirm('¿Está seguro de eliminar este grupo? Los subgrupos asociados también serán eliminados.')) return;
+    if (!(await confirmar('¿Está seguro de eliminar este grupo? Los subgrupos asociados también serán eliminados.'))) return;
     try {
       const response = await fetch(`/api/categorias-jerarquia?tipo=grupo&id=${id_grupo}`, { method: 'DELETE' });
       if (response.ok) {
-        alert('Grupo eliminado');
+        avisar('Grupo eliminado');
         cargarDatos();
       } else {
         const data = await response.json();
-        alert(`Error: ${data.error}`);
+        avisar(`Error: ${data.error}`);
       }
     } catch (error) {
-      alert('Error al eliminar');
+      avisar('Error al eliminar');
     }
   };
 
   // Función para eliminar subgrupo
   const handleEliminarSubgrupo = async (id_subgrupo: number) => {
-    if (!confirm('¿Está seguro de eliminar este subgrupo?')) return;
+    if (!(await confirmar('¿Está seguro de eliminar este subgrupo?'))) return;
     try {
       const response = await fetch(`/api/categorias-jerarquia?tipo=subgrupo&id=${id_subgrupo}`, { method: 'DELETE' });
       if (response.ok) {
-        alert('Subgrupo eliminado');
+        avisar('Subgrupo eliminado');
         cargarDatos();
       } else {
         const data = await response.json();
-        alert(`Error: ${data.error}`);
+        avisar(`Error: ${data.error}`);
       }
     } catch (error) {
-      alert('Error al eliminar');
+      avisar('Error al eliminar');
     }
   };
 
@@ -503,7 +504,7 @@ export default function AdministrarProductoPage() {
             <div className="flex gap-2">
               <Button 
                 variant="outline"
-                className="border-amber-500/60 text-amber-400 hover:bg-amber-500/10"
+                className="border-amber-600/70 text-amber-800 hover:bg-amber-500/10 dark:text-amber-300"
                 onClick={handleDescargarCatalogo}
                 disabled={generandoPDF || productos.length === 0}
               >
@@ -544,7 +545,7 @@ export default function AdministrarProductoPage() {
                     window.URL.revokeObjectURL(url);
                   } catch (error) {
                     console.error('Error al exportar:', error);
-                    alert('Error al exportar productos');
+                    avisar('Error al exportar productos');
                   }
                 }}
               >
@@ -561,7 +562,7 @@ export default function AdministrarProductoPage() {
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all ${
                 activeTab === 'productos'
                   ? 'text-primary border-b-2 border-primary'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <Package className="h-4 w-4" />
@@ -572,7 +573,7 @@ export default function AdministrarProductoPage() {
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all ${
                 activeTab === 'categorias'
                   ? 'text-primary border-b-2 border-primary'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <Filter className="h-4 w-4" />
@@ -679,7 +680,7 @@ export default function AdministrarProductoPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-slate-700 dark:text-slate-200">Lista de Productos</CardTitle>
-                <CardDescription className="text-slate-400">
+                <CardDescription className="text-slate-500 dark:text-slate-400">
                   {productosFiltrados.length} de {totalProductos} productos (Página {currentPage} de {totalPages})
                 </CardDescription>
               </div>
@@ -688,7 +689,7 @@ export default function AdministrarProductoPage() {
                 <button
                   onClick={() => setVistaTabla(false)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all ${
-                    !vistaTabla ? 'bg-primary text-white' : 'text-slate-400 hover:text-slate-200'
+                    !vistaTabla ? 'bg-primary text-white' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   <LayoutGrid className="h-4 w-4" />
@@ -697,7 +698,7 @@ export default function AdministrarProductoPage() {
                 <button
                   onClick={() => setVistaTabla(true)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all ${
-                    vistaTabla ? 'bg-primary text-white' : 'text-slate-400 hover:text-slate-200'
+                    vistaTabla ? 'bg-primary text-white' : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   <List className="h-4 w-4" />
@@ -929,7 +930,7 @@ export default function AdministrarProductoPage() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 categoriaSubTab === 'categorias'
                   ? 'bg-primary text-white'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50'
               }`}
             >
               Categorías ({categoriasNuevas.length})
@@ -939,7 +940,7 @@ export default function AdministrarProductoPage() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 categoriaSubTab === 'grupos'
                   ? 'bg-primary text-white'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50'
               }`}
             >
               Grupos ({gruposDB.length})
@@ -949,7 +950,7 @@ export default function AdministrarProductoPage() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 categoriaSubTab === 'subgrupos'
                   ? 'bg-primary text-white'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800/50'
               }`}
             >
               Subgrupos ({subgruposDB.length})

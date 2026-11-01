@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -163,7 +164,7 @@ export default function ProveedoresPage() {
 
   // forzar = true omite el aviso de cambios sin guardar (uso interno tras guardar)
   const abrirProveedor = async (id: number, forzar = false) => {
-    if (!forzar && sucio && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
+    if (!forzar && sucio && !(await confirmar('Hay cambios sin guardar. ¿Descartarlos?'))) return;
     try {
       const res = await fetch(`/api/proveedores?id=${id}`);
       const data = await res.json();
@@ -219,7 +220,7 @@ export default function ProveedoresPage() {
   };
 
   const nuevoProveedor = async () => {
-    if (sucio && !confirm('Hay cambios sin guardar. ¿Descartarlos?')) return;
+    if (sucio && !(await confirmar('Hay cambios sin guardar. ¿Descartarlos?'))) return;
     setForm({ ...FORM_VACIO });
     setContactos([CONTACTO_VACIO(1), CONTACTO_VACIO(2)]);
     setCuentas([]);
@@ -290,7 +291,7 @@ export default function ProveedoresPage() {
 
   const eliminar = async () => {
     if (modo !== 'editar') return;
-    if (!confirm(`¿Desactivar el proveedor "${form.nombre_legal}"?`)) return;
+    if (!(await confirmar(`¿Desactivar el proveedor "${form.nombre_legal}"?`))) return;
 
     try {
       const res = await fetch(`/api/proveedores?id=${form.idproveedor}`, {
@@ -494,7 +495,7 @@ export default function ProveedoresPage() {
 
   const eliminarCuenta = async (idcuenta?: number) => {
     if (!idcuenta) return;
-    if (!confirm('¿Eliminar esta cuenta bancaria?')) return;
+    if (!(await confirmar('¿Eliminar esta cuenta bancaria?'))) return;
     try {
       const res = await fetch(`/api/proveedores/cuentas?idcuenta=${idcuenta}`, {
         method: 'DELETE',

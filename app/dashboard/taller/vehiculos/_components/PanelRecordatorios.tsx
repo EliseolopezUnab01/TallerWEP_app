@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useState } from 'react';
 import { CheckCheck, Plus, Trash2 } from 'lucide-react';
@@ -182,7 +183,7 @@ export function PanelRecordatorios({
                           className={UI.denseBtnDanger}
                           aria-label="Eliminar recordatorio"
                           onClick={async () => {
-                            if (confirm(`¿Eliminar el recordatorio "${r.descripcion}"?`)) {
+                            if ((await confirmar(`¿Eliminar el recordatorio "${r.descripcion}"?`))) {
                               await accion(`/api/recordatorios?id=${r.idrecordatorio}`, 'DELETE');
                             }
                           }}

@@ -1,4 +1,5 @@
 'use client';
+import { confirmar as pedirConfirmacion } from '@/components/ui/avisos';
 
 import { Fragment, useState } from 'react';
 import { ArrowRightLeft, Pencil, Plus, Trash2, Undo2 } from 'lucide-react';
@@ -240,7 +241,7 @@ export function PanelPartes({
                                 className={UI.denseBtnDanger}
                                 title="Eliminar (solo errores de captura)"
                                 onClick={async () => {
-                                  if (confirm(`¿Eliminar ${p.nombre_parte}? Úselo solo para corregir errores de captura.`)) {
+                                  if (await pedirConfirmacion(`¿Eliminar ${p.nombre_parte}? Úselo solo para corregir errores de captura.`)) {
                                     await accion(`/api/vehiculo-partes?id=${p.idparte}`, 'DELETE');
                                   }
                                 }}

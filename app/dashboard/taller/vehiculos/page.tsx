@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -204,7 +205,7 @@ export default function VehiculosPage() {
   };
 
   const eliminar = async () => {
-    if (!detalle || !confirm(`¿Eliminar ${detalle.vehiculo.codigo}? Se borran sus partes, revisiones, recordatorios y fotos.`)) return;
+    if (!detalle || !(await confirmar(`¿Eliminar ${detalle.vehiculo.codigo}? Se borran sus partes, revisiones, recordatorios y fotos.`))) return;
     try {
       const data = await pedir(`/api/vehiculos?id=${detalle.vehiculo.id}`, 'DELETE');
       notificar('ok', data.mensaje);

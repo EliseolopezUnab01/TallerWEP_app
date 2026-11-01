@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, FilePlus2, Save, Search, Trash2 } from 'lucide-react';
@@ -227,7 +228,7 @@ export default function ProcesosPage() {
                           className={UI.denseBtnDanger}
                           aria-label="Eliminar proceso"
                           onClick={async () => {
-                            if (!confirm(`¿Eliminar ${detalle.proceso.codigo}? Las facturas y documentos quedan sin proceso.`)) return;
+                            if (!(await confirmar(`¿Eliminar ${detalle.proceso.codigo}? Las facturas y documentos quedan sin proceso.`))) return;
                             try {
                               const data = await pedir(`/api/procesos?id=${detalle.proceso.idproceso}`, 'DELETE');
                               notificar('ok', data.mensaje);

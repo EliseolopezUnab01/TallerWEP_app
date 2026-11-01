@@ -1,5 +1,6 @@
-// app/dashboard/inventario/nuevo/page.tsx
 'use client';
+// app/dashboard/inventario/nuevo/page.tsx
+import { avisar } from '@/components/ui/avisos';
 
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
@@ -275,7 +276,7 @@ export default function NuevoProductoPage() {
       if (totalImages <= 10) {
         return [...prev, ...newImages];
       } else {
-        alert('Máximo 10 imágenes permitidas');
+        avisar('Máximo 10 imágenes permitidas');
         return prev;
       }
     });
@@ -468,7 +469,7 @@ export default function NuevoProductoPage() {
       }
     } catch (error) {
       console.error('Error al guardar producto:', error);
-      alert('Error al conectar con el servidor');
+      avisar('Error al conectar con el servidor');
     } finally {
       setLoading(false);
     }
@@ -1008,28 +1009,19 @@ export default function NuevoProductoPage() {
                     </div>
                   </div>
 
-                  {/* Stock Inicial */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
                     <div className="space-y-2">
                       <Label htmlFor="stock_contable">Stock Contable</Label>
-                      <Input 
-                        id="stock_contable" 
-                        type="number" 
-                        value={formData.stock_contable}
-                        onChange={handleInputChange}
-                        className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
-                      />
+                      <Input id="stock_contable" type="number" readOnly value="0" className="bg-slate-100 dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-500" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="stock_fisico">Stock Físico</Label>
-                      <Input 
-                        id="stock_fisico" 
-                        type="number" 
-                        value={formData.stock_fisico}
-                        onChange={handleInputChange}
-                        className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-cyan-700/60 focus:ring-cyan-700/20"
-                      />
+                      <Input id="stock_fisico" type="number" readOnly value="0" className="bg-slate-100 dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-500" />
                     </div>
+                    <p className="md:col-span-2 text-xs text-slate-500">
+                      El producto nace en cero. El stock inicial se carga en{' '}
+                      <Link href="/dashboard/inventario/ajuste-stock" className="text-primary hover:underline">Ajuste de inventario</Link>.
+                    </p>
                   </div>
 
                   {/* Información Adicional */}

@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Paperclip, Trash2, Upload } from 'lucide-react';
@@ -71,7 +72,7 @@ export function Adjuntos({ titulo, destino, editable = true, compacto, onCambio 
   };
 
   const quitar = async (id: unknown) => {
-    if (!confirm('¿Eliminar este archivo?')) return;
+    if (!(await confirmar('¿Eliminar este archivo?'))) return;
     const res = await fetch(`/api/archivos?id=${id}`, { method: 'DELETE' });
     if (res.ok) {
       await cargar();

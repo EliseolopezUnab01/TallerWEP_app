@@ -1,4 +1,5 @@
 'use client';
+import { confirmar } from '@/components/ui/avisos';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -280,7 +281,7 @@ export function PanelDocumentos({ detalle, editable, accion, actualizarRelacion,
                         type="button"
                         className="p-1 text-muted-foreground hover:text-red-600"
                         aria-label="Desvincular"
-                        onClick={() => confirm('¿Quitar este vínculo?') && accion({ accion: 'desvincular', idrelacion: r.idrelacion })}
+                        onClick={async () => (await confirmar('¿Quitar este vínculo?')) && accion({ accion: 'desvincular', idrelacion: r.idrelacion })}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

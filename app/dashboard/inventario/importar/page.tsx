@@ -462,7 +462,7 @@ REF-002,Producto Ejemplo 2,Otra descripción,MARCA2,5,5,50.00,987654321,frenos,H
             <p>1. Descarga la plantilla de ejemplo para ver el formato correcto</p>
             <p>2. Las columnas <strong className="text-slate-600 dark:text-slate-300">OE</strong> (Referencia) y <strong className="text-slate-600 dark:text-slate-300">Nombre</strong> son obligatorias</p>
             <p>3. Si un producto con el mismo OE ya existe, se actualizará en lugar de duplicarse</p>
-            <p>4. Los nombres de columnas son flexibles (ej: "Stock", "Stock Contable", "stock_contable" funcionan igual)</p>
+            <p>4. El stock del Excel se ignora. El inicial entra en Inventario &gt; Ajuste de inventario.</p>
           </CardContent>
         </Card>
         </div>
