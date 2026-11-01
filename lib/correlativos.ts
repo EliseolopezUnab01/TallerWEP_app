@@ -11,7 +11,9 @@ export type TipoCorrelativo =
   | 'IMP'
   | 'PT'
   | 'VH'
-  | 'EX';
+  | 'EX'
+  | 'DTE14'
+  | 'SE';
 
 function formatear(tipo: TipoCorrelativo, anio: number, numero: number) {
   const aa = String(anio % 100).padStart(2, '0');
@@ -23,6 +25,8 @@ function formatear(tipo: TipoCorrelativo, anio: number, numero: number) {
     case 'PT':
     case 'VH':
       return `${tipo}${aa}-${String(numero).padStart(5, '0')}`;
+    case 'DTE14':
+      return String(numero).padStart(15, '0');
     default:
       return `${tipo}${aa}-${String(numero).padStart(6, '0')}`;
   }
