@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
     await connection.beginTransaction();
     const idusuario = await usuarioDeRequest(request);
     const { codigo } = await siguienteCorrelativo(connection, 'AJ');
-    const fecha = limpiar(body.fecha) || new Date().toISOString().slice(0, 10);
+    const fecha = limpiar(body.fecha);
     const [res] = await connection.execute<ResultSetHeader>(
-      'INSERT INTO ajustes_inventario (numero, fecha, motivo, idusuario) VALUES (?, ?, ?, ?)',
+      'INSERT INTO ajustes_inventario (numero, fecha, motivo, idusuario) VALUES (?, COALESCE(?, CURDATE()), ?, ?)',
       [codigo, fecha, motivo.slice(0, 200), idusuario]
     );
     const idajuste = res.insertId;
