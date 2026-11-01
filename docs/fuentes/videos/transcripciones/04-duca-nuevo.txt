@@ -1,0 +1,147 @@
+# idioma=es duracion=760s
+[00:00] el proceso de educa de corporación ya para que no sea mucho el cambio yo creo que debe
+[00:10] ser así como ya entendiste como lo hago anteriormente no hay creo que te expliqué
+[00:15] brevemente cómo funciona lo de los cálculos de impuestos entonces vamos a suponer que
+[00:21] obviamente ya elegí aquí o por acá o por donde sea como dije no tengo el menú de eso
+[00:27] porque lo estamos creando pero debemos suponer que de aquí mismo es o por acá
+[00:32] arriba como aquí y démosle ingreso de educa es porque a bueno no vamos vamos a
+[00:39] ir un poquito más atrás porque se nos está olvidando algo de repente ya
+[00:43] viene todo en camino y me empiezan a dar factura mis diferentes agentes le
+[00:50] llaman esto de transporte forguarder o tramitadores quien sea me empieza a
+[00:56] emitir facturas entonces yo puedo tener que poder
+[01:01] agregar documentos adicionales al proceso que existe cargo el proceso agrego en el
+[01:08] listado que está aquí nuevos nuevos registros de documentos para tenerlos
+[01:12] a la vista y al alcance cuando necesite de estos documentos de aquí
+[01:17] agarrar los valores que voy a colocar acá para el retaseo de los costos de la
+[01:23] inversión entonces si si los tengo a la mano pues me va a ser fácil por eso pongo
+[01:29] el ejemplo que está por acá entonces este
+[01:34] cuando ya llegó el momento de tramitar y presentar todo ante aduana y yo pues le
+[01:41] doy ingresos del duka importancia como sea que le vamos a poner y
+[01:46] puedo cargar el proceso completo de lo que ya hice y pues en vez de andar
+[01:53] consultando carpeta por carpeta ya tengo todos los documentos aquí como dije a la
+[01:57] mano y solo voy a necesitar el duka como tal como este para poder ingresar uno
+[02:05] los datos que correspondan según la fecha el número etcétera
+[02:11] de lo que ya expliqué anteriormente puede ser de la misma manera más bien en la
+[02:17] misma en los mismos controles que he utilizado los textbox pueden ser de
+[02:24] este misma distribución pueden ser de esto mismo pero lo mejor sería que
+[02:27] que analicés si vos querés cambiar las posiciones donde se mire mejor donde
+[02:34] mire más bonito acorde que te dije que quiero que ingresen una que parezca
+[02:38] imágenes del tanto los productos aquí inventario como de los productos que
+[02:41] estamos cotizando y que se van a ingresar entonces vos decidís como
+[02:45] redistribuir todos los controles de de manejo de datos
+[02:51] pero bueno una vez que ya los tenemos aquí ya registramos el duka tenemos todos los
+[02:56] datos vamos a inventar otro datos acá son los mismos del duka entonces esto
+[03:02] que está aquí antes se guardaba en compras en la tabla de compras uno
+[03:10] creo que se llama y la y esto se guardaba en la tabla de compras dos ahora
+[03:15] no esto ni se va a guardar en tablas de compras ni de nada sino que para eso se
+[03:20] creó la nueva tabla duka solo para el duka solamente para eso por ahí vos me
+[03:26] propusiste que costos y duka detalles los un temos porque son muy similares y
+[03:31] tienen bastante en común está muy bien yo los había llamado de manera
+[03:35] diferente para que esto no fuese confuso pero no importa al final donde
+[03:40] vayan a parar siempre cuanto estén registrado los datos y me parece
+[03:44] muy bien que lo que lo mezclemos al final porque va a servir entonces se van a ir
+[03:50] a los detalles a la tabla digamos homologada estos dos o la tabla única
+[03:56] de esas dos unidos y pues cuando ya tengamos todo eso listo pues solo nos
+[04:04] queda lo del recalculó cómo lo vamos a hacer o lo del cálculo y recalculó
+[04:08] porque hay que calcular obviamente de recalcular pero cómo lo vamos a
+[04:13] hacer yo no sé si querés que utilicemos el código que hay aquí dentro de este
+[04:17] botón que solo vamos a ver después porque eso ya sería exactamente en los días
+[04:23] que ya todo lo anterior esté funcionando para que no nos entretengamos en esto
+[04:28] sino hasta que todo lo anterior ya funcione podemos irnos a esta parte
+[04:33] si no sé si vas a querer que utilicemos este mismo código para que no nos
+[04:38] quebremos tanto la cabeza porque la verdad que sí bastante bastante bien lo hace
+[04:43] porque de todas maneras tendrías que revisar luego detalladamente y vos querés
+[04:47] para ver si es necesario hacer otro yo creé ese y como te digo no te lo puedo
+[04:53] explicar ahorita porque entonces te voy a enredar más así que una vez que se
+[04:59] haga el recalculo se va a hacer ahora ya no con valores si obviamente con los
+[05:03] valores que yo voy a colocar aquí pero voy a tener el acceso a los
+[05:06] documentos acá vamos a suponer que eso otra vez vamos a poner el ejemplo de
+[05:11] estos documentos aquí de este registro vamos a suponer que estos son vamos a
+[05:15] hacerlo para acá encaje entonces tengo aquí los registros de los documentos que
+[05:19] tienen que ver con este ingreso de compra y pues voy a ver los detalles porque de
+[05:24] pronto que me dan ganas de verlos porque allí hay algunos cosas que así
+[05:27] debo considerar y otras que no entonces quiero poder abrir en otro en otra
+[05:32] ventanita part los detalles de estos de estos documentos porque puede ser que
+[05:38] algunos gastos alguna información ahí sea muy muy importante y que no la debo
+[05:45] tomar en cuenta o si la debo de tomar en cuenta para a o ver razón o a o ver
+[05:49] cálculo o distribuir en tal lugar una vez que ya tengo los datos claros y las
+[05:54] sumas aquí los totales entonces yo yo empiezo a ver a este de este es la
+[06:01] cotización esto esto pues obviamente todo lo que es cotización hasta por forma
+[06:06] no tiene ningún interés ya porque esto es para la actualización de stock pero
+[06:12] de ahí de fact del de los fletes de seguro todo esto que se lista aquí que
+[06:17] aquí bien poco como dije pueden ser dos o tres facturas de fletes por qué porque
+[06:21] hay un proveedor que me vende el transporte en origen o sea desde el
+[06:26] macén hasta el puerto de mi del país de donde viene la mercadería el
+[06:30] otro que es el barco el otro que recibe en tal país hay en guatemala de repente y
+[06:36] el otro que es transporte de guatemala salvador y el otro que me entrega el
+[06:39] salvador hasta al almacén o sea es un montón y resumirlos en uno solo y o
+[06:45] poner aquí el gran listado te no se puede pero al agarrar estos valores que yo
+[06:49] voy a tener aquí los totales digo a este me cobró tanto yo puedo hacer una
+[06:52] sumatoria más alcance aquí colocar la ca lo mismo con los demás de
+[06:56] transferencia y con todo lo que tenga que ver porque aquí solo puse estas
+[07:00] posibles cosas realmente no solo son estas pueden ser cinco seis más
+[07:04] diferente que se van ir listando de acuerdo a como yo las quiera llamar a qué
+[07:09] tipo de categoría de gastos representan dentro de la inversión
+[07:15] entonces ya con todo esto pues como ya tengo cargado la factura y que tal si
+[07:23] vienen dos o tres proveedores dentro del mismo duca una vez por me lo
+[07:27] preguntaste pues puedo tener aquí las cuatro facturas de lo diferente de los
+[07:31] cuatro proveedores tengo que tener las cuatro listas de coticiones vamos a decir
+[07:35] que qué voy a hacer con tanta información pues para eso es esto tener el
+[07:40] gran listado te del montón de huy que se hizo ya se me perdió creo que los
+[07:43] cerré puedo tener los los
+[07:48] puedo tener así el montón de facturas de documentos que tienen que ver con un
+[07:58] duca porque todos esos van a ingresar en un solo duque pueden ser como dije yo
+[08:04] una o más facturas para un mismo duca y por lo tanto quiero tener acceso a todo
+[08:09] ello aquí aquí aquí donde sea que lo quieras poner para poder este
+[08:16] independizar aunque aquí venga vaya a parecer un solo registro de todos los
+[08:21] documentos de todos los de todos los productos perdón cada uno debe
+[08:25] tener registrado obviamente su proveedor correspondiente para no confundirme
+[08:31] porque algunos proveedores tienen que pagar dahi pero otros no y este impuesto no
+[08:38] te he explicado pero dependiendo de cada país de donde viene el producto se debe
+[08:43] pagar impuesto o no se debe pagar impuesto el dahi el 13 por ciento es para
+[08:47] todo entonces por eso importante que vayan independizado cada uno de los
+[08:52] registros que se vayan colocando aquí que pueda ser la sumatoria de toditos
+[08:57] estos acá pues sí aquí va a aparecer el total pero pero tienen que mantenerse
+[09:06] pues la independencia de cada uno entonces una vez que ya tengo todos los
+[09:11] registros cargados aquí digo yo aquí no sé si es necesario cargar los todos yo
+[09:16] digo que sí porque de aquí se pueden trasladar más fácilmente a el destino
+[09:21] correspondiente en cada una de las tablas que van a guardar la información
+[09:25] porque si solo los listo aquí de manera general no puedo ver los detalles y si
+[09:32] cada vez que hay clic aquí aquí miro los detalles también sería bueno no es
+[09:35] ningún problema la cosa es que los pueda visualizar los detalles de lo que
+[09:40] está aquí puedo visualizar quizá los detalles de todos los documentos que
+[09:45] no son facturas y de las facturas puedo visualizar los todos aquí o que
+[09:49] cuando de clic aquí se actualice acá no sé esa ya decisión de diseño y
+[09:54] programación de tu parte ahí ve vos como crees que sale más fácil pero yo
+[09:59] creería que bueno que esta última idea no está tan mal está bastante bien y
+[10:03] ordenada y bonita pero no sé qué tan complejo vaya a hacer para para
+[10:08] programarse así la cosa es que una vez que ya esté todo listo pues simplemente
+[10:12] igual que lo otro no finalizar el documento de
+[10:18] Dios me pide qué expreso de qué que no puede ser no sé vamos a quitar esto
+[10:24] vaya ahí está otra vez lo estaré calculando obviamente no puedo meter un
+[10:27] producto de expresa en un duca porque pues ahí está mal por lo menos tiene
+[10:33] el itemita función para verificar es posible fallo
+[10:37] entonces ya de ahí puedo procesar y cada uno de los datos a su respectiva
+[10:43] tabla que para los detalles del duca que sería mismo de costo que para los gastos
+[10:49] desde un documento se actualiza sin documento perdón se actualiza los
+[10:53] documentos relacionados al proceso de ingreso pues ya están listados ahí en
+[10:57] el en el listadito que dijimos en este hipotético y ficticio listado y pues se
+[11:04] van a actualizar van a van a van a van a darse por cerrado el proceso porque
+[11:09] ya se compró y podríamos ir a pues ya se acabó y haces todo no porque de
+[11:14] repente se me olvidó una factura ya finalicé y había una factura que no
+[11:19] también cuenta para el retacer de estos gastos que voy a hacer cargar el proceso
+[11:23] otra vez obviamente con alguna credencial de de verificación para
+[11:28] evitar que cualquier hecho en mano aquí verdad y cambia de datos por error por
+[11:32] malicia y entonces poder agregar otro nuevo documento para que sea tomada en
+[11:40] cuenta que se registre dentro del proceso a hacer el retaceo y recálculo y
+[11:44] reingresar todos esos datos actualizados no nuevos registros sino datos
+[11:50] actualizados a los datos que ya existen relacionados con este ingreso de este
+[11:56] duca no se va a actualizar el duca no va a actualizar fecha de nada de eso
+[12:02] todo lo que tenga que ver pasado por hacienda por aduana perdón va a
+[12:05] mantenerse lo único que se va a actualizar quizá sería no datos de retaceo
+[12:09] esa opción también es muy necesaria porque ya se me ha quedado y viera a mí
+[12:15] me ha tocado deshacer esos cambios y volver a estos ni te lo explico es un
+[12:19] proceso horrible entonces eso sería básicamente lo que se necesita mejorar
+[12:26] que se me ocurre ahorita no sé si algo se me va a quedar lo vamos viendo
+[12:30] después en el camino pero sería entonces todo esto lo que se requiere que se haga
+[12:35] en el nuevo sistema para el ingreso de las compras

@@ -17,12 +17,12 @@ async function verificarEstructura() {
   console.log('='.repeat(60));
 
   try {
-    // 1. Verificar si existe la tabla categorias
-    console.log('\n📁 TABLA CATEGORIAS:');
+    // 1. Verificar si existe la tabla categorias_nuevo
+    console.log('\n📁 TABLA CATEGORIAS_NUEVO:');
     const [categorias] = await connection.execute(`
       SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_KEY
       FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_SCHEMA = 'taller_web' AND TABLE_NAME = 'categorias'
+      WHERE TABLE_SCHEMA = 'taller_web' AND TABLE_NAME = 'categorias_nuevo'
     `);
     
     if (categorias.length > 0) {
@@ -32,7 +32,7 @@ async function verificarEstructura() {
       });
       
       // Mostrar datos de categorías
-      const [catData] = await connection.execute('SELECT * FROM categorias LIMIT 10');
+      const [catData] = await connection.execute('SELECT * FROM categorias_nuevo LIMIT 10');
       console.log('\n   Datos actuales:');
       catData.forEach(cat => {
         console.log(`   - ID: ${cat.idcategoria}, Nombre: ${cat.nombre}`);

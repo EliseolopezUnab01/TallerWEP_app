@@ -27,6 +27,7 @@ interface Rubro {
   nombre: string;
   descripcion: string | null;
   cuenta_contable: string | null;
+  codigo_oficial: string | null;
   condicion_iva_sugerida: string | null;
   activo: number;
 }
@@ -38,6 +39,7 @@ interface FormRubro {
   nombre: string;
   descripcion: string;
   cuenta_contable: string;
+  codigo_oficial: string;
   condicion_iva_sugerida: string;
   activo: boolean;
 }
@@ -49,6 +51,7 @@ const FORM_VACIO = (tipo: Tipo): FormRubro => ({
   nombre: '',
   descripcion: '',
   cuenta_contable: '',
+  codigo_oficial: '',
   condicion_iva_sugerida: '',
   activo: true,
 });
@@ -133,6 +136,7 @@ export default function CatalogoContablePage() {
       nombre: r.nombre,
       descripcion: r.descripcion || '',
       cuenta_contable: r.cuenta_contable || '',
+      codigo_oficial: r.codigo_oficial || '',
       condicion_iva_sugerida: r.condicion_iva_sugerida || '',
       activo: !!r.activo,
     });
@@ -259,6 +263,11 @@ export default function CatalogoContablePage() {
                   {r.cuenta_contable && (
                     <span className="text-[11px] text-slate-400 font-mono">
                       Cta. {r.cuenta_contable}
+                    </span>
+                  )}
+                  {r.codigo_oficial && (
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      Of. {r.codigo_oficial}
                     </span>
                   )}
                   {r.condicion_iva_sugerida && (
@@ -512,6 +521,17 @@ export default function CatalogoContablePage() {
                       onChange={setCampo('cuenta_contable')}
                       className={`${INPUT_CLS} font-mono`}
                       placeholder="Pendiente del contador"
+                      maxLength={30}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className={LABEL_CLS}>Código oficial</Label>
+                    <Input
+                      value={form.codigo_oficial}
+                      onChange={setCampo('codigo_oficial')}
+                      className={`${INPUT_CLS} font-mono`}
+                      placeholder="Hacienda o norma contable, si existe"
                       maxLength={30}
                     />
                   </div>

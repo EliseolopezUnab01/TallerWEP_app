@@ -1,0 +1,258 @@
+// Flujograma de Taller Web (vista para el cliente)
+// Pegar en https://dbdiagram.io
+// No es el esquema completo: cada caja es una tabla real, con solo la columna que la une a la siguiente.
+// El detalle columna por columna está en docs/taller_web.dbml
+
+Project taller_web_flujo {
+  database_type: 'MySQL'
+  Note: 'Cómo se conectan las tablas. categorias (la vieja) ya no existe.'
+}
+
+TableGroup Inventario {
+  categorias_nuevo
+  grupos
+  subgrupos
+  productos
+  producto_imagenes
+  referencias_oem
+  ubicaciones_producto
+}
+
+TableGroup Precios {
+  costos
+  precios
+  ajuste_precios
+}
+
+TableGroup Compras {
+  proveedores
+  compras
+  compras_detalle
+  compras_pagos
+  compras_documentos_rel
+  catalogo_contable
+  cat_tipos_dte
+  cat_formas_pago
+}
+
+TableGroup Taller_aun_vacio {
+  clientes
+  vehiculos
+  ordenes_trabajo
+  hojas_de_inspeccion
+}
+
+// ---------- Inventario: categoría > grupo > subgrupo > producto ----------
+
+Table categorias_nuevo {
+  idcategoria int [pk, note: 'Código 10, 11, 12… Motor, Transmisión, Frenos']
+  nombre varchar
+
+  Note: 'LA QUE SE USA. 19 categorías. De aquí cuelgan grupos y subgrupos.'
+}
+
+Table grupos {
+  id_grupo int [pk]
+  idcategoria int [not null]
+  nombre varchar
+
+  Note: '23 grupos. Cada uno pertenece a una categoría nueva.'
+}
+
+Table subgrupos {
+  id_subgrupo int [pk]
+  id_grupo int [not null]
+  nombre varchar
+
+  Note: '8 subgrupos.'
+}
+
+Table productos {
+  idprod int [pk]
+  nombre varchar
+  idcategoria_nuevo int [note: 'categoría vigente']
+  id_grupo int
+  id_subgrupo int
+  idcategoria varchar [note: 'código viejo de importación. No apunta a ninguna tabla']
+  OE varchar [note: 'un solo código OEM. La lista larga va en referencias_oem']
+  costo decimal [note: 'copia. El detalle vive en la tabla costos']
+  costo_local decimal [note: 'copia. También está en costos']
+
+  Note: '146 productos. El código se arma categoría + grupo + subgrupo + consecutivo.'
+}
+
+Table producto_imagenes {
+  idimagen int [pk]
+  idprod int
+
+  Note: 'Fotos del producto. Vacía por ahora.'
+}
+
+Table referencias_oem {
+  id int [pk]
+  idprod int
+  codigo varchar
+
+  Note: 'Varios OEM o equivalentes por producto. No reemplaza el campo OE: lo amplía. Vacía.'
+}
+
+Table ubicaciones_producto {
+  id int [pk]
+  idprod int
+  codigo_ubicacion varchar
+
+  Note: 'Anaquel (E9-A6). Vacía.'
+}
+
+// categorias (MOTOR, FRENOS, …) se eliminó. Ningún producto apuntaba a esas 9 filas.
+// La vigente es categorias_nuevo. productos.idcategoria conserva códigos sueltos de la importación.
+
+// ---------- Costo y precios: no son la misma tabla ----------
+
+Table costos {
+  idcosto int [pk]
+  idprod int [unique, note: 'un costo vigente por producto']
+  costo decimal
+  costo_local decimal
+  costo_promedio decimal
+
+  Note: '146 filas, una por producto. Aquí está el costo de verdad (factura, promedio, previos). productos.costo es una copia corta.'
+}
+
+Table precios {
+  idprod int [pk]
+  precio_general decimal
+  precio_cliente decimal
+  precio_especial decimal
+
+  Note: 'Precio de venta actual, uno por producto. Vacía: todavía no hay precios cargados.'
+}
+
+Table ajuste_precios {
+  idajuste int [pk]
+  idprod int
+  fecha datetime
+
+  Note: 'Historial: cada vez que alguien cambia un precio. No es otra lista de precios.'
+}
+
+// ---------- Compras ----------
+
+Table proveedores {
+  idproveedor int [pk]
+  codigo varchar
+  nombre_legal varchar
+
+  Note: '1 proveedor de prueba.'
+}
+
+Table cat_tipos_dte {
+  codigo varchar [pk]
+
+  Note: 'Catálogo de Hacienda: factura, crédito fiscal, nota de crédito…'
+}
+
+Table cat_formas_pago {
+  codigo varchar [pk]
+
+  Note: 'Catálogo de Hacienda: efectivo, tarjeta, transferencia…'
+}
+
+Table compras {
+  idcompra int [pk]
+  idproveedor int
+  tipo_dte varchar
+
+  Note: 'Encabezado de la compra. 9 compras.'
+}
+
+Table compras_detalle {
+  iddetalle int [pk]
+  idcompra int
+  idprod int
+  idcatalogo int
+
+  Note: 'Líneas. Cada línea es un producto o un gasto/activo.'
+}
+
+Table catalogo_contable {
+  idcatalogo int [pk]
+  nombre varchar
+
+  Note: 'Rubros de gasto y activo. 9 rubros. Solo lo usa la línea cuando el destino no es inventario.'
+}
+
+Table compras_pagos {
+  idpago int [pk]
+  idcompra int
+  codigo_forma_pago varchar
+
+  Note: 'Hasta 3 formas de pago de esa compra.'
+}
+
+Table compras_documentos_rel {
+  idrelacion int [pk]
+  idcompra int
+
+  Note: 'Documento que modifica una nota de crédito o débito.'
+}
+
+// ---------- Taller: existe la estructura, no hay datos ----------
+
+Table clientes {
+  id int [pk]
+  nombre varchar
+
+  Note: 'Vacía. El módulo de órdenes todavía no se usa.'
+}
+
+Table vehiculos {
+  id int [pk]
+  cliente_id int
+
+  Note: 'Vacía.'
+}
+
+Table ordenes_trabajo {
+  id int [pk]
+  cliente_id int
+  vehiculo_id int
+  numero_orden varchar
+
+  Note: 'Vacía. Cabecera de la orden.'
+}
+
+Table hojas_de_inspeccion {
+  orden_id int
+
+  Note: 'No es una tabla duplicada. En la base son 6 tablas distintas, una por sistema del vehículo, todas colgando de la orden: orden_motor, orden_traccion, orden_frenos_clutch, orden_chasis_electrico, orden_filtros_lubes, orden_reparaciones. Las seis están vacías.'
+}
+
+// ---------- Relaciones ----------
+
+Ref: grupos.idcategoria > categorias_nuevo.idcategoria
+Ref: subgrupos.id_grupo > grupos.id_grupo
+Ref: productos.idcategoria_nuevo > categorias_nuevo.idcategoria
+Ref: productos.id_grupo > grupos.id_grupo
+Ref: productos.id_subgrupo > subgrupos.id_subgrupo
+
+Ref: producto_imagenes.idprod > productos.idprod
+Ref: referencias_oem.idprod > productos.idprod
+Ref: ubicaciones_producto.idprod > productos.idprod
+Ref: costos.idprod > productos.idprod
+Ref: precios.idprod > productos.idprod
+Ref: ajuste_precios.idprod > productos.idprod
+
+Ref: compras.idproveedor > proveedores.idproveedor
+Ref: compras.tipo_dte > cat_tipos_dte.codigo
+Ref: compras_detalle.idcompra > compras.idcompra
+Ref: compras_detalle.idprod > productos.idprod
+Ref: compras_detalle.idcatalogo > catalogo_contable.idcatalogo
+Ref: compras_pagos.idcompra > compras.idcompra
+Ref: compras_pagos.codigo_forma_pago > cat_formas_pago.codigo
+Ref: compras_documentos_rel.idcompra > compras.idcompra
+
+Ref: vehiculos.cliente_id > clientes.id
+Ref: ordenes_trabajo.cliente_id > clientes.id
+Ref: ordenes_trabajo.vehiculo_id > vehiculos.id
+Ref: hojas_de_inspeccion.orden_id > ordenes_trabajo.id

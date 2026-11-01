@@ -1,0 +1,550 @@
+Table documentos_compras [headercolor: #175e7a] {
+	nodocto bigint [ pk, note: 'Identificador del documento. Debe ser único global e irrepetible. Lo cree para identificar o numerar los documentos. Es un ID interno. Ejemplo: 2026000001.' ]
+	id_documento varchar [ note: 'Número del documento. Puede ser un correlativo combinado con caracteres para identificar el tipo de documento. Puede ser la combinación de uno de los Tipo de Documento más un correlativo. Ejemplo: CT2600001.' ]
+	tipo_documento varchar [ 
+    note: 'Para identificar y separar los tipos de documento que han sido guardados en las tablas. SOLICITUD: Cuando se envía el documento al proveedor para recibir de ellos la cotización. COTIZACION: Cuando el proveedor ha enviado los precios y se edita la solicitud. Se podrá guardar el nuevo documento con los precios recibidos como cotización. ORDEN: Documento enviado al proveedor para solicitar la compra. PROFORMA: Documento compromiso o confirmación enviado por el proveedor. FACTURA: Documento oficial emitido por el proveedor.' ]
+	categoria_operacion varchar [ note: 'Indica como se va clasificar o categorizar el documento, no es un dato definitivo porque después lo podrá cambiar el usuario desde el modulo de contabilidad. Podrá ser FISCAL: Todo lo usado para el crédito fiscal del mes a mes. GASTO: Todo lo que es válido en crédito fiscal, pero que si es útil para Renta de fín de año. MIXTO: para los documentos que pueden contener artículos o servicios con diversa información tanto fiscal como gasto.' ]
+  ambito_operacion varchar [ note: 'Desde el momento en que se cree un proveedor y se cargue para crear un documento, se establecerá si el documento será a nivel nacional o internacional. Valores sugeridos: NACIONAL, EXTRANJERO o INTERNACIONAL.' ]
+	fecha_creacion date [ note: 'Fecha en que se creó o editó por última vez el documento.' ]
+	hora_creacion time [ note: 'Hora en que se creó o editó por última vez el documento.' ]
+	estado_documento varchar [ note: 'BORRADOR: admitirá edición de todo tipo y se guardará como el mismo borrador o como otro nuevo si se desea. FINALIZADO: Se presume que el documento ha sido enviado, se ha emitido y ya no podrá editarse; se está esperando respuesta de precios e información de disponibilidad de los productos.' ]
+	referencia_proceso varchar [ note: 'Este es un ID que englobará todo el proceso desde la cotización hasta el ingreso a bodega. Deberá tener un contador propio para agrupar o relacionar todos los documentos asociados. Será generado mediante un botón y permitirá relacionar diferentes solicitudes y cotizaciones a un mismo proceso de compra. Ejemplo: IMP-2026-00001.' ]
+  proveedor_id varchar [ note: 'ID del proveedor asociado al documento.' ]
+	proveedor_nombre varchar [ note: 'Nombre del proveedor. Puede obtenerse desde la tabla de proveedores pero debe mostrarse para consulta.' ]
+	contacto_nombre varchar [ note: 'Nombre del contacto o encargado con quien se realiza la negociación. Solo para registro. El contacto debe estar registrado y/o vinculado a la ficha del proveedor.' ]
+	usuario_id bigint [ note: 'Usuario responsable de la creación o edición del documento.' ]
+	comentarios text [ note: 'Texto libre para comentar sobre el documento en general. No debe confundirse con los comentarios de cada artículo.' ]
+	subtotal_moneda decimal [ note: 'Subtotal según la divisa o moneda en la que el proveedor ha emitido el documento o proforma. Si está en dólares, coincide con el subtotal en dólares.' ]
+	subtotal_usd decimal [ note: 'Subtotal aproximado en dólares según el tipo de cambio calculado mediante la información brindada por el banco. Es aproximado porque hasta que no se haya pagado completamente no puede conocerse el valor definitivo.' ]
+	total_moneda decimal [ note: 'Total del documento según la moneda original del proveedor.' ]
+	total_usd decimal [ note: 'Total aproximado en dólares según el tipo de cambio utilizado para la conversión.' ]
+	moneda_documento varchar [ note: 'El tipo de moneda con el que fue emitido el documento.' ]
+	tipo_cambio decimal [ note: 'Valor de intercambio entre la moneda del proveedor y los dólares pagados realmente. Para las cotizaciones es aproximado y no real; el valor definitivo se conoce al completar los pagos.' ]
+	incoterm varchar [ note: 'Término de negociación o venta indicado por el proveedor. Ejemplos: FOB, CIF, CFR, CPT, FCA.' ]
+	fecha_est_entrega date [ note: 'Fecha estimiada que el proveedor asume, en la que podría tener listos todos los productos declarados en la proforma o cotizacion.' ]
+  condicion_pago varchar [ note: 'Indica si la operación será CONTADO o CREDITO.' ]
+	acuerdo_pago text [ note: 'Indica el término de pago acordado con el proveedor. Puede ser texto libre o una combinación predeterminada. Ejemplos: 30% Anticipo / 70% Contra Entrega, 50%-50%, 30-70, 1 pago, 2 pagos, etc.' ]
+}
+
+Table documentos_compras_detalle [headercolor: #1a7f64] {
+	id_detalle bigint [ pk, increment, note: 'Identificador único de la línea o registro del detalle.' ]
+	nodocto bigint [ not null, note: 'Identificador del documento padre al que pertenece este detalle. Corresponde al campo Nodocto de la tabla solicitud_cotizacion.' ]
+	id_documento varchar [ note: 'Número visible del documento. Puede ser útil para búsquedas rápidas, consultas o exportaciones.' ]
+	id_producto varchar [ note: 'Este no es el ID que se otorga al producto cuando forma parte del inventario. Es un ID propio que permite registrar productos cotizados sin mezclarlos con el inventario oficial y de rotación comercial. Se puede crear un identificador que permita distinguir entre productos temporales y productos permanentes.' ]
+	linea_visual int [ note: 'Número de la línea o renglón del documento.' ]
+	referencia_proveedor varchar [ note: 'Referencia del producto según el fabricante o proveedor.' ]
+	oems text [ note: 'Otras referencias OE, OEM u otras equivalencias. Debe permitir saltos de línea para almacenar múltiples referencias.' ]
+	descripcion_articulo varchar [ note: 'Nombre o descripción principal del producto.' ]
+	cantidad decimal [ note: 'Cantidad de artículos solicitados o cotizados.' ]
+	estatus_articulo varchar [ note: 'Indicará si los artículos de interés han sido identificados o no por el proveedor y cuáles puede proveer. Valores sugeridos: DISPONIBLE, BAJO STOCK, SIN STOCK, EN DESARROLLO, DESCONTINUADO, DESCONOCIDO. DESCONOCIDO será la selección por defecto.' ]
+	precio_moneda decimal [ note: 'Precio del producto en la moneda original del proveedor. Solo para registro, consulta y comparación.' ]
+  precio_usd decimal [ note: 'Precio convertido a dólares. Si el documento se emite en moneda extranjera, deberá calcularse a dolar y si es en dolares pues el valor se almacenará en ambos campos por igual.' ]
+  fecha_est_produccion date [ note: 'Fecha estimada en la que se iniciará la fabricación del producto, según lo que el proveedor ha indicado o establecido' ]
+  fecha_est_entrega date [ note: 'Fecha estimada de la entrega o finalización de producción que el proveedor ha indicado o establecido' ]
+	comentario_usuario text [ note: 'Observaciones internas que desee registrar el usuario para el artículo.' ]
+	comentario_proveedor text [ note: 'Respuesta, observaciones o comentarios proporcionados por el proveedor acerca del artículo.' ]
+	origen_producto varchar [ note: 'País de origen o fabricación indicado por el proveedor. Aunque no siempre sea exacto, es conveniente almacenar el dato para futuras consultas o importaciones.' ]
+}
+
+Ref fk_documentos_compras_nodocto_solicitud_cotizacion_detalle {
+	documentos_compras.nodocto < documentos_compras_detalle.nodocto [ delete: no action, update: no action ]
+}
+
+Table proceso_ingreso [headercolor: #2d6a4f] {
+
+    id_proceso varchar [
+        pk,
+        note: 'Número del documento o referencia del Proceso de Compra. Todos los documentos relacionados con el retaceo o distribución de costos serán referenciados entre sí mediante este ID. Ejemplo: IMP-2026-00001.'
+    ]
+
+    fecha_creacion date [
+        note: 'Fecha de creación del proceso de compra.'
+    ]
+
+    hora_creacion time [
+        note: 'Hora de creación del proceso de compra.'
+    ]
+
+    estado_documento varchar [
+        note: 'BORRADOR: permite edición del proceso y de sus documentos relacionados. FINALIZADO: ya no debe modificarse porque los cambios afectarían costos, relaciones y cálculos realizados.'
+    ]
+
+    estado_proceso varchar [
+        note: 'Indica en qué etapa se encuentra el proceso de compra. Ejemplos: COTIZANDO, PRODUCCION, PAGADO, EN TRANSITO, BODEGA. Puede determinarse automáticamente según los documentos relacionados.'
+    ]
+
+    origen_negociacion varchar [
+        note: 'Indica si el proceso corresponde a una negociación NACIONAL o INTERNACIONAL.'
+    ]
+    
+    factura_compra varchar [
+        note: 'Debe indicarse el número de la factura que contiene los documentos a ingresar al inventario'
+    ]
+
+    total_factura decimal [
+        note: 'El valor total en la factura de compra que ingresará y que tendrá un proceso de ingreso por retaceo'
+    ]
+
+    sumas_documentos decimal [
+        note: 'Es el valor total de la sumatoria de todos los totales que presentan los documentos. Aqui es importante que la suma debe incluir solo montos fiscales (para las facturas nacionales), para evitar duplicidad de valores por facturas con cobros por cuenta ajena.'
+    ]
+
+    total_retaceo decimal [
+        note: 'Es el valor total de gastos que se van a distribuir entre todos los productos que se ingresarán al inventario. No es la sumatoria de todos lo documentos, si no el valor que el usuario va a decidir usar o tomar en cuenta, obviamente partiendo de la información de todos los documentos relacionados.'
+    ]
+}
+
+Table relacion_documentos [headercolor: #40916c] 
+{
+
+    id_doc_proceso bigint [
+        pk,
+        increment,
+        note: 'Identificador único del registro.'
+    ]
+
+    nodocto varchar [
+        note: 'El número del documento según el ID de sistema que estará vinculado a esta compra o importación.'
+    ]
+
+    ref_documento varchar [
+        note:'Cualquier número o identificador de un documento que se ha asignado al proceso pero que no se ha ingresado de otra manera al sistema. Por ejemplo vouchers, recibos, etc.'
+    ]
+
+    id_proceso varchar [
+        note: 'Número o referencia que vincula todos los documentos del proceso.'
+    ]
+
+    razon_vinculo varchar [
+        note: 'Describe la finalidad del documento dentro del proceso. Ejemplos: PAGO, SEGURO, IMPUESTOS, TRANSPORTE, CONTRATO (BL), ALMACEN, GASTO ORIGEN, GASTO LOCAL.'
+    ]
+
+    total_usd decimal [
+        note: 'Monto total del documento relacionado. Inicialmente informativo. Posteriormente puede modificarse para efectos de distribución o ajustes de costos.'
+    ]
+    
+    comentarios text [
+        note: 'Observaciones sobre si el documento debe o no participar en la distribución de costos o cualquier aclaración importante para el proceso.'
+    ]
+    
+    
+}Table pedido_pendiente [headercolor: #52b788] {
+
+    id_stock_proceso bigint [
+        pk,
+        increment,
+        note: 'Identificador único del registro.'
+    ]
+
+     referencia_proceso varchar [
+        note: 'Referencia que vincula el registro con el proceso de compra o ingreso respectivo. Aunque también podría filtrarse según las demás referencias de factura proforma y orden.'
+    ]
+
+    id_producto varchar [
+        note: 'Identificador del producto. Puede ser inventariable o temporal.'
+    ]
+
+    cant_cotizado decimal [
+        note: 'Cantidad indicada por el proveedor en la última cotización registrada.'
+    ]
+
+    cant_ordenado decimal [
+        note: 'Cantidad solicitada mediante la orden de compra.'
+    ]
+
+    cant_proforma decimal [
+        note: 'Cantidad confirmada por el proveedor mediante la proforma.'
+    ]
+
+    cant_factura decimal [
+        note: 'Cantidad registrada en la factura de compra.'
+    ]
+
+    cant_recibido decimal [
+        note: 'Cantidad recibida físicamente y verificada al llegar a bodega.'
+    ]
+
+    backorder_reservado decimal [
+        note: 'Cantidad pendiente de entrega por el proveedor pero que ya fue pagada.'
+    ]
+
+    backorder_enproceso decimal [
+        note: 'Cantidad pendiente de entrega por el proveedor pero que ya fue pagada.'
+    ]
+
+    backorder_total decimal [
+        note: 'Cantidad pendiente de entrega por el proveedor pero que ya fue pagada.'
+    ]
+
+    backorder_pagado decimal [
+        note: 'Cantidad pendiente de entrega por el proveedor pero que ya fue pagada.'
+    ]
+
+    backorder_por_pagar decimal [
+        note: 'Cantidad pendiente de producción o entrega que aún no ha sido pagada.'
+    ]
+
+    fecha_estimada_backorder date [
+        note: 'Fecha estimada en la que estarán disponibles los productos pendientes o backorders.'
+    ]
+
+    id_orden_compra varchar [
+        note: 'Identificador de la orden de compra relacionada.'
+    ]
+
+    fecha_orden_compra date [
+        note: 'Fecha de la orden de compra.'
+    ]
+
+    id_proforma varchar [
+        note: 'Identificador de la proforma emitida por el proveedor.'
+    ]
+
+    fecha_proforma date [
+        note: 'Fecha correspondiente a la proforma.'
+    ]
+
+    id_factura varchar [
+        note: 'Identificador de la factura de compra.'
+    ]
+
+    fecha_factura date [
+        note: 'Fecha de la factura de compra.'
+    ]
+
+    fecha_actualizacion date [
+        note: 'Fecha en la que se realizó la mas reciente actualización al registro.'
+    ]
+
+    estatus_backorder varchar [
+        note: 'Para identificar si aún se seguirá esperando o monitoreando el producto o si se ha cancelado o finalizado el proceso de despacho y envío. Podría ser: ACTIVO, CANCELADO, FINALIZADO'
+    ]
+
+}
+
+Ref: "proceso_ingreso"."id_proceso" ?<>? "relacion_documentos"."id_proceso"
+
+Table datos_duca [headercolor: #264653] {
+
+    referencia_proceso varchar [
+        pk,
+        note: 'ID que vincula o referencia los documentos relacionados a un proceso de ingreso de compra. Ejemplos: IMP-2026-00001 o DUC-202600001.'
+    ]
+
+    nodocto varchar [
+        note: 'Debe existir un Nodocto para poder realizar una relación por cualquier archivo que se desee vincular.'
+    ]
+
+    numero_duca varchar [
+        note: 'Número del documento DUCA con el que se realizó el pago de impuestos de importación.'
+    ]
+
+    fecha_duca date [
+        note: 'Fecha en la que se procesó el DUCA.'
+    ]
+
+    mandamiento_pago varchar [
+        note: 'Número del documento emitido por Hacienda que contiene el NPE y ordena el pago de los impuestos.'
+    ]
+
+    incoterm_duca varchar [
+        note: 'Término de venta declarado en el DUCA. Ejemplos: FOB, FCA, CFR, DAP, etc.'
+    ]
+
+    seguro_declarado decimal [
+        note: 'Valor monetario que Aduana considera como costo del seguro de la mercancía transportada. Es imprescindible para el cálculo de impuestos.'
+    ]
+
+    flete_declarado decimal [
+        note: 'Valor monetario que Aduana considera como costo del flete marítimo o aéreo. Es imprescindible para el cálculo de impuestos.'
+    ]
+
+    total_productos_duca decimal [
+        note: 'Valor monetario de los productos declarados en el DUCA. Puede incluir mercancías provenientes de una o varias facturas y distintos proveedores.'
+    ]
+
+    gastos_declarados decimal [
+        note: 'Valor monetario declarado en el DUCA como Otros Gastos. Normalmente corresponde a gastos de origen relacionados al transporte.'
+    ]
+
+    valor_cif_duca decimal [
+        note: 'Valor CIF utilizado por Aduana. Corresponde al Costo + Seguro + Flete.'
+    ]
+
+    gastos_no_declarados decimal [
+        note: 'Gastos que Aduana no tomó en cuenta o que no están respaldados por documentos oficiales, pero que se desean considerar para efectos administrativos o de costeo.'
+    ]
+
+    total_costos_operativos decimal [
+        note: 'Total de todos los gastos que se distribuirán entre los productos. Incluye gastos declarados y no declarados. No incluye los impuestos, pues esos serán distribuidos mediante la simulación o réplica del cálculo DUCA.'
+    ]
+
+    peso_carga varchar [
+        note: 'Peso total de la carga transportada. Puede indicarse en kilogramos, libras o ambas unidades. Ejemplo: 1500 kg / 3306.93 lb.'
+    ]
+
+    volumen_carga varchar [
+        note: 'Volumen de la carga transportada. Normalmente expresado en CBM o metros cúbicos. Ejemplo: 15.5 CBM.'
+    ]
+
+    iva_pagado decimal [
+        note: 'Valor monetario del IVA pagado según el DUCA.'
+    ]
+
+    dai_pagado decimal [
+        note: 'Valor monetario del DAI pagado según el DUCA.'
+    ]
+
+    otros_cargos_pagados decimal [
+        note: 'Valor monetario de otros cargos pagados mediante el DUCA. Generalmente ITS, VTS u otros cargos aduanales.'
+    ]
+
+    total_pagado_duca decimal [
+        note: 'Monto total cancelado según el documento DUCA.'
+    ]
+
+    gasto_total_inversion decimal [
+        note: 'Total general invertido en la operación. Incluye productos, impuestos, fletes, seguros, gastos, servicios, almacenajes y cualquier otro desembolso relacionado con la compra.'
+    ]
+
+    comentarios text [
+        note: 'Observaciones generales relacionadas al DUCA, cálculos, correcciones o aclaraciones administrativas.'
+    ]
+}Table cat_contable_gastos [headercolor: #5a189a] {
+
+    id_clasificacion bigint [
+        pk,
+        note: 'Identificador único de la clasificación contable. Sirve para separar y administrar las diferentes clasificaciones registradas.'
+    ]
+
+    id_contable varchar [
+        note: 'Código o identificador utilizado internamente por el contador o por el catálogo contable de la empresa.'
+    ]
+
+    id_oficial varchar [
+        note: 'Código oficial asignado por Hacienda, por una norma contable o por cualquier institución reguladora, en caso de existir.'
+    ]
+
+    tipo_clasificacion varchar [
+        note: 'Tipo general de clasificación. Valores previstos: GASTO o ACTIVO.'
+    ]
+
+    descripcion varchar [
+        note: 'Nombre o descripción de la clasificación contable. Ejemplos futuros: Servicios Básicos, Equipo de Cómputo, Vehículos, Papelería y Oficina, etc.'
+    ]
+
+    comentario text [
+        note: 'Información adicional que ayude a identificar cuándo debe utilizarse esta clasificación. Ejemplo: Solo gastos que cumplan cierto criterio o condición contable específica.'
+    ]
+}
+Table ruta_archivos [headercolor: #4361ee] {
+
+    id_ruta bigint [
+        pk,
+        increment,
+        note: 'Identificador único del registro de rutas de archivos.'
+    ]
+
+    nodocto varchar [note: 'ID del documento o registro creado en sistema con el que vinculará la ruta del archivo. Pueden haber varios archivos vinculados a un mismo Nodocto, por lo que se puede repetir para efectos de listar varios archivos o rutas que tengan relación con ese documento.']
+    ruta_archivo varchar [ note: 'Ruta del archivo que será llamado o visualizado (según se programe) vinculado al documento o registro deseado.']
+}
+
+Ref: "documentos_compras"."referencia_proceso" ?>? "proceso_ingreso"."id_proceso"
+
+Ref: "pedido_pendiente"."referencia_proceso" ?>? "proceso_ingreso"."id_proceso"
+
+Ref: "proceso_ingreso"."id_proceso" -? "datos_duca"."referencia_proceso"
+
+Table esquemas_dte [headercolor: #800f2f] {
+
+    nodocto bigint [
+        pk,
+        note: 'Identificador interno del documento dentro del sistema.'
+    ]
+
+    esquema_json text [
+        note: 'Almacena el esquema JSON completo del DTE emitido o recibido. Su objetivo principal es servir como respaldo documental y permitir recuperar información que pudiera perderse en otras tablas.'
+    ]
+
+    tipo_documento varchar [
+        note: 'Indica el tipo de documento almacenado. Puede identificarse utilizando el código oficial definido por Hacienda Ejemplo: 01, 03, 05, etc. O bien usar una abreviatura oficial, Ejemplo: CCF, FCF, NC, ND, FSE, etc.'
+    ]
+
+    tipo_movimiento varchar [
+        note: 'Indica el tipo de movimiento, es decir, si es compra o venta. Esto por si se desea usar la misma tabla para almacenar tanto DTEs de compras como de ventas'
+    ]
+
+    version varchar [
+        note: 'Versión del esquema JSON recibido. Permite conservar copias históricas de diferentes versiones de los esquemas utilizados por Hacienda.'
+    ]
+}
+
+Table duca_detalles [headercolor: #6a4c93] {
+
+    id_registro bigint [
+        pk,
+        increment,
+        note: 'Identificador único del registro.'
+    ]
+
+    id_producto varchar [
+        note: 'Identificador del producto. El registro debe corresponder a la línea exacta comprada y no únicamente al ID del producto, ya que un mismo producto puede aparecer varias veces dentro de una misma compra.'
+    ]
+
+    id_proceso_ingreso varchar [
+        note: 'Este es el ID más importante de la tabla. Identifica el proceso de compra o ingreso al cual pertenece el producto. Permitirá relacionar costos, documentos, impuestos y gastos utilizados en el cálculo del costo final.'
+    ]
+
+    numero_duca varchar [
+        note: 'Identificar del DUCA al que pertenecen los registros almacenados.'
+    ]
+
+    costo_contable_usd decimal [
+        note: 'Costo en dólares (según hacienda) utilizado para cálculos de impuestos. Equivale al campo COSTO de Compras2.'
+    ]
+
+    costo_divisa decimal [
+        note: 'Costo original según la moneda de la factura del proveedor. El valor exacto que tiene la factura sin importar la moneda. Equivale al campo CSTDIVISA de Compras2.'
+    ]
+
+    costo_cif decimal [
+        note: 'Costo CIF individual calculado para el artículo. Incluye costo, seguro y flete antes de calcular DAI e IVA. Equivale al campo CIFUNIT de Compras2.'
+    ]
+
+    codigo_arancelario varchar [
+        note: 'Partida o código arancelario utilizado para el cálculo de impuestos. Equivale al campo PARANCEL de Compras2.'
+    ]
+
+    dai_preferente boolean [
+        note: 'Indica si el producto utilizó preferencia arancelaria. Aún no se usa en compras2. Cuando use preferencia de DAI entonces tendrá un valor de 1 y si no un 0.'
+    ]
+
+    valor_dai decimal [
+        note: 'Valor porcentual del impuesto DAI, que se cobra antes del IVA y que determina un monto a pagar. Equivale al campo DAIVALOR de Compras2.'
+    ]
+
+    dai_pagado decimal [
+        note: 'Valor monetario DAI que se ha pagado por el producto. Equivale al campo DAIUNIT de Compras2.'
+    ]
+
+    iva_pagado decimal [
+        note: 'Valor monetario IVA que se ha pagado por el producto. Equivale al campo IVAUNIT de Compras2.'
+    ]
+
+    gastos_aduana decimal [
+        note: 'Valor de gastos según el DUCA que se han distribuido para determinar el monto correspondiente a cada producto. Equivale al campo GASTOSUNIT de Compras2.'
+    ]
+
+    cantidad decimal [
+        note: 'Cantidad de unidades correspondientes a esta línea.'
+    ]
+
+    subtotal_contable decimal [
+        note: 'costo_contable_usd multiplicado por la cantidad.'
+    ]
+
+    subtotal_cif decimal [
+        note: 'Subtotal CIF calculado para esta línea. Equivale al campo STOTALCIF de Compras2.'
+    ]
+
+    total_grupo_cif decimal [
+        note: 'Valor total CIF del grupo utilizado para las distribuciones proporcionales. Equivale al campo CIFGRUPO de Compras2.'
+    ]
+
+    tipo_cambio_duca decimal [
+        note: 'Tipo de cambio utilizado por Aduana para el cálculo del DUCA. Equivale al campo CAMBIOADU de Compras2.'
+    ]
+
+}
+
+Ref: "duca_detalles"."numero_duca" ?<>? "datos_duca"."numero_duca"
+
+Ref: "duca_detalles"."id_proceso_ingreso" ?>? "proceso_ingreso"."id_proceso"
+
+Table costos_prodcutos [headercolor: #6a4c93] {
+
+    id_registro bigint [
+        pk,
+        increment,
+        note: 'Identificador único del registro.'
+    ]
+
+    id_producto varchar [
+        note: 'Identificador del producto. El registro debe corresponder a la línea exacta comprada y no únicamente al ID del producto, ya que un mismo producto puede aparecer varias veces dentro de una misma compra.'
+    ]
+
+    id_proceso_ingreso varchar [
+        note: 'Este es el ID que dentifica el proceso de compra o ingreso al cual pertenece el producto. Permitirá relacionar costos, documentos, impuestos y gastos utilizados en el cálculo del costo final.'
+    ]
+
+    factura_compra varchar [
+        note: 'Se almacenará el número de la factura por cualquier necesidad futura para relacion de costos o por simple información mas accesible'
+    ]
+
+    costo_divisa decimal [
+        note: 'Costo original según la moneda de la factura del proveedor. El valor exacto que tiene la factura sin importar la moneda. Equivale al campo CSTDIVISA de Compras2.'
+    ]
+
+    costo_contable_usd decimal [
+        note: 'Costo en dólares (según hacienda) utilizado para cálculos de impuestos. Equivale al campo COSTO de Compras2.'
+    ]
+
+    costo_pagado_usd decimal [
+        note: 'Costo en dólares (lo pagado al proveedor, según el valor de la divisa en el momento de la compra). Ese valor debía estar almacenado en CSTDOLAR de Compras2, pero por un error o tonta confusisón lo deshabilité, debía contener siempre el valor real pagado.'
+    ]
+
+    iva_pagado decimal [
+        note: 'Valor monetario IVA que se ha pagado por el producto. Equivale al campo IVAUNIT de Compras2.'
+    ]
+
+    gastos_totales decimal [
+        note: 'Total de gastos distribuidos al producto incluyendo costos de aduana, transporte, seguros, almacenajes, servicios y otros gastos vinculados.'
+    ]
+
+    costo_corregido decimal [
+        note: 'Costo corregido del producto después de todos los ajustes. Equivale al campo CSTORIGEN de Compras2. Este valor será útil solo en casos sumamente raros, pero cuando tenga un valor, este campo deberá ser el referente del costo real pagado en lugar del campo costo_pagado_usd. Pero no reemplazará el valor de otro campo.'
+    ]
+
+    costo_cif decimal [
+        note: 'Costo CIF individual calculado para el artículo. Incluye costo, seguro y flete antes de calcular DAI e IVA. Equivale al campo CIFUNIT de Compras2.'
+    ]
+
+    cantidad decimal [
+        note: 'Cantidad de unidades correspondientes a esta línea.'
+    ]
+
+    costo_destino decimal [
+        note: 'Costo final del producto colocado en destino. Equivale al campo COSTOLOCAL de Compras2.'
+    ]
+
+    costo_destino_prom decimal [
+        note: 'Costo promedio final del producto colocado en destino. Equivale al campo CSTLOCALP de la tabla de Fox Inventario.'
+    ]
+
+    tipo_cambio_pagado decimal [
+        note: 'Tipo de cambio bancario realmente utilizado para el pago. Equivale al campo CAMBIOBAN de Compras2.'
+    ]
+}
+
+Ref: "costos_prodcutos"."id_proceso_ingreso" ?>? "proceso_ingreso"."id_proceso"
+
+Table gastos_sindocumento [headercolor: #1a7f64] {
+	id_gasto bigint [ pk, increment, note: 'Id para numerar los registros. Estos registros serán de los gastos que no son facturas sino solo tickets o vouchers o incluso sin comprobantes pero que se sepa que si son gastos.' ]
+	ref_proceso varchar [ note: 'ID del proceso de compra o ingreso, por si se desea relacionar con ello.' ]
+  ref_nodocto varchar [ note: 'Cuando exista una referencia a algun documento o registro de sistema, como facturas, de compras, etc que no tengan un proceso de ingreso.' ]
+  ref_orden_servicio varchar [ note: 'ID o número de referencia cuando se trate de una orden de trabajo o servicio brindado por la empresa.' ]
+  ref_otros varchar [ note: 'En caso de necesitar indicar una segunda referencia u otro asunto al que se desee referenciar el gasto.' ]
+  descripcion varchar [ note: 'Descripcion de la razón del gasto o de la salida de dinero. ¿En que o para que será el dinero o gasto?' ]
+  recibe varchar [ note: 'Nombre de quien recibe el dinero.' ]
+  entrega varchar [ note: 'Nombre de la persona a cargo o quien entrega el dinero.' ]
+	monto_salida decimal [ note: 'El total del dinero del gasto o salida.' ]
+  fecha_registro date [ note: 'Fecha y hora en la que se creó el registro.' ]
+  fecha_salida date [ note: 'Fecha y hora en la que se realizó el gasto, o en la que se dió la salida del dinero. Lo correcto sería realizar el registro el mismo día. Pero por si acaso.' ]
+	comentario text [ note: 'Comentarios que desee registrar el usuario.' ]
+}
+
+Ref: "ruta_archivos"."nodocto" ?>? "documentos_compras"."nodocto"
+
+Ref: "ruta_archivos"."nodocto" ?<>? "datos_duca"."nodocto"
+
+Ref: "gastos_sindocumento"."ref_proceso" ?>? "proceso_ingreso"."id_proceso"

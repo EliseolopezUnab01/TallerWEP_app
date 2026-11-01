@@ -1,56 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
+import { requiereCatalogo, tipoCatalogoEsperado } from '@/lib/compras-detalle';
 import {
-  calcularLinea,
-  CONDICIONES_IVA,
-  DESTINOS,
-  requiereCatalogo,
-  tipoCatalogoEsperado,
-  type CondicionIva,
-} from '@/lib/compras-detalle';
-import { calcularResumen } from '@/lib/compras-resumen';
-
-const CAMPOS_LINEA = [
-  'idcompra',
-  'numero_linea',
-  'numero_orden',
-  'destino',
-  'idcatalogo',
-  'idprod',
-  'referencia_proveedor',
-  'descripcion',
-  'cantidad',
-  'costo_unitario',
-  'descuento_porcentaje',
-  'subtotal_sin_iva',
-  'iva_unitario',
-  'subtotal_con_iva',
-  'exento_unitario',
-  'no_sujeto_unitario',
-  'condicion_iva',
-  'numero_documento_rel',
-  'codigo_tributo',
-  'cargos_no_afectos',
-  'imagen_url',
-] as const;
-
-function limpiar(valor: unknown) {
-  if (valor === undefined || valor === null) return null;
-  const texto = String(valor).trim();
-  return texto === '' ? null : texto;
-}
-
-function aNumero(valor: unknown, defecto = 0): number {
-  const n = Number(valor);
-  return Number.isFinite(n) ? n : defecto;
-}
+  CAMPOS_LINEA,
+  asignarCodigoExpress,
+  errorDestinoLinea,
+  insertarLinea,
+  normalizarLinea,
+  persistirTotales,
+  siguienteNumeroLinea,
+  type CompraReglas,
+  type Conexion,
+  type LineaNormalizada,
+} from '@/lib/compras-detalle-db';
+import { topeDevolucion } from '@/lib/compras-nota';
 
 async function validarCompraBorrador(
   connection: Awaited<ReturnType<typeof connectDB>>,
   idcompra: number
 ) {
   const [rows]: any = await connection.execute(
-    'SELECT idcompra, estado FROM compras WHERE idcompra = ?',
+    'SELECT idcompra, estado, categoria_operacion, clase_documento, tipo_dte FROM compras WHERE idcompra = ?',
     [idcompra]
   );
   if (rows.length === 0) return { ok: false as const, error: 'Compra no encontrada', status: 404 };
@@ -61,15 +31,15 @@ async function validarCompraBorrador(
       status: 400,
     };
   }
-  return { ok: true as const };
+  return { ok: true as const, compra: rows[0] as CompraReglas };
 }
 
 async function validarCatalogo(
   connection: Awaited<ReturnType<typeof connectDB>>,
-  destino: string,
+  destino: string | null,
   idcatalogo: number | null
 ) {
-  if (!requiereCatalogo(destino)) return { ok: true as const };
+  if (!destino || !requiereCatalogo(destino)) return { ok: true as const };
 
   if (!idcatalogo) {
     return {
@@ -100,117 +70,9 @@ async function validarCatalogo(
   return { ok: true as const, rubro: rows[0] };
 }
 
-async function persistirTotales(
-  connection: Awaited<ReturnType<typeof connectDB>>,
-  idcompra: number
-) {
-  const [lineas]: any = await connection.execute(
-    `SELECT condicion_iva, subtotal_sin_iva, iva_unitario, cantidad,
-            descuento_porcentaje, cargos_no_afectos
-     FROM compras_detalle WHERE idcompra = ?`,
-    [idcompra]
-  );
-  const [encabezado]: any = await connection.execute(
-    `SELECT descuento_global_gravado, descuento_global_exento, descuento_global_no_sujeto,
-            porcentaje_descuento, iva_retenido, iva_percibido, retencion_renta
-     FROM compras WHERE idcompra = ?`,
-    [idcompra]
-  );
-  const base = encabezado[0] || {};
-  const resumen = calcularResumen({
-    lineas,
-    descuento_global_gravado: Number(base.descuento_global_gravado) || 0,
-    descuento_global_exento: Number(base.descuento_global_exento) || 0,
-    descuento_global_no_sujeto: Number(base.descuento_global_no_sujeto) || 0,
-    porcentaje_descuento: Number(base.porcentaje_descuento) || 0,
-    iva_retenido: Number(base.iva_retenido) || 0,
-    iva_percibido: Number(base.iva_percibido) || 0,
-    retencion_renta: Number(base.retencion_renta) || 0,
-  });
-
-  await connection.execute(
-    `UPDATE compras SET
-       total_gravado = ?, total_exento = ?, total_no_sujeto = ?, total_xcomprobar = ?,
-       suma_operaciones = ?, total_descuento = ?, sub_total = ?, iva = ?,
-       monto_total_operacion = ?, total_cargos_no_afectos = ?, total_pagar = ?,
-       valor_en_letras = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE idcompra = ?`,
-    [
-      resumen.total_gravado,
-      resumen.total_exento,
-      resumen.total_no_sujeto,
-      resumen.total_xcomprobar,
-      resumen.suma_operaciones,
-      resumen.total_descuento,
-      resumen.sub_total,
-      resumen.iva,
-      resumen.monto_total_operacion,
-      resumen.total_cargos_no_afectos,
-      resumen.total_pagar,
-      resumen.valor_en_letras,
-      idcompra,
-    ]
-  );
-}
-
-async function siguienteNumeroLinea(
-  connection: Awaited<ReturnType<typeof connectDB>>,
-  idcompra: number
-) {
-  const [rows]: any = await connection.execute(
-    'SELECT COALESCE(MAX(numero_linea), 0) + 1 AS siguiente FROM compras_detalle WHERE idcompra = ?',
-    [idcompra]
-  );
-  return Number(rows[0].siguiente);
-}
-
-function normalizarLinea(body: Record<string, unknown>, calcular = true) {
-  const destino = DESTINOS.includes(String(body.destino) as any)
-    ? String(body.destino)
-    : 'INVENTARIO';
-
-  const condicion_iva = CONDICIONES_IVA.includes(String(body.condicion_iva) as CondicionIva)
-    ? (String(body.condicion_iva) as CondicionIva)
-    : 'GRAVADA';
-
-  const cantidad = aNumero(body.cantidad, 1);
-  const costo_unitario = aNumero(body.costo_unitario, 0);
-  const descuento_porcentaje = aNumero(body.descuento_porcentaje, 0);
-
-  const calculados = calcular
-    ? calcularLinea({ cantidad, costo_unitario, descuento_porcentaje, condicion_iva })
-    : {
-        subtotal_sin_iva: aNumero(body.subtotal_sin_iva),
-        iva_unitario: aNumero(body.iva_unitario),
-        exento_unitario: aNumero(body.exento_unitario),
-        no_sujeto_unitario: aNumero(body.no_sujeto_unitario),
-        subtotal_con_iva: aNumero(body.subtotal_con_iva),
-      };
-
-  return {
-    idcompra: Number(body.idcompra),
-    numero_linea: body.numero_linea ? Number(body.numero_linea) : null,
-    numero_orden: limpiar(body.numero_orden),
-    destino,
-    idcatalogo: body.idcatalogo ? Number(body.idcatalogo) : null,
-    idprod: body.idprod ? Number(body.idprod) : null,
-    referencia_proveedor: limpiar(body.referencia_proveedor),
-    descripcion: String(body.descripcion || '').trim(),
-    cantidad,
-    costo_unitario,
-    descuento_porcentaje,
-    ...calculados,
-    condicion_iva,
-    numero_documento_rel: limpiar(body.numero_documento_rel),
-    codigo_tributo: limpiar(body.codigo_tributo) || (condicion_iva === 'GRAVADA' ? '20' : null),
-    cargos_no_afectos: aNumero(body.cargos_no_afectos, 0),
-    imagen_url: limpiar(body.imagen_url),
-  };
-}
-
 async function enriquecerDescripcion(
-  connection: Awaited<ReturnType<typeof connectDB>>,
-  linea: ReturnType<typeof normalizarLinea>
+  connection: Conexion,
+  linea: LineaNormalizada
 ) {
   if (linea.descripcion) return linea;
 
@@ -271,7 +133,13 @@ export async function GET(request: NextRequest) {
     }
 
     const [rows]: any = await connection.execute(
-      'SELECT * FROM v_compras_detalle WHERE idcompra = ? ORDER BY numero_linea ASC',
+      `SELECT v.*, dd.dai_pagado AS imp_dai_unitario, dd.gastos_aduana AS imp_gastos_unitario,
+              dd.costo_cif AS imp_costo_cif, dd.subtotal_cif AS imp_subtotal_cif,
+              dd.codigo_arancelario AS imp_partida, cp.costo_destino AS imp_costo_local
+       FROM v_compras_detalle v
+       LEFT JOIN duca_detalles dd ON dd.iddetalle = v.iddetalle
+       LEFT JOIN costos_productos cp ON cp.iddetalle = v.iddetalle
+       WHERE v.idcompra = ? ORDER BY v.numero_linea ASC`,
       [idcompra]
     );
 
@@ -305,7 +173,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: compraOk.error }, { status: compraOk.status });
     }
 
-    let linea = normalizarLinea(body);
+    let linea = normalizarLinea({ ...body, iddetalle_origen: null, ajuste_precio: 0 });
     linea = await enriquecerDescripcion(connection, linea);
 
     if (!linea.descripcion) {
@@ -316,11 +184,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const errorDestino = errorDestinoLinea(compraOk.compra, linea);
+    if (errorDestino) {
+      await connection.end();
+      return NextResponse.json({ error: errorDestino }, { status: 400 });
+    }
+
     const catalogoOk = await validarCatalogo(connection, linea.destino, linea.idcatalogo);
     if (!catalogoOk.ok) {
       await connection.end();
       return NextResponse.json({ error: catalogoOk.error }, { status: catalogoOk.status });
     }
+    await asignarCodigoExpress(connection, linea);
 
     if (linea.idprod) {
       const [prod]: any = await connection.execute(
@@ -337,22 +212,17 @@ export async function POST(request: NextRequest) {
       linea.numero_linea = await siguienteNumeroLinea(connection, linea.idcompra);
     }
 
-    const valores = CAMPOS_LINEA.map((c) => (linea as any)[c]);
-
-    const [resultado]: any = await connection.execute(
-      `INSERT INTO compras_detalle (${CAMPOS_LINEA.join(', ')})
-       VALUES (${CAMPOS_LINEA.map(() => '?').join(', ')})`,
-      valores
-    );
+    const iddetalle = await insertarLinea(connection, linea);
 
     await persistirTotales(connection, linea.idcompra);
 
     await connection.end();
     return NextResponse.json({
       success: true,
-      iddetalle: resultado.insertId,
+      iddetalle,
       numero_linea: linea.numero_linea,
-      mensaje: 'Línea agregada',
+      codigo_express: linea.codigo_express,
+      mensaje: linea.codigo_express ? `Línea express ${linea.codigo_express} agregada` : 'Línea agregada',
     });
   } catch (error: any) {
     if (connection) await connection.end();
@@ -400,6 +270,22 @@ export async function PUT(request: NextRequest) {
     }
 
     const merged = { ...actual[0], ...body };
+    if (actual[0].iddetalle_origen) {
+      // Línea de nota: conserva la clasificación de la factura original.
+      for (const campo of ['destino', 'idprod', 'idcatalogo', 'numero_orden', 'codigo_express', 'iddetalle_origen', 'ajuste_precio']) {
+        merged[campo] = actual[0][campo];
+      }
+      if (!actual[0].ajuste_precio) {
+        const tope = await topeDevolucion(connection, actual[0].idcompra, actual[0].iddetalle_origen, actual[0].iddetalle);
+        if (tope && Number(merged.cantidad) > tope.maximo + 1e-8) {
+          await connection.end();
+          return NextResponse.json(
+            { error: `Solo quedan ${tope.maximo} por devolver de esa línea (compradas ${tope.comprado})` },
+            { status: 400 }
+          );
+        }
+      }
+    }
     let linea = normalizarLinea(merged);
     linea.idcompra = actual[0].idcompra;
     linea = await enriquecerDescripcion(connection, linea);
@@ -409,11 +295,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'La descripción es obligatoria' }, { status: 400 });
     }
 
+    const errorDestino = errorDestinoLinea(compraOk.compra, linea);
+    if (errorDestino) {
+      await connection.end();
+      return NextResponse.json({ error: errorDestino }, { status: 400 });
+    }
+
     const catalogoOk = await validarCatalogo(connection, linea.destino, linea.idcatalogo);
     if (!catalogoOk.ok) {
       await connection.end();
       return NextResponse.json({ error: catalogoOk.error }, { status: catalogoOk.status });
     }
+    await asignarCodigoExpress(connection, linea);
 
     const camposUpdate = CAMPOS_LINEA.filter((c) => c !== 'idcompra');
     const asignaciones = camposUpdate.map((c) => `${c} = ?`).join(', ');

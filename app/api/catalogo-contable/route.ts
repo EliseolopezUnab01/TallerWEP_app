@@ -8,6 +8,7 @@ const CAMPOS_CATALOGO = [
   'nombre',
   'descripcion',
   'cuenta_contable',
+  'codigo_oficial',
   'condicion_iva_sugerida',
   'activo',
 ] as const;

@@ -7,6 +7,9 @@
 export const UI = {
   page:
     'min-h-screen bg-background p-4 md:p-6',
+  /** Lienzo de la pantalla: el cuadro más oscuro detrás de las tarjetas. */
+  canvas:
+    'rounded-xl bg-gradient-to-b from-slate-100 via-slate-50 to-white p-3 dark:from-surface-deep dark:via-surface-deep dark:to-surface-deep',
   stack: 'space-y-6',
 
   navbar:
@@ -63,6 +66,35 @@ export const UI = {
   divide: 'divide-border',
   borderSoft: 'border-border',
   borderHairline: 'border-border/70',
+
+  /** Pantallas densas tipo escritorio (ingreso de compras) */
+  densePanel:
+    'rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)] dark:shadow-none',
+  densePanelTitle:
+    'px-3 py-1.5 border-b border-border text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground',
+  denseLabel: 'text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap',
+  denseInput:
+    'h-7 px-2 text-xs rounded-md bg-card dark:bg-surface-deep border border-input text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-60 shadow-none',
+  denseSelect:
+    'h-7 px-1.5 text-xs rounded-md bg-card dark:bg-surface-deep border border-input text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60',
+  denseMono: 'font-mono tabular-nums',
+  denseTable: 'w-full text-xs border-collapse',
+  denseTh:
+    'sticky top-0 z-10 bg-muted text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5 text-left whitespace-nowrap',
+  denseTd: 'px-2 py-1 border-t border-border whitespace-nowrap',
+  denseRow: 'hover:bg-muted/60 cursor-pointer',
+  denseRowActive: 'bg-primary/10 text-primary',
+  denseBtn:
+    'h-7 px-2.5 text-xs rounded-md inline-flex items-center gap-1 border border-border bg-card text-foreground hover:bg-muted disabled:opacity-50 disabled:pointer-events-none',
+  denseBtnPrimary:
+    'h-7 px-2.5 text-xs rounded-md inline-flex items-center gap-1 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none',
+  denseBtnDanger:
+    'h-7 px-2.5 text-xs rounded-md inline-flex items-center gap-1 border border-red-300 dark:border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50 disabled:pointer-events-none',
+  /** Controles del Word aún sin definir por el cliente: visibles pero deshabilitados */
+  densePending:
+    'opacity-55 cursor-not-allowed select-none',
+  densePendingTag:
+    'inline-flex items-center rounded px-1 text-[9px] font-semibold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
 
   avisoOk:
     'rounded-lg border border-emerald-200 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',

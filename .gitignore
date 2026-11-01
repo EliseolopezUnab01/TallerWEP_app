@@ -33,6 +33,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# archivos subidos, respaldos de la base y videos del cliente
+/public/uploads/
+/backups/
+/certificados/
+/docs/fuentes/videos/*.mkv
+
 # vercel
 .vercel
 

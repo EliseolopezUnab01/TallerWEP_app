@@ -1,14 +1,17 @@
 // Totales del resumen DTE (sección Resumen del Manual Funcional V 2.0).
-// Cuerpo: hasta 4 decimales. Resumen: 2 decimales, holgura MH ±$0.01.
-// PREGUNTA 1: el descuento por ítem se guarda pero NO se resta del subtotal.
+// Se calculan y guardan con hasta 8 decimales; se muestran a 2.
+// El subtotal de cada línea ya trae restado su descuento (como ventaGravada
+// en el DTE); total_descuento suma esos descuentos más los globales.
 
-import { IVA_TASA, type CondicionIva } from '@/lib/compras-detalle';
+import { IVA_TASA, descuentoLinea, type CondicionIva } from '@/lib/compras-detalle';
+import { r8 } from '@/lib/decimales';
 
 export interface LineaResumen {
   condicion_iva: CondicionIva | string;
   subtotal_sin_iva: number;
   iva_unitario: number;
   cantidad: number;
+  costo_unitario?: number;
   descuento_porcentaje?: number;
   cargos_no_afectos?: number;
 }
@@ -107,10 +110,14 @@ export function numeroALetras(monto: number): string {
   return `${capitalizado} con ${String(centavos).padStart(2, '0')}/100 dólares`;
 }
 
-function descuentoInformativo(linea: LineaResumen): number {
+function descuentoDeLinea(linea: LineaResumen): number {
   const porcentaje = aNumero(linea.descuento_porcentaje);
   if (porcentaje <= 0) return 0;
-  return redondear2((aNumero(linea.subtotal_sin_iva) * porcentaje) / 100);
+  if (linea.costo_unitario !== undefined && linea.costo_unitario !== null) {
+    return descuentoLinea(aNumero(linea.cantidad, 1), aNumero(linea.costo_unitario), porcentaje);
+  }
+  if (porcentaje >= 100) return 0;
+  return r8((aNumero(linea.subtotal_sin_iva) * porcentaje) / (100 - porcentaje));
 }
 
 export function calcularResumen(input: ResumenInput): ResumenResult {
@@ -125,9 +132,9 @@ export function calcularResumen(input: ResumenInput): ResumenResult {
   for (const linea of input.lineas) {
     const subtotal = aNumero(linea.subtotal_sin_iva);
     const cantidad = aNumero(linea.cantidad, 1);
-    const ivaLinea = redondear2(aNumero(linea.iva_unitario) * cantidad);
+    const ivaLinea = r8(aNumero(linea.iva_unitario) * cantidad);
     total_cargos_no_afectos += aNumero(linea.cargos_no_afectos);
-    descuento_por_item += descuentoInformativo(linea);
+    descuento_por_item += descuentoDeLinea(linea);
 
     switch (linea.condicion_iva) {
       case 'GRAVADA':
@@ -146,37 +153,35 @@ export function calcularResumen(input: ResumenInput): ResumenResult {
     }
   }
 
-  total_gravado = redondear2(total_gravado);
-  total_exento = redondear2(total_exento);
-  total_no_sujeto = redondear2(total_no_sujeto);
-  total_xcomprobar = redondear2(total_xcomprobar);
-  iva_lineas = redondear2(iva_lineas);
-  total_cargos_no_afectos = redondear2(total_cargos_no_afectos);
-  descuento_por_item = redondear2(descuento_por_item);
+  total_gravado = r8(total_gravado);
+  total_exento = r8(total_exento);
+  total_no_sujeto = r8(total_no_sujeto);
+  total_xcomprobar = r8(total_xcomprobar);
+  iva_lineas = r8(iva_lineas);
+  total_cargos_no_afectos = r8(total_cargos_no_afectos);
+  descuento_por_item = r8(descuento_por_item);
 
-  const descuento_global_gravado = redondear2(aNumero(input.descuento_global_gravado));
-  const descuento_global_exento = redondear2(aNumero(input.descuento_global_exento));
-  const descuento_global_no_sujeto = redondear2(aNumero(input.descuento_global_no_sujeto));
-  const porcentaje_descuento = redondear2(aNumero(input.porcentaje_descuento));
+  const descuento_global_gravado = r8(aNumero(input.descuento_global_gravado));
+  const descuento_global_exento = r8(aNumero(input.descuento_global_exento));
+  const descuento_global_no_sujeto = r8(aNumero(input.descuento_global_no_sujeto));
+  const porcentaje_descuento = r8(aNumero(input.porcentaje_descuento));
 
-  const suma_operaciones = redondear2(total_gravado + total_exento + total_no_sujeto);
-  const desc_globales = redondear2(
-    descuento_global_gravado + descuento_global_exento + descuento_global_no_sujeto
-  );
-  const total_descuento = redondear2(descuento_por_item + desc_globales);
+  const suma_operaciones = r8(total_gravado + total_exento + total_no_sujeto);
+  const desc_globales = r8(descuento_global_gravado + descuento_global_exento + descuento_global_no_sujeto);
+  const total_descuento = r8(descuento_por_item + desc_globales);
 
-  const gravado_neto = redondear2(Math.max(0, total_gravado - descuento_global_gravado));
-  const exento_neto = redondear2(Math.max(0, total_exento - descuento_global_exento));
-  const no_sujeto_neto = redondear2(Math.max(0, total_no_sujeto - descuento_global_no_sujeto));
-  const sub_total = redondear2(gravado_neto + exento_neto + no_sujeto_neto);
+  const gravado_neto = r8(Math.max(0, total_gravado - descuento_global_gravado));
+  const exento_neto = r8(Math.max(0, total_exento - descuento_global_exento));
+  const no_sujeto_neto = r8(Math.max(0, total_no_sujeto - descuento_global_no_sujeto));
+  const sub_total = r8(gravado_neto + exento_neto + no_sujeto_neto);
 
-  const iva = redondear2(gravado_neto * IVA_TASA);
-  const iva_retenido = redondear2(aNumero(input.iva_retenido));
-  const iva_percibido = redondear2(aNumero(input.iva_percibido));
-  const retencion_renta = redondear2(aNumero(input.retencion_renta));
+  const iva = r8(gravado_neto * IVA_TASA);
+  const iva_retenido = r8(aNumero(input.iva_retenido));
+  const iva_percibido = r8(aNumero(input.iva_percibido));
+  const retencion_renta = r8(aNumero(input.retencion_renta));
 
-  const monto_total_operacion = redondear2(sub_total + iva + iva_percibido);
-  const total_pagar = redondear2(
+  const monto_total_operacion = r8(sub_total + iva + iva_percibido);
+  const total_pagar = r8(
     monto_total_operacion - iva_retenido - retencion_renta + total_cargos_no_afectos + total_xcomprobar
   );
 

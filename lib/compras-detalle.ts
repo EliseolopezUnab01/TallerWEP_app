@@ -1,6 +1,8 @@
 // Cálculos de línea de compra (control 30). IVA El Salvador = 13%.
-// PREGUNTA 1 pendiente al cliente: el descuento se guarda pero NO se resta
-// del subtotal hasta confirmar si es informativo o aplicado.
+// El descuento por línea se resta antes del IVA, como en el totalizador del
+// cliente (sumas, descuento, subtotal). Se guarda con hasta 8 decimales.
+
+import { r8 } from '@/lib/decimales';
 
 export const IVA_TASA = 0.13;
 
@@ -26,14 +28,12 @@ export interface LineaCalculoResult {
   subtotal_con_iva: number;
 }
 
-function redondear4(valor: number): number {
-  return Math.round(valor * 10000) / 10000;
-}
-
 export function calcularLinea(input: LineaCalculoInput): LineaCalculoResult {
   const cantidad = Number(input.cantidad) || 0;
   const costo = Number(input.costo_unitario) || 0;
-  const subtotal_sin_iva = redondear4(cantidad * costo);
+  const porcentaje = Math.min(100, Math.max(0, Number(input.descuento_porcentaje) || 0));
+  const costoNeto = r8(costo * (1 - porcentaje / 100));
+  const subtotal_sin_iva = r8(cantidad * costoNeto);
 
   let iva_unitario = 0;
   let exento_unitario = 0;
@@ -41,22 +41,20 @@ export function calcularLinea(input: LineaCalculoInput): LineaCalculoResult {
 
   switch (input.condicion_iva) {
     case 'GRAVADA':
-      iva_unitario = redondear4(costo * IVA_TASA);
+      iva_unitario = r8(costoNeto * IVA_TASA);
       break;
     case 'EXENTO':
-      exento_unitario = redondear4(costo);
+      exento_unitario = costoNeto;
       break;
     case 'NO_SUJETO':
-      no_sujeto_unitario = redondear4(costo);
+      no_sujeto_unitario = costoNeto;
       break;
     case 'XCOMPROBAR':
       break;
   }
 
   const subtotal_con_iva =
-    input.condicion_iva === 'GRAVADA'
-      ? redondear4(cantidad * (costo + iva_unitario))
-      : subtotal_sin_iva;
+    input.condicion_iva === 'GRAVADA' ? r8(subtotal_sin_iva + cantidad * iva_unitario) : subtotal_sin_iva;
 
   return {
     subtotal_sin_iva,
@@ -65,6 +63,12 @@ export function calcularLinea(input: LineaCalculoInput): LineaCalculoResult {
     no_sujeto_unitario,
     subtotal_con_iva,
   };
+}
+
+/** Monto del descuento de una línea (cantidad × costo × %). */
+export function descuentoLinea(cantidad: number, costo: number, porcentaje: number): number {
+  const p = Math.min(100, Math.max(0, Number(porcentaje) || 0));
+  return r8((Number(cantidad) || 0) * (Number(costo) || 0) * (p / 100));
 }
 
 export function requiereCatalogo(destino: string): boolean {

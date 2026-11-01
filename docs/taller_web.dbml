@@ -1,0 +1,1079 @@
+// Taller Web — esquema de taller_web
+// Generado desde MySQL para pegar en https://dbdiagram.io (Import > DBML)
+// Fecha: 2026-10-28
+// No incluye proveedores_legacy_backup (respaldo de migración).
+
+Project taller_web {
+  database_type: 'MySQL'
+  Note: 'Inventario de taller, El Salvador. IVA 13%.'
+}
+
+TableGroup Usuarios {
+  usuarios
+}
+
+TableGroup Inventario {
+  categorias_nuevo
+  grupos
+  subgrupos
+  productos
+  producto_imagenes
+  referencias_oem
+  ubicaciones_producto
+}
+
+TableGroup Precios {
+  costos
+  precios
+  ajuste_precios
+}
+
+TableGroup Proveedores {
+  proveedores
+  proveedor_contactos
+  cuentas_bancarias
+}
+
+TableGroup Catalogos_DTE {
+  cat_tipos_dte
+  cat_formas_pago
+  cat_tributos
+  configuracion_impuestos
+}
+
+TableGroup Contabilidad {
+  catalogo_contable
+}
+
+TableGroup Compras {
+  compras
+  compras_detalle
+  compras_pagos
+  compras_documentos_rel
+  esquemas_dte
+  correlativos
+  ruta_archivos
+}
+
+TableGroup Cotizaciones {
+  documentos_compras
+  documentos_compras_detalle
+  productos_temporales
+}
+
+TableGroup Importacion {
+  proceso_ingreso
+  relacion_documentos
+  datos_duca
+  duca_detalles
+  costos_productos
+  pedido_pendiente
+  gastos_sindocumento
+}
+
+TableGroup Taller {
+  clientes
+  vehiculos
+  empleados
+  cat_sistemas_vehiculo
+  vehiculo_partes
+  estado_partes
+  recordatorios_mantenimiento
+  ordenes_trabajo
+  orden_reparaciones
+}
+
+// --- Usuarios ---
+// 1 registros
+Table usuarios {
+  id int [pk, increment]
+  email varchar(255) [unique, not null]
+  password varchar(255) [not null]
+  nombre varchar(100) [not null]
+  created_at timestamp [not null]
+}
+
+// --- Inventario ---
+// 19 registros
+Table categorias_nuevo {
+  idcategoria int [pk]
+  codigo_antiguo varchar(10)
+  nombre varchar(100) [not null]
+  descripcion text
+  activo tinyint
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// 23 registros
+Table grupos {
+  id_grupo int [pk, increment]
+  codigo varchar(3) [not null]
+  nombre varchar(100) [not null]
+  descripcion text
+  idcategoria int [not null]
+  activo tinyint
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// 8 registros
+Table subgrupos {
+  id_subgrupo int [pk, increment]
+  codigo varchar(3) [not null]
+  nombre varchar(100) [not null]
+  descripcion text
+  id_grupo int [not null]
+  activo tinyint
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// 146 registros
+Table productos {
+  idprod int [pk, increment]
+  idprodprov varchar(20)
+  idprodpaquete varchar(20)
+  idprodfisico varchar(20)
+  OE varchar(20)
+  nombre varchar(60) [not null]
+  descripcion varchar(60)
+  etiquetas varchar(200)
+  marca varchar(20)
+  peso decimal(10,3)
+  codarancel bigint
+  porcentaje_dai decimal(12,8) [note: 'Porcentaje DAI de la partida (codarancel). Se copia a la línea del DUCA']
+  lado varchar(10)
+  modelo varchar(50)
+  clase varchar(50)
+  estilo varchar(50)
+  giro varchar(50)
+  capacidad varchar(50)
+  unimedida varchar(20)
+  idcategoria varchar(6)
+  codigo_barras varchar(100)
+  info_reservada text
+  info_publica text
+  info_referencias_directas text
+  info_referencias_indirectas text
+  exento tinyint
+  stock_contable int
+  stock_fisico int
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  aplicacion_marcas text [note: 'Marcas compatibles (RENAULT|MERCEDES|VOLVO)']
+  costo decimal(10,2) [note: 'Costo del producto']
+  idcategoria_nuevo int
+  id_grupo int
+  id_subgrupo int
+  codigo_jerarquico varchar(15)
+  costo_local decimal(10,2) [note: 'Costo local del producto (costo + gastos de importación)']
+  iva_pagado decimal(10,2) [note: 'IVA unitario pagado en la compra del producto']
+  consecutivo_catalogo int
+}
+
+// sin registros
+Table producto_imagenes {
+  idimagen int [pk, increment]
+  idprod int [not null]
+  imagen_url varchar(500) [not null]
+  orden int
+  es_principal tinyint
+  created_at timestamp [not null]
+}
+
+// Referencias OEM y equivalencias de productos · sin registros
+Table referencias_oem {
+  id int [pk, increment]
+  idprod int [not null]
+  fabricante varchar(100) [not null, note: 'Fabricante (DAF, IVECO, MAN, MERCEDES, VOLVO, etc)']
+  codigo varchar(100) [not null, note: 'Código de referencia']
+  tipo varchar [note: 'Tipo de referencia · enum(OEM,EQUIVALENTE,SUSTITUYE)']
+  notas text [note: 'Notas adicionales']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Ubicaciones físicas de productos en almacén · sin registros
+Table ubicaciones_producto {
+  id int [pk, increment]
+  idprod int [not null]
+  codigo_ubicacion varchar(50) [not null, note: 'Código de ubicación (E9-A6, etc)']
+  stock int [note: 'Stock en esta ubicación']
+  descripcion varchar(200) [note: 'Descripción de la ubicación']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// --- Precios ---
+// 146 registros
+Table costos {
+  idcosto int [pk, increment, note: 'Identificador único del registro de costo']
+  idprod int [unique, not null, note: 'FK a productos - relación 1:1']
+  nofactura varchar(50) [note: 'Número de factura o documento de la compra']
+  nodocto bigint [note: 'Documento del que salió el último costo']
+  dt_compra date [note: 'Fecha de la última compra']
+  costo decimal(20,8) [note: 'Costo según factura de la compra más reciente']
+  costo_proveedor decimal(20,8) [note: 'Costo real pagado al proveedor']
+  costo_promedio decimal(20,8) [note: 'Costo promedio de todas las compras']
+  costo_local decimal(20,8) [note: 'Costo promedio en moneda local']
+  costo_local_promedio decimal(20,8) [note: 'Promedio del costo local (CSTLOCALP)']
+  iva_pagado decimal(20,8) [note: 'IVA pagado en la compra']
+  costo_previo1 decimal(20,8) [note: 'Respaldo 1: valor anterior de costo_local']
+  costo_previo2 decimal(20,8) [note: 'Respaldo 2: valor que tenía costo_previo1']
+  costop_previo1 decimal(20,8) [note: 'Respaldo 1 del costo promedio']
+  costop_previo2 decimal(20,8) [note: 'Respaldo 2 del costo promedio']
+  costolcl_previo1 decimal(20,8) [note: 'Costo local anterior']
+  costolcl_previo2 decimal(20,8) [note: 'Costo local previo a costolcl_previo1']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// sin registros
+Table precios {
+  idprod int [pk]
+  precio_manual decimal(10,2) [note: 'Precio manual si el usuario lo establece']
+  precio_pvr decimal(10,2) [note: 'Precio PVR (Precio de Venta Recomendado)']
+  precio_lcl decimal(10,2) [note: 'Precio LCL']
+  precio_general decimal(10,2) [note: 'GENERAL, ALTO. Precio más alto']
+  precio_cliente decimal(10,2) [note: 'CLIENTE. Persona que ya ha rentado algo y nos prefiere']
+  precio_mecanico decimal(10,2) [note: 'MECÁNICO o MINORISTA. Quien compra muy poco']
+  precio_minorista decimal(10,2) [note: 'MAYORISTA. Quien compra por montos considerables']
+  precio_mayorista decimal(10,2) [note: 'MAYORISTA (con contrato). Muy conocida']
+  precio_especial decimal(10,2) [note: 'ESPECIAL. Precio mínimo de venta']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  porcentaje_general decimal(10,2)
+  porcentaje_cliente decimal(10,2)
+  porcentaje_mecanico decimal(10,2)
+  porcentaje_minorista decimal(10,2)
+  porcentaje_mayorista decimal(10,2)
+  porcentaje_especial decimal(10,2)
+  ganancia_general decimal(10,2)
+  ganancia_cliente decimal(10,2)
+  ganancia_mecanico decimal(10,2)
+  ganancia_minorista decimal(10,2)
+  ganancia_mayorista decimal(10,2)
+  ganancia_especial decimal(10,2)
+}
+
+// sin registros
+Table ajuste_precios {
+  idajuste int [pk, increment]
+  idusuario int [note: 'Identificador del usuario que cambia o ajusta un precio']
+  idprod int [note: 'Identificador del producto que recibe el cambio']
+  fecha datetime [note: 'Fecha del ajuste']
+  razon_justificacion text [note: 'Razón o justificación del porqué cambió el precio']
+  created_at timestamp [not null]
+  precio1_anterior decimal(10,2)
+  precio2_anterior decimal(10,2)
+  precio3_anterior decimal(10,2)
+  precio4_anterior decimal(10,2)
+  precio5_anterior decimal(10,2)
+  precio6_anterior decimal(10,2)
+  precio7_anterior decimal(10,2)
+  precio1_nuevo decimal(10,2)
+  precio2_nuevo decimal(10,2)
+  precio3_nuevo decimal(10,2)
+  precio4_nuevo decimal(10,2)
+  precio5_nuevo decimal(10,2)
+  precio6_nuevo decimal(10,2)
+  precio7_nuevo decimal(10,2)
+  tipo_ajuste varchar [note: 'enum(PORCENTAJE,PRECIO,GANANCIA)']
+  tipo_precio varchar(50)
+  valor_anterior decimal(10,2)
+  valor_nuevo decimal(10,2)
+  porcentaje_anterior decimal(10,2)
+  porcentaje_nuevo decimal(10,2)
+  ganancia_anterior decimal(10,2)
+  ganancia_nueva decimal(10,2)
+}
+
+// --- Proveedores ---
+// Proveedores. Especificaci├│n del cliente 21-07-2026 + capturas del sistema actual · 1 registros
+Table proveedores {
+  idproveedor int [pk, increment]
+  codigo varchar(20) [unique, not null, note: 'C├│digo del proveedor. Autogenerado PL#### / PE#### pero editable para admitir los c├│digos num├®ricos actuales del cliente']
+  tipo_proveedor varchar [not null, note: 'Origen del proveedor. Define el prefijo del c├│digo: PL local, PE extranjero · enum(LOCAL,EXTRANJERO)']
+  nombre_legal varchar(200) [not null, note: 'Nombre legal inscrito en su pa├¡s']
+  nombre_comercial varchar(200) [note: 'Nombre comercial, a veces distinto del legal']
+  alias varchar(60) [note: 'Alias corto para b├║squedas r├ípidas. Ej: LCR = La Casa del Repuesto']
+  direccion text
+  ciudad varchar(100)
+  direccion2 text
+  ciudad2 varchar(100)
+  pais varchar(100)
+  telefono varchar(30) [note: 'Tel├®fono principal de oficinas']
+  telefono2 varchar(30) [note: 'Tel├®fono secundario']
+  fax varchar(30)
+  email varchar(150) [note: 'Correo electr├│nico principal']
+  sitio_web varchar(200)
+  nit varchar(30) [note: 'N├║mero de registro tributario. Admite formatos extranjeros, no solo el NIT salvadore├▒o']
+  nrc varchar(30) [note: 'Registro fiscal / NRC. Dato t├¡pico solo de proveedores nacionales']
+  giro varchar(200) [note: 'Giro o actividad econ├│mica']
+  categoria_contribuyente varchar [note: 'Categor├¡a de contribuyente. Incide en el c├ílculo de retenciones en compras · enum(CONTRIBUYENTE,GRAN_CONTRIBUYENTE,PEQUENO,OTRO)']
+  que_provee varchar [not null, note: 'Qu├® provee este proveedor · enum(PRODUCTO,GASTO,PRODUCTO_Y_GASTO)']
+  incluir_en_catalogo tinyint [not null, note: 'Si sus productos se consideran en el cat├ílogo de productos a ofrecer']
+  limite_credito_usd decimal(12,2) [not null, note: 'L├¡mite de cr├®dito disponible, siempre en d├│lares']
+  dias_credito int [not null, note: 'D├¡as de cr├®dito por defecto para este proveedor']
+  saldo_actual decimal(12,2) [not null, note: 'SOLO LECTURA. Lo actualizar├í el m├│dulo Cuentas por Pagar (a├║n no existe)']
+  saldo_vencido decimal(12,2) [not null, note: 'SOLO LECTURA. Lo actualizar├í el m├│dulo Cuentas por Pagar (a├║n no existe)']
+  moneda varchar(10) [not null, note: 'Moneda habitual de negociaci├│n']
+  terminos_comentarios text [note: 'T├®rminos y comentarios. Campo abierto multil├¡nea']
+  activo tinyint [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Contactos de cada proveedor · sin registros
+Table proveedor_contactos {
+  idcontacto int [pk, increment]
+  idproveedor int [not null]
+  orden tinyint [not null, note: 'Posici├│n del contacto en la ficha (1 y 2 son los que muestra el formulario)']
+  nombre varchar(150)
+  puesto_cargo varchar(100)
+  telefono varchar(30)
+  movil varchar(30)
+  email varchar(150)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Cuentas bancarias de proveedores y clientes. Un titular puede tener varias · sin registros
+Table cuentas_bancarias {
+  idcuenta int [pk, increment]
+  idproveedor int [note: 'FK a proveedores. Se llena si la cuenta pertenece a un proveedor']
+  idcliente int [note: 'FK a clientes. Reservado: la tabla clientes usa otra estructura, se activar├í al integrar ese m├│dulo']
+  numero_cuenta varchar(60) [not null, note: 'Texto, no num├®rico: hay pa├¡ses que usan letras y separadores']
+  beneficiario varchar(200) [note: 'Nombre de la empresa seg├║n est├í registrado en su banco']
+  direccion_beneficiario text
+  banco varchar(200)
+  direccion_banco text
+  codigo_aba varchar(30) [note: 'Routing number ABA. Casi exclusivo de USA']
+  codigo_swift varchar(30) [note: 'C├│digo SWIFT / BIC. Uso mundial']
+  codigo_iban varchar(60) [note: 'IBAN. Suele ser el n├║mero de cuenta con caracteres antepuestos']
+  moneda varchar(20) [note: 'Moneda en que se recibe dinero en la cuenta']
+  comentarios text [note: 'Comentarios e instrucciones. Texto abierto']
+  activo tinyint [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// --- Catalogos_DTE ---
+// Catálogo CAT-002 Tipo de Documento Tributario Electrónico · 11 registros
+Table cat_tipos_dte {
+  codigo varchar(2) [pk, note: 'Código Hacienda CAT-002 (01, 03, 05, 06, 10, etc.)']
+  nombre varchar(120) [not null, note: 'Nombre oficial completo']
+  abreviatura varchar(10) [not null, note: 'FE, CCFE, NCE, NDE, FSEE, etc.']
+  activo_compras tinyint [not null, note: '1 si se usa en el módulo de compras nacionales']
+  descripcion varchar(255) [note: 'Nota breve sobre cuándo se usa']
+}
+
+// Catálogo CAT-017 Formas de Pago · 11 registros
+Table cat_formas_pago {
+  codigo varchar(2) [pk, note: 'Código CAT-017 Hacienda']
+  nombre varchar(80) [not null, note: 'Descripción de la forma de pago']
+}
+
+// Catálogo CAT-015 Tributos (sección 1 relevantes a compras nacionales) · 6 registros
+Table cat_tributos {
+  codigo varchar(3) [pk, note: 'Código CAT-015 Hacienda']
+  nombre varchar(120) [not null]
+  seccion tinyint [not null, note: '1=resumen, 2=cuerpo, 3=informativo']
+  tasa decimal(6,4) [note: 'Ej: 0.1300 para IVA 13%. NULL si fija o variable']
+}
+
+// 2 registros
+Table configuracion_impuestos {
+  id int [pk, increment]
+  nombre varchar(100) [not null]
+  codigo varchar(50) [unique, not null]
+  porcentaje decimal(5,4) [not null]
+  descripcion text
+  activo tinyint
+  created_at timestamp [not null]
+}
+
+// --- Contabilidad ---
+// Catalogo contable de compras (control 29.1). Rubros de gastos y activos · 9 registros
+Table catalogo_contable {
+  idcatalogo int [pk, increment]
+  tipo varchar [not null, note: 'Control 29.1. GASTO se muestra cuando el destino es GASTOS; ACTIVO cuando es ACTIVOS · enum(GASTO,ACTIVO)']
+  codigo varchar(20) [unique, not null, note: 'Codigo del rubro. Autogenerado G### / A### pero editable para admitir la codificacion del contador']
+  nombre varchar(150) [not null, note: 'Nombre del rubro tal como debe aparecer en el desplegable']
+  descripcion text [note: 'Detalle de que entra en este rubro. Ayuda al usuario que captura la compra']
+  cuenta_contable varchar(30) [note: 'Numero de cuenta del catalogo del contador. Opcional: el cliente aun no lo entrego']
+  codigo_oficial varchar(30) [note: 'Código oficial (Hacienda o norma contable), si existe']
+  condicion_iva_sugerida varchar [note: 'Condicion de IVA que se sugiere al elegir este rubro. NULL = no sugerir nada · enum(GRAVADA,EXENTO,NO_SUJETO,XCOMPROBAR)']
+  activo tinyint [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// --- Compras ---
+// Encabezado mínimo de compras (Compras1). Fase 4 expandirá campos fiscales · 9 registros
+Table compras {
+  idcompra int [pk, increment]
+  nodocto bigint [unique, note: 'ID global del documento. AA + 6 dígitos']
+  numero_interno varchar(20) [unique, note: 'Número visible por tipo: CP (compra nacional) o CI (compra de importación)']
+  estado varchar [not null, note: 'BORRADOR editable, REGISTRADA confirma, ANULADA cierra · enum(BORRADOR,REGISTRADA,ANULADA)']
+  clase_documento varchar [not null, note: 'DTE = compra nacional con documento electrónico; IMPORTACION = factura de proveedor extranjero · enum(DTE,IMPORTACION)']
+  categoria_operacion varchar [not null, note: 'Control 2. CONTABLE = solo inventario; EXPRES = solo express; GASTOS = gastos o activos; OTRO = cualquiera · enum(CONTABLE,EXPRES,GASTOS,OTRO)']
+  tipo_dte varchar(2)
+  numero_control varchar(31)
+  codigo_generacion varchar(36)
+  sello_recepcion varchar(100)
+  numero_factura varchar(100)
+  referencia_contable varchar(30)
+  fecha_emision date
+  fecha_recepcion date
+  fecha_registro date
+  stock_aplicado tinyint [not null, note: '1 = el registro ya movió stock_contable (para revertir exacto al anular)']
+  idproveedor int [note: 'Proveedor asociado. Opcional en borrador hasta capturar la factura']
+  idproceso int [note: 'Proceso de ingreso al que pertenece (importaciones)']
+  idcompra_origen int [note: 'Nota de crédito o débito: factura original que ajusta']
+  notas text [note: 'Observaciones internas del borrador']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  total_gravado decimal(20,8) [not null]
+  total_exento decimal(20,8) [not null]
+  total_no_sujeto decimal(20,8) [not null]
+  total_xcomprobar decimal(20,8) [not null]
+  suma_operaciones decimal(20,8) [not null]
+  descuento_global_gravado decimal(20,8) [not null]
+  descuento_global_exento decimal(20,8) [not null]
+  descuento_global_no_sujeto decimal(20,8) [not null]
+  porcentaje_descuento decimal(12,8) [not null]
+  total_descuento decimal(20,8) [not null]
+  sub_total decimal(20,8) [not null]
+  iva decimal(20,8) [not null]
+  iva_retenido decimal(20,8) [not null]
+  iva_percibido decimal(20,8) [not null]
+  retencion_renta decimal(20,8) [not null]
+  monto_total_operacion decimal(20,8) [not null]
+  total_cargos_no_afectos decimal(20,8) [not null]
+  total_pagar decimal(20,8) [not null]
+  valor_en_letras varchar(300)
+  condicion_operacion tinyint [note: '1 contado, 2 crédito, 3 otro. NULL = el usuario aún no la elige (no se registra)']
+  plazo_tipo varchar(2)
+  plazo_periodo int
+  fecha_vencimiento_pago date
+}
+
+// Líneas de compra (Compras2 / control 30). PK por línea, DECIMAL(14,4) · 7 registros
+Table compras_detalle {
+  iddetalle int [pk, increment]
+  idcompra int [not null]
+  iddetalle_origen int [note: 'Nota de crédito: línea de la factura original que ajusta']
+  ajuste_precio tinyint [not null, note: 'NC: 1 = solo rebaja el precio de la línea original; no resta stock ni cuenta como devolución']
+  numero_linea int [not null, note: 'Control 30 - No. Orden visual en el documento. Reordenable']
+  numero_orden varchar(50) [note: 'Referencia a orden de trabajo. Editable por el usuario']
+  codigo_express varchar(20) [note: 'Código incremental de la línea express (EXAA-000001)']
+  destino varchar [note: 'Tipo de producto. NULL = pendiente de clasificar (líneas del JSON sin ficha) · enum(INVENTARIO,EXPRESS,ACTIVOS,GASTOS)']
+  idcatalogo int
+  idprod int
+  referencia_proveedor varchar(100) [note: 'Control 30 - Referencia tal como la usa el proveedor']
+  descripcion varchar(255) [not null, note: 'Control 30 - Snapshot del nombre. No editable en UI; viene de inventario o rubro']
+  cantidad decimal(14,4) [not null]
+  costo_unitario decimal(20,8) [not null, note: 'Control 30 - Hasta 8 decimales; se imprime a 4']
+  descuento_porcentaje decimal(12,8) [not null, note: 'Control 28/30 - Se resta del subtotal antes del IVA']
+  subtotal_sin_iva decimal(20,8) [not null]
+  iva_unitario decimal(20,8) [not null]
+  subtotal_con_iva decimal(20,8) [not null]
+  exento_unitario decimal(20,8) [not null]
+  no_sujeto_unitario decimal(20,8) [not null]
+  condicion_iva varchar [not null, note: 'enum(GRAVADA,EXENTO,NO_SUJETO,XCOMPROBAR)']
+  numero_documento_rel varchar(100)
+  codigo_tributo varchar(10)
+  cargos_no_afectos decimal(20,8) [not null]
+  imagen_url varchar(500) [note: 'Control 30 - URL de imagen del producto al momento de la línea']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Formas de pago de una compra (CAT-017). Varias por documento · 2 registros
+Table compras_pagos {
+  idpago int [pk, increment]
+  idcompra int [not null]
+  codigo_forma_pago varchar(2) [not null, note: 'FK cat_formas_pago']
+  monto decimal(20,8) [not null]
+  referencia varchar(100) [note: 'No. cheque, transferencia, etc. null para efectivo']
+  plazo_tipo varchar(2) [note: 'CAT-018: 01=Días, 02=Meses, 03=Años']
+  plazo_periodo int [note: 'Número de días/meses/años']
+}
+
+// 1 registros
+Table compras_documentos_rel {
+  idrelacion int [pk, increment]
+  idcompra int [not null]
+  tipo_dte_relacionado varchar(2) [not null]
+  tipo_generacion tinyint [not null]
+  numero_documento varchar(100) [not null]
+  fecha_generacion date [not null]
+}
+
+// JSON completo de cada DTE de compra o venta, con su versión · 2 registros
+Table esquemas_dte {
+  nodocto bigint [pk, note: 'Documento interno al que corresponde el JSON']
+  codigo_generacion varchar(36)
+  tipo_dte varchar(2) [note: 'Código CAT-002 (01, 03, 05...)']
+  tipo_movimiento varchar [not null, note: 'enum(COMPRA,VENTA)']
+  version smallint [note: 'identificacion.version del JSON de Hacienda']
+  esquema_json text [not null, note: 'JSON completo recibido o emitido. Respaldo documental']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Control de correlativos de documentos (equivalente a la tabla de control de Fox) · 10 registros
+Table correlativos {
+  tipo varchar(20) [pk, note: 'NODOCTO = ID global; CP, CI, SC, CT, OC, PF, IMP, PT, VH, EX = números visibles por tipo']
+  anio smallint [pk, note: 'Año del correlativo. Cada año reinicia en 1']
+  ultimo int [not null, note: 'Último número entregado']
+  updated_at timestamp [not null]
+}
+
+// Archivos vinculados a documentos o registros del sistema · sin registros
+Table ruta_archivos {
+  idarchivo int [pk, increment]
+  nodocto bigint [note: 'Documento al que pertenece el archivo. Un documento puede tener varios']
+  entidad varchar(30) [note: 'Para registros que no son documentos: VEHICULO, PRODUCTO_TEMPORAL...']
+  identidad int [note: 'ID del registro de la entidad']
+  ruta varchar(500) [not null, note: 'Ruta pública del archivo']
+  nombre_original varchar(255)
+  tipo_archivo varchar(80) [note: 'Tipo MIME o etiqueta (TARJETA, DUCA, FACTURA...)']
+  descripcion varchar(255)
+  created_at timestamp [not null]
+}
+
+// --- Cotizaciones ---
+// Solicitudes, cotizaciones, órdenes de compra y proformas · 2 registros
+Table documentos_compras {
+  iddocumento int [pk, increment]
+  nodocto bigint [unique, not null, note: 'ID global del documento (AA + 6 dígitos)']
+  id_documento varchar(20) [unique, not null, note: 'Número visible: SC26-000001, CT26-..., OC26-..., PF26-...']
+  tipo_documento varchar [not null, note: 'enum(SOLICITUD,COTIZACION,ORDEN,PROFORMA)']
+  nodocto_origen bigint [note: 'Documento del que se generó (encadena solicitud → cotización → orden → proforma)']
+  categoria_operacion varchar [not null, note: 'enum(CONTABLE,EXPRES,GASTOS,OTRO)']
+  ambito_operacion varchar [not null, note: 'enum(NACIONAL,INTERNACIONAL)']
+  estado_documento varchar [not null, note: 'FINALIZADO = enviado o recibido; ya no se edita · enum(BORRADOR,FINALIZADO,ANULADO)']
+  idproceso int [note: 'Proceso de ingreso (IMP-AAAA-00001) que agrupa los documentos']
+  idproveedor int
+  idcontacto int [note: 'Contacto del proveedor con quien se negocia']
+  idusuario int [note: 'Usuario que creó o editó por última vez']
+  fecha_documento date [not null]
+  comentarios text
+  moneda_documento char(3) [not null]
+  tipo_cambio decimal(20,8) [not null, note: 'Dólares por unidad de la moneda del documento. Aproximado hasta completar el pago']
+  incoterm varchar(10) [note: 'FOB, CIF, CFR, CPT, FCA, EXW, DAP...']
+  fecha_est_entrega date
+  condicion_pago varchar [not null, note: 'enum(CONTADO,CREDITO)']
+  acuerdo_pago varchar(500) [note: 'Ej.: 30% anticipo / 70% contra entrega']
+  subtotal_moneda decimal(20,8) [not null]
+  subtotal_usd decimal(20,8) [not null]
+  total_moneda decimal(20,8) [not null]
+  total_usd decimal(20,8) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Líneas de los documentos de compra: producto del inventario o temporal · 2 registros
+Table documentos_compras_detalle {
+  iddetalle int [pk, increment]
+  iddocumento int [not null]
+  linea_visual int [not null]
+  idprod int
+  idtemporal int
+  iddetalle_origen int [note: 'Línea del documento anterior de la que se copió']
+  referencia_proveedor varchar(50)
+  oems text
+  descripcion_articulo varchar(200) [not null]
+  cantidad decimal(14,4) [not null]
+  estatus_articulo varchar [not null, note: 'enum(DISPONIBLE,BAJO STOCK,SIN STOCK,EN DESARROLLO,DESCONTINUADO,DESCONOCIDO)']
+  precio_moneda decimal(20,8) [not null]
+  precio_usd decimal(20,8) [not null]
+  precio_objetivo decimal(20,8) [note: 'Orden de compra: precio que se le pide al proveedor']
+  fecha_est_produccion date
+  fecha_est_entrega date
+  comentario_usuario text
+  comentario_proveedor text
+  origen_producto varchar(60)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Productos cotizados que aún no tienen ficha de inventario. Imágenes en ruta_archivos (entidad PRODUCTO_TEMPORAL) · sin registros
+Table productos_temporales {
+  idtemporal int [pk, increment]
+  codigo varchar(20) [unique, not null, note: 'Código propio PT26-00001; no se mezcla con idprod del inventario']
+  referencia_proveedor varchar(50)
+  descripcion varchar(200) [not null]
+  oems text [note: 'Otras referencias OE/OEM, una por línea']
+  marca varchar(50)
+  origen_producto varchar(60) [note: 'País de origen indicado por el proveedor']
+  idproveedor int
+  comentario text
+  estado varchar [not null, note: 'enum(ACTIVO,CONVERTIDO,DESCARTADO)']
+  idprod_final int [note: 'Ficha de inventario creada a partir de este temporal']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// --- Importacion ---
+// Proceso de compra o importación: de la cotización al ingreso a bodega · sin registros
+Table proceso_ingreso {
+  idproceso int [pk, increment]
+  codigo varchar(20) [unique, not null, note: 'IMP-AAAA-00001. Agrupa todos los documentos del proceso']
+  nodocto bigint [unique, not null, note: 'ID global, para vincular archivos al proceso']
+  descripcion varchar(200)
+  estado_documento varchar [not null, note: 'FINALIZADO = retaceo aplicado; ya no se modifica · enum(BORRADOR,FINALIZADO)']
+  estado_proceso varchar [not null, note: 'enum(COTIZANDO,PRODUCCION,PAGADO,EN TRANSITO,BODEGA)']
+  origen_negociacion varchar [not null, note: 'enum(NACIONAL,INTERNACIONAL)']
+  factura_compra varchar(100) [note: 'Número(s) de factura del proveedor que se ingresan con este proceso']
+  moneda_factura char(3) [not null, note: 'Moneda de las facturas del proveedor (compras no guarda moneda)']
+  tipo_cambio_pagado decimal(20,8) [not null, note: 'Dólares por unidad pagados al banco (CAMBIOBAN)']
+  total_factura decimal(20,8) [not null, note: 'Suma de las facturas de importación del proceso']
+  sumas_documentos decimal(20,8) [not null, note: 'Suma fiscal de los documentos relacionados (sin cuenta ajena)']
+  total_retaceo decimal(20,8) [not null, note: 'Gastos que el usuario decide repartir entre los productos']
+  fecha_retaceo datetime
+  fecha_reapertura datetime [note: 'Última vez que se reabrió el retaceo aplicado']
+  idusuario_reapertura int [note: 'Usuario que reabrió el retaceo']
+  idusuario int
+  comentarios text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Documentos vinculados a un proceso y su razón (PAGO, SEGURO, BL...) · sin registros
+Table relacion_documentos {
+  idrelacion int [pk, increment]
+  idproceso int [not null]
+  nodocto bigint [note: 'Documento del sistema (compra, documento de compra)']
+  ref_documento varchar(100) [note: 'Documento externo no ingresado: voucher, recibo, BL...']
+  razon_vinculo varchar(40) [not null, note: 'Categoría del documento en el proceso: FACTURA, PAGO, SEGURO, FLETE, FORWARDER... (lista abierta)']
+  total_usd decimal(20,8) [not null, note: 'Monto que participa en el proceso (para compras nacionales, solo lo fiscal)']
+  incluir_retaceo tinyint [not null]
+  comentarios text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Encabezado del DUCA de un proceso de importación · sin registros
+Table datos_duca {
+  idduca int [pk, increment]
+  idproceso int [unique, not null, note: 'Un solo DUCA por proceso; si se corrige, se reemplaza']
+  nodocto bigint [unique, not null, note: 'ID global, para vincular el PDF del DUCA']
+  numero_duca varchar(50)
+  fecha_duca date
+  mandamiento_pago varchar(50) [note: 'Mandamiento de Hacienda con el NPE']
+  incoterm_duca varchar(10)
+  tipo_cambio_duca decimal(20,8) [not null, note: 'Tipo de cambio usado por Aduana (CAMBIOADU)']
+  seguro_declarado decimal(20,8) [not null]
+  flete_declarado decimal(20,8) [not null]
+  total_productos_duca decimal(20,8) [not null]
+  gastos_declarados decimal(20,8) [not null, note: 'Otros gastos declarados (normalmente de origen)']
+  valor_cif_duca decimal(20,8) [not null]
+  gastos_no_declarados decimal(20,8) [not null]
+  total_costos_operativos decimal(20,8) [not null, note: 'Gastos declarados + no declarados que se reparten; sin impuestos']
+  peso_carga varchar(50)
+  volumen_carga varchar(50)
+  iva_pagado decimal(20,8) [not null]
+  dai_pagado decimal(20,8) [not null]
+  vts_pagado decimal(20,8) [not null, note: 'VTS según el DUCA (informativo)']
+  its_pagado decimal(20,8) [not null, note: 'ITS según el DUCA (informativo)']
+  otros_cargos_pagados decimal(20,8) [not null]
+  total_pagado_duca decimal(20,8) [not null]
+  gasto_total_inversion decimal(20,8) [not null]
+  comentarios text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Cálculo DUCA por línea de factura · sin registros
+Table duca_detalles {
+  idduca_detalle int [pk, increment]
+  idproceso int [not null]
+  iddetalle int [unique, not null, note: 'Línea exacta de la factura (compras_detalle)']
+  idprod int
+  numero_duca varchar(50)
+  cantidad decimal(14,4) [not null]
+  costo_divisa decimal(20,8) [not null, note: 'Costo unitario en la moneda de la factura (CSTDIVISA)']
+  costo_contable_usd decimal(20,8) [not null, note: 'Costo unitario en dólares según Aduana (COSTO)']
+  costo_cif decimal(20,8) [not null, note: 'CIF unitario (CIFUNIT)']
+  codigo_arancelario varchar(20)
+  dai_preferente tinyint [not null]
+  valor_dai decimal(12,8) [not null, note: 'Porcentaje DAI (DAIVALOR)']
+  dai_pagado decimal(20,8) [not null, note: 'DAI unitario (DAIUNIT)']
+  iva_pagado decimal(20,8) [not null, note: 'IVA unitario (IVAUNIT)']
+  gastos_aduana decimal(20,8) [not null, note: 'Gastos repartidos por unidad (GASTOSUNIT)']
+  subtotal_contable decimal(20,8) [not null]
+  subtotal_cif decimal(20,8) [not null, note: 'STOTALCIF']
+  total_grupo_cif decimal(20,8) [not null, note: 'CIF total del grupo usado como base del reparto (CIFGRUPO)']
+  tipo_cambio_duca decimal(20,8) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Costo final por línea de factura tras el retaceo · sin registros
+Table costos_productos {
+  idcosto_producto int [pk, increment]
+  idproceso int [not null]
+  iddetalle int [unique, not null]
+  idprod int
+  factura_compra varchar(100)
+  cantidad decimal(14,4) [not null]
+  costo_divisa decimal(20,8) [not null]
+  costo_contable_usd decimal(20,8) [not null]
+  costo_pagado_usd decimal(20,8) [not null, note: 'Lo pagado al proveedor con el tipo de cambio del banco']
+  iva_pagado decimal(20,8) [not null]
+  gastos_totales decimal(20,8) [not null, note: 'Gastos repartidos por unidad, incluido DAI']
+  costo_corregido decimal(20,8) [note: 'Solo en casos raros; si tiene valor es el referente del costo pagado']
+  costo_cif decimal(20,8) [not null]
+  costo_destino decimal(20,8) [not null, note: 'Costo puesto en bodega (COSTOLOCAL)']
+  costo_destino_prom decimal(20,8) [not null, note: 'Costo local promedio tras esta compra (CSTLOCALP)']
+  costo_prom_anterior decimal(20,8) [note: 'Costo local promedio antes de aplicar este proceso (para reaplicar sin duplicar)']
+  stock_anterior decimal(14,4) [note: 'Stock contable antes de sumar esta línea']
+  stock_aplicado tinyint [not null, note: '1 = la cantidad ya se sumó a stock_contable']
+  tipo_cambio_pagado decimal(20,8) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Cantidades por producto y proceso, y backorder · sin registros
+Table pedido_pendiente {
+  idpendiente int [pk, increment]
+  idproceso int [not null]
+  idprod int
+  idtemporal int
+  cant_cotizado decimal(14,4) [not null]
+  cant_ordenado decimal(14,4) [not null]
+  cant_proforma decimal(14,4) [not null]
+  cant_factura decimal(14,4) [not null]
+  cant_recibido decimal(14,4) [not null]
+  backorder_reservado decimal(14,4) [not null, note: 'Pendiente, ya disponible y reservado por el proveedor']
+  backorder_enproceso decimal(14,4) [not null, note: 'Pendiente, aún en producción o en espera']
+  backorder_total decimal(14,4) [note: 'Reservado + en proceso = pagado + por pagar']
+  backorder_pagado decimal(14,4) [not null]
+  backorder_por_pagar decimal(14,4) [not null]
+  fecha_estimada_backorder date
+  id_orden_compra varchar(20)
+  fecha_orden_compra date
+  id_proforma varchar(20)
+  fecha_proforma date
+  id_factura varchar(100)
+  fecha_factura date
+  estatus_backorder varchar [not null, note: 'enum(ACTIVO,CANCELADO,FINALIZADO)']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Gastos con ticket, voucher o sin comprobante · sin registros
+Table gastos_sindocumento {
+  idgasto int [pk, increment]
+  idproceso int
+  ref_nodocto bigint [note: 'Documento del sistema sin proceso al que se asocia el gasto']
+  ref_orden_servicio varchar(50)
+  ref_otros varchar(100)
+  descripcion varchar(255) [not null]
+  categoria varchar(40) [not null, note: 'Categoría para sumar con los documentos del proceso']
+  recibe varchar(100)
+  entrega varchar(100)
+  monto_salida decimal(20,8) [not null]
+  fecha_salida date
+  incluir_retaceo tinyint [not null]
+  comentario text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// --- Taller ---
+// Clientes del taller · sin registros
+Table clientes {
+  id int [pk, increment]
+  codigo varchar(50) [unique, not null, note: 'Código único del cliente']
+  nombre varchar(200) [not null, note: 'Nombre o razón social']
+  tipo varchar [note: 'enum(PERSONA,EMPRESA)']
+  dui varchar(10) [note: 'Documento Único de Identidad (00000000-0)']
+  nit varchar(17) [note: 'NIT (0000-000000-000-0)']
+  nrc varchar(10) [note: 'Registro de contribuyente']
+  giro varchar(200) [note: 'Actividad económica, si es contribuyente']
+  telefono varchar(50)
+  telefono2 varchar(50)
+  email varchar(100)
+  direccion text
+  municipio varchar(100)
+  departamento varchar(100)
+  limite_credito decimal(10,2)
+  dias_credito int
+  descuento_general decimal(5,2)
+  activo tinyint
+  notas text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Vehículos de los clientes · sin registros
+Table vehiculos {
+  id int [pk, increment]
+  codigo varchar(20) [unique, note: 'Código interno VH26-00001']
+  cliente_id int [not null]
+  placa varchar(20) [unique, note: 'Placa sin año: C79371']
+  anio_placa smallint [note: 'Año que acompaña la placa en la tarjeta: 2011']
+  vin varchar(50) [note: 'Número de serie/VIN']
+  marca varchar(100) [not null]
+  modelo varchar(100) [not null]
+  anio_modelo smallint [note: 'Año del modelo']
+  tipo varchar(100) [note: 'Tipo de vehículo (Camión, Auto, etc)']
+  clase varchar(50) [note: 'AUTOMÓVIL, PICK UP, CAMIÓN…']
+  ejes tinyint
+  tara decimal(10,2) [note: 'Peso del vehículo vacío']
+  unidad_capacidad varchar(20) [note: 'KG, TON, LB, PASAJEROS']
+  capacidad_carga decimal(10,2)
+  capacidad_maxima decimal(10,2)
+  traccion varchar(20) [note: '4X2, 4X4, 6X4…']
+  dominio varchar(50) [note: 'Dominio según la tarjeta']
+  en_calidad varchar(50) [note: 'En calidad de: PROPIETARIO…']
+  propietario_nombre varchar(200) [note: 'Propietario en la tarjeta (puede no ser el cliente)']
+  propietario_dui varchar(20)
+  propietario_domicilio text
+  tarjeta_emision date
+  tarjeta_vencimiento date
+  color varchar(50)
+  numero_motor varchar(100)
+  numero_chasis varchar(100)
+  odometro_actual int
+  unidad_odometro varchar [note: 'enum(KM,MILLAS)']
+  activo tinyint
+  notas text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Empleados del taller · sin registros
+Table empleados {
+  id int [pk, increment]
+  codigo varchar(50) [unique, not null, note: 'Código único del empleado']
+  nombre varchar(100) [not null]
+  apellido varchar(100) [not null]
+  fecha_nacimiento date
+  dui varchar(10)
+  nit varchar(17)
+  isss varchar(20) [note: 'Número de afiliación ISSS']
+  afp varchar(30) [note: 'Institución: CRECER, CONFÍA…']
+  nup varchar(20) [note: 'Número Único Previsional (AFP)']
+  telefono varchar(50)
+  telefono2 varchar(50)
+  email varchar(100)
+  direccion text
+  municipio varchar(100)
+  departamento_residencia varchar(100)
+  puesto varchar(100)
+  departamento varchar(100)
+  fecha_ingreso date
+  fecha_baja date
+  salario decimal(10,2)
+  tipo_contrato varchar [note: 'enum(PLANTA,TEMPORAL,HONORARIOS)']
+  activo tinyint
+  notas text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Sistemas del vehículo (frenos, motor…). Catálogo editable · 15 registros
+Table cat_sistemas_vehiculo {
+  idsistema int [pk, increment]
+  nombre varchar(80) [unique, not null]
+  descripcion varchar(255)
+  orden smallint [not null]
+  activo tinyint [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Piezas documentadas de cada vehículo; la vieja queda RETIRADA al reemplazarla · sin registros
+Table vehiculo_partes {
+  idparte int [pk, increment]
+  idvehiculo int [not null]
+  idsistema int [not null]
+  nombre_parte varchar(150) [not null]
+  posicion varchar(50) [note: 'DELANTERA IZQ., TRASERA, EJE 2…']
+  idprod int [note: 'Producto del inventario, si se vendió/instaló desde aquí']
+  marca varchar(50)
+  referencia varchar(100)
+  numero_serie varchar(100)
+  estado_instalacion varchar [not null, note: 'enum(INSTALADA,RETIRADA)']
+  fecha_instalacion date
+  km_instalacion int
+  fecha_retiro date
+  km_retiro int
+  reemplaza_a int [note: 'Parte retirada que esta pieza reemplazó']
+  comentario text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Revisión de una parte: una fila solo cuando se revisa o cambia algo · sin registros
+Table estado_partes {
+  idestado int [pk, increment]
+  idparte int [not null]
+  idorden int
+  idempleado int
+  momento varchar [not null, note: 'enum(ENTRADA,SALIDA)']
+  estado_visual tinyint [note: 'Apreciación visual o técnica, 1 a 10']
+  estado_texto varchar [not null, note: 'Opinión o recomendación · enum(EXCELENTE,BUEN ESTADO,REGULAR,DAÑADO,PELIGRO,INSERVIBLE,DESACTIVADO,SIN VERIFICAR,OTRO)']
+  kilometraje int
+  fecha datetime [not null]
+  comentario text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Próximo cambio por fecha y por kilometraje · sin registros
+Table recordatorios_mantenimiento {
+  idrecordatorio int [pk, increment]
+  idvehiculo int [not null]
+  idparte int
+  idsistema int
+  descripcion varchar(200) [not null, note: 'Ej.: Cambio de aceite de motor']
+  intervalo_dias int
+  intervalo_km int
+  ultimo_fecha date
+  ultimo_km int
+  proximo_fecha date
+  proximo_km int
+  activo tinyint [not null]
+  comentario text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Órdenes de trabajo del taller · sin registros
+Table ordenes_trabajo {
+  id int [pk, increment]
+  numero_orden varchar(50) [unique, not null, note: 'Número de orden único']
+  comando varchar(50) [note: 'Comando o referencia interna']
+  cliente_id int [not null]
+  vehiculo_id int [not null]
+  conductor_nombre varchar(200)
+  conductor_telefono varchar(50)
+  conductor_telefono2 varchar(50)
+  odometro_inicial int
+  odometro_final int
+  fecha_inicial date
+  fecha_final date
+  parcial varchar(50)
+  estado varchar [note: 'enum(PROCESO,FINALIZADA,ESPERA,CANCELADA)']
+  tipo_servicio varchar [note: 'enum(MANTENIMIENTO,REPARACION,DIAGNOSTICO,OTRO)']
+  prioridad varchar [note: 'enum(BAJA,MEDIA,ALTA,URGENTE)']
+  reparaciones_solicitadas text [note: 'Fallas reportadas por el cliente']
+  reparaciones_realizadas text [note: 'Trabajos realizados']
+  comentarios text [note: 'Comentarios generales']
+  notas_internas text [note: 'Notas internas del taller']
+  costo_mano_obra decimal(10,2)
+  costo_repuestos decimal(10,2)
+  costo_total decimal(10,2)
+  fecha_recepcion timestamp [not null]
+  fecha_compromiso timestamp
+  fecha_entrega timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Detalle de reparaciones en órdenes de trabajo · sin registros
+Table orden_reparaciones {
+  id int [pk, increment]
+  orden_id int [not null]
+  tipo varchar [not null, note: 'Tipo de reparación · enum(SOLICITADA,REALIZADA)']
+  estado varchar [note: 'enum(PROCESO,FINALIZADA,ESPERA,CANCELADA)']
+  cantidad int
+  codigo_servicio varchar(50)
+  accion varchar(200) [note: 'Acción a realizar (REPARAR, INSTALAR, etc)']
+  tarea_actividad text [note: 'Descripción detallada de la tarea']
+  idempleado1 int [note: 'Mecánico principal']
+  idempleado2 int
+  idempleado3 int
+  dias int
+  horas decimal(5,2)
+  precio_unitario decimal(10,2)
+  precio_total decimal(10,2)
+  fecha_inicio timestamp
+  fecha_fin timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+// Relaciones que MySQL sí obliga
+Ref: ajuste_precios.idprod > productos.idprod
+Ref: compras.idproceso > proceso_ingreso.idproceso
+Ref: compras.tipo_dte > cat_tipos_dte.codigo
+Ref: compras.idcompra_origen > compras.idcompra
+Ref: compras.idproveedor > proveedores.idproveedor
+Ref: compras_detalle.idcompra > compras.idcompra
+Ref: compras_detalle.idprod > productos.idprod
+Ref: compras_detalle.idcatalogo > catalogo_contable.idcatalogo
+Ref: compras_detalle.iddetalle_origen > compras_detalle.iddetalle
+Ref: compras_documentos_rel.idcompra > compras.idcompra
+Ref: compras_documentos_rel.tipo_dte_relacionado > cat_tipos_dte.codigo
+Ref: compras_pagos.idcompra > compras.idcompra
+Ref: compras_pagos.codigo_forma_pago > cat_formas_pago.codigo
+Ref: costos.idprod > productos.idprod
+Ref: costos_productos.iddetalle > compras_detalle.iddetalle
+Ref: costos_productos.idprod > productos.idprod
+Ref: costos_productos.idproceso > proceso_ingreso.idproceso
+Ref: cuentas_bancarias.idproveedor > proveedores.idproveedor
+Ref: datos_duca.idproceso > proceso_ingreso.idproceso
+Ref: documentos_compras.idproceso > proceso_ingreso.idproceso
+Ref: documentos_compras.idusuario > usuarios.id
+Ref: documentos_compras.nodocto_origen > documentos_compras.nodocto
+Ref: documentos_compras.idproveedor > proveedores.idproveedor
+Ref: documentos_compras.idcontacto > proveedor_contactos.idcontacto
+Ref: documentos_compras_detalle.iddetalle_origen > documentos_compras_detalle.iddetalle
+Ref: documentos_compras_detalle.idtemporal > productos_temporales.idtemporal
+Ref: documentos_compras_detalle.iddocumento > documentos_compras.iddocumento
+Ref: documentos_compras_detalle.idprod > productos.idprod
+Ref: duca_detalles.idproceso > proceso_ingreso.idproceso
+Ref: duca_detalles.iddetalle > compras_detalle.iddetalle
+Ref: duca_detalles.idprod > productos.idprod
+Ref: estado_partes.idorden > ordenes_trabajo.id
+Ref: estado_partes.idempleado > empleados.id
+Ref: estado_partes.idparte > vehiculo_partes.idparte
+Ref: gastos_sindocumento.idproceso > proceso_ingreso.idproceso
+Ref: grupos.idcategoria > categorias_nuevo.idcategoria
+Ref: ordenes_trabajo.vehiculo_id > vehiculos.id
+Ref: ordenes_trabajo.cliente_id > clientes.id
+Ref: orden_reparaciones.idempleado2 > empleados.id
+Ref: orden_reparaciones.orden_id > ordenes_trabajo.id
+Ref: orden_reparaciones.idempleado1 > empleados.id
+Ref: orden_reparaciones.idempleado3 > empleados.id
+Ref: pedido_pendiente.idprod > productos.idprod
+Ref: pedido_pendiente.idproceso > proceso_ingreso.idproceso
+Ref: pedido_pendiente.idtemporal > productos_temporales.idtemporal
+Ref: precios.idprod > productos.idprod
+Ref: proceso_ingreso.idusuario > usuarios.id
+Ref: productos_temporales.idproveedor > proveedores.idproveedor
+Ref: productos_temporales.idprod_final > productos.idprod
+Ref: producto_imagenes.idprod > productos.idprod
+Ref: proveedor_contactos.idproveedor > proveedores.idproveedor
+Ref: recordatorios_mantenimiento.idsistema > cat_sistemas_vehiculo.idsistema
+Ref: recordatorios_mantenimiento.idparte > vehiculo_partes.idparte
+Ref: recordatorios_mantenimiento.idvehiculo > vehiculos.id
+Ref: referencias_oem.idprod > productos.idprod
+Ref: relacion_documentos.idproceso > proceso_ingreso.idproceso
+Ref: subgrupos.id_grupo > grupos.id_grupo
+Ref: ubicaciones_producto.idprod > productos.idprod
+Ref: vehiculos.cliente_id > clientes.id
+Ref: vehiculo_partes.reemplaza_a > vehiculo_partes.idparte
+Ref: vehiculo_partes.idvehiculo > vehiculos.id
+Ref: vehiculo_partes.idprod > productos.idprod
+Ref: vehiculo_partes.idsistema > cat_sistemas_vehiculo.idsistema
+
+// Relaciones que usa la app, sin llave foránea en MySQL
+Ref: productos.idcategoria_nuevo > categorias_nuevo.idcategoria
+Ref: productos.id_grupo > grupos.id_grupo
+Ref: productos.id_subgrupo > subgrupos.id_subgrupo
+
+// Vistas (no se dibujan como tablas; son consultas sobre las de arriba)
+// VIEW v_catalogo_activos
+// VIEW v_catalogo_gastos
+// VIEW v_categorias_jerarquia
+// VIEW v_compras_detalle
+// VIEW v_proveedores_resumen

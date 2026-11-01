@@ -33,6 +33,7 @@ interface Producto {
   marca: string;
   peso: string;
   codarancel: string;
+  porcentaje_dai?: string | number | null;
   lado: string;
   modelo: string;
   clase: string;
@@ -150,18 +151,6 @@ function EditarProductoContent() {
   // Debounce para búsqueda en servidor
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Categorías antiguas (para compatibilidad)
-  const categorias = [
-    { id: 'FRENOS', nombre: 'Sistema de Frenos' },
-    { id: 'MOTOR', nombre: 'Motor y Componentes' },
-    { id: 'SUSPEN', nombre: 'Suspensión' },
-    { id: 'TRANSM', nombre: 'Transmisión' },
-    { id: 'ELECTR', nombre: 'Sistema Eléctrico' },
-    { id: 'LUBRIC', nombre: 'Lubricantes' },
-    { id: 'FILTROS', nombre: 'Filtros' },
-    { id: 'ESCAPE', nombre: 'Sistema de Escape' },
-  ];
 
   const unidadesMedida = ['UNIDAD', 'PAR', 'JUEGO', 'KIT', 'LITRO', 'GALON', 'METRO'];
   const lados = ['IZQUIERDO', 'DERECHO', 'AMBOS', 'NO APLICA'];
@@ -1269,6 +1258,19 @@ function EditarProductoContent() {
                         <Input type="number" step="0.001" value={producto.peso || ''} onChange={(e) => updateProductField('peso', e.target.value)}
                           className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100" />
                       </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="space-y-2 col-span-2">
+                        <Label>Partida arancelaria</Label>
+                        <Input inputMode="numeric" value={producto.codarancel || ''} onChange={(e) => updateProductField('codarancel', e.target.value.replace(/\D/g, ''))}
+                          placeholder="87083000" className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>% DAI</Label>
+                        <Input type="number" step="any" min={0} value={producto.porcentaje_dai ?? ''} onChange={(e) => updateProductField('porcentaje_dai', e.target.value)}
+                          placeholder="0" className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100" />
+                      </div>
+                      <p className="self-end pb-2 text-[11px] text-slate-500">El retaceo de importación los toma por defecto.</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <input type="checkbox" id="exento" checked={producto.exento === 1} onChange={(e) => updateProductField('exento', e.target.checked ? 1 : 0)}

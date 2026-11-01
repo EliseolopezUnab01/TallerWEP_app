@@ -52,6 +52,64 @@ export function tipoDteRequiereRelacionados(codigo: string | null | undefined): 
   return codigo === '05' || codigo === '06';
 }
 
+/**
+ * Efecto del documento sobre el saldo con el proveedor y las sumas de un proceso.
+ * Manual MH V 2.0 (págs. 41–42): devoluciones, descuentos y rebajas de precio se
+ * ajustan con nota de crédito (resta); la nota de débito aumenta el monto (suma).
+ */
+export function signoDocumento(codigo: string | null | undefined): 1 | -1 {
+  return codigo === '05' ? -1 : 1;
+}
+
+/**
+ * Control 2 de la pantalla (video del cliente, 27/10). El tipo de documento
+ * (crédito fiscal, consumidor final) es otro control: un documento EXPRES
+ * sigue siendo fiscal para el IVA.
+ */
+export const CATEGORIAS_OPERACION = [
+  { valor: 'CONTABLE', etiqueta: 'Contable', ayuda: 'Solo productos de inventario' },
+  { valor: 'EXPRES', etiqueta: 'Expres', ayuda: 'Solo productos express (con orden de trabajo)' },
+  { valor: 'GASTOS', etiqueta: 'Gastos', ayuda: 'Solo gastos o activos con su rubro' },
+  { valor: 'OTRO', etiqueta: 'Otro', ayuda: 'Inventario, express y gastos en el mismo documento' },
+] as const;
+
+export type CategoriaOperacion = (typeof CATEGORIAS_OPERACION)[number]['valor'];
+
+export function esCategoriaOperacion(valor: unknown): valor is CategoriaOperacion {
+  return CATEGORIAS_OPERACION.some((c) => c.valor === valor);
+}
+
+const DESTINOS_POR_CATEGORIA: Record<CategoriaOperacion, readonly string[]> = {
+  CONTABLE: ['INVENTARIO'],
+  EXPRES: ['EXPRESS'],
+  GASTOS: ['GASTOS', 'ACTIVOS'],
+  OTRO: ['INVENTARIO', 'EXPRESS', 'GASTOS', 'ACTIVOS'],
+};
+
+export function destinoPermitido(categoria: string | null | undefined, destino: string): boolean {
+  const permitidos = DESTINOS_POR_CATEGORIA[esCategoriaOperacion(categoria) ? categoria : 'CONTABLE'];
+  return permitidos.includes(destino);
+}
+
+export function destinosDeCategoria(categoria: string | null | undefined): readonly string[] {
+  return DESTINOS_POR_CATEGORIA[esCategoriaOperacion(categoria) ? categoria : 'CONTABLE'];
+}
+
+export const NOMBRE_DESTINO: Record<string, string> = {
+  INVENTARIO: 'Inventario',
+  EXPRESS: 'Express',
+  GASTOS: 'Gasto',
+  ACTIVOS: 'Activo',
+};
+
+/** Avisos con el texto que usa el sistema actual del cliente. */
+export const AVISOS_COMPRA = {
+  condicion: 'Debe elegir la condición de compra',
+  tipoProducto: 'Es obligatorio que elija una opción para el tipo de producto',
+  confirmarCambios: '¿Está seguro de hacer cambios?',
+  eliminarItem: 'Seguro de eliminar este ítem',
+} as const;
+
 export function nombreTipoDte(codigo: string | null | undefined): string {
   const encontrado = TIPOS_DTE_COMPRAS.find((t) => t.codigo === codigo);
   return encontrado ? encontrado.abrev : codigo || '—';

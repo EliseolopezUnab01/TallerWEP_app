@@ -1,0 +1,206 @@
+# idioma=es duracion=1440s
+[00:01] voy a tratar de explicarte cómo debería realizarse bueno primero lo voy a hacer como lo hago yo
+[00:11] el hijo lo de las importaciones o de las compras de proveedores extranjeros
+[00:18] el hijo primero el pues el tipo de documento que es importación así lo que se llama pongo que
+[00:24] es contable o inventariable más bien fiscal porque pues todo tiene un propósito comercial
+[00:32] y pues la fecha la fecha que yo utilizo aquí y vas a ver más adelante que esto es un error
+[00:37] es la fecha de este documento a veces le agrego uno o dos días más porque pues obviamente ésta es
+[00:43] la fecha que yo presenté el documento o que el tramitador presentó el documento en la
+[00:47] ventanilla de aduana no en la fecha en que yo recibí el producto pero como sea es la que
+[00:52] vamos a usar por ahorita lo dejo así tal cual voy a buscar el proveedor
+[00:57] vamos a elegir cualquiera de estos vamos a decir que que es este no sé quién es pero
+[01:10] va a poner aquí que es la número de la factura y aquí me pregunta aquí me está pidiendo
+[01:20] información que antes no habíamos hablado de esto lo voy a llenar como dije como yo lo suelo
+[01:27] hacer y después voy a explicar qué si va a cambiar aquí suelo poner el el comprobante o algún
+[01:36] documento o alguna referencia por ahí dice número de documento que compruebe el pago único o el primer
+[01:43] pago que se le ha realizado a pues al proveedor porque a veces puedo hacer la tres pagos dos pagos
+[01:53] uno solo todos estos pagos no por crédito sino porque algunos proveedores me dicen pues pague
+[01:59] un 50 por ciento antes y cuando yo ya tenga la mercadería lista le pago me paga el otro 50 por
+[02:07] ciento tema de confianza al final porque es un riesgo para uno de comprador lo mismo puede ser como un
+[02:12] 30 por ciento un 20 por ciento dependerá del acuerdo por ahí había había en unos campos que indicaban
+[02:20] eso para las diferentes que estaba en coté el tipo de cambio fecha condición de pago aquí está indica
+[02:30] si la operación será contado crédito acuerdo de pago que está los términos de compra a los que
+[02:36] he acordado con mi proveedor bueno como sea puedo poner hasta tres pagos tres referencias y
+[02:43] estas referencias pueden ser la información del del del documento que o factura que me entregue el banco
+[02:53] con el que hago la transferencia o puede ser cualquier otro otro dato que pongo ahorita yo
+[02:58] estoy usando es bl es el número del documento con el que viajó la mercadería que es en estos
+[03:06] casos de este educa que tenemos acá aparece después de la factura que suele ser este este es el bl hbal y
+[03:15] aquí está el número entonces lo puedo copiar y pegar ahí si quiero vamos a hacerlo el seguro si
+[03:23] tengo algún número de polisa de seguro que pague por la mercadería pues lo coloco si no pues a lo
+[03:29] dejo como está o le puedo poner cualquier otra cuestión por ejemplo puedo ponerle porque no
+[03:35] en todos los casos se pagan seguro le puedo poner que el seguro ya estaba dentro del flete pongo la
+[03:40] palabra feta y ya debería poder entender con esa información que estaba incluido dentro del pago
+[03:46] del transporte no tuve que pagar nada adicional ducca pues es el número del documento este que
+[03:52] este es el que se buscó el que se presenta para a la ventanilla de aduana uno copio lo
+[04:00] pego ahí completamente y pues acá ya empiezo a dar otra información por ejemplo ya me vengo
+[04:07] para acá aquí le pongo el incóterm que aquí en este caso de que es fo yo utilizo este control
+[04:12] con datos precargado podría ser así podría tener enlace con un catálogo en una tabla más
+[04:20] extenso donde puede elegir el tipo de incóterm y a la para aparezca una descripción del mismo para
+[04:27] pues cualquier fin no es útil podría hacerse y en vez que no es mucho complejidad pues podrías
+[04:34] hacerlo y en internet creo que se puede encontrar una lista bastante completa de todos los incóter que
+[04:41] que existen porque suelen estarse actualizando actualizando así que quizás si sea bueno tener un
+[04:47] catálogo o bien pues como sólo es para este tipo de cuestiones si vos crees que no yo la verdad ni
+[04:55] ni me parece necesario pero tampoco me estorbaría sería bien por ponerselo pero sería con un
+[05:03] plantecito adicional no podemos dejarle un texto como tal para recibir texto y ahí ponerlo
+[05:10] digamos manualmente pero pues yo aquí lo quise hacer así hay decisión tuya cómo lo es aquí de
+[05:19] todas maneras luego te explico todo esto te lo reexplico de qué manera se va a hacer en el nuevo
+[05:25] sistema entonces acá ya me permite me pregunta o me pide la información del total del proveedor yo
+[05:32] le he dejado aquí unos unos como enfoque se llama tu el tib text que es como una herramienta para
+[05:39] para dejar un algún consejo algún tipo un texto
+[05:47] y aquí me dice que debe ser el valor de la factura o sea cuánto es el total de los productos yo
+[05:53] tenía aquí cargado un listado de excel que yo creo que vos lo tenés por ahí vamos a hacer
+[05:58] aquí la suma funciona 19.826 78 1836 26.78 bien tenemos eso
+[06:18] el seguro suele estar descrito en el duca que es este 63 11 el flete también está aquí gastó
+[06:30] el transporte 334 87 y puesto de aduana bueno este dato ya es informativo
+[06:41] puramente informativo y a ver lo que me refiero con eso 8253 es como lo he estado haciendo muy mal la
+[06:51] verdad muy feo para las nuevas ideas que se me ha ocurrido está está feo ya esto y este es otra
+[06:59] vez el mismo valor este por qué en algunos casos si yo trabajo con euros este valor que yo pongo aquí
+[07:08] va a discrepar bastante de esto porque aquí estoy colocando valores en dólares y si yo puchó acá
+[07:13] tengo que colocar aquí el tipo de cambio de la moneda como yo la pagué a mi proveedor y aquí el
+[07:21] tipo de cambio como el banco nacional o aquí aduana también autorizó en qué tipo de cambio me va a
+[07:30] recibir esos productos lo explicar nuevamente aquí yo debo colocar por ejemplo si pongo a 1.14
+[07:40] digamos que los compré en euro y se la compre en euro y hacienda le dio la gana a decir que estaban
+[07:48] a 1.19 pero por qué si yo realmente pagué a 1.14 pues porque esto no sé en qué leyo de qué madre
+[07:57] se les ocurrió por qué hacer esto así pero pero bueno la cosa es que según el valor de tipo de
+[08:06] cambio que está del día a cuánto está el euro respecto al dólar según ese valor de ese día
+[08:15] que se hizo el trámite así recibe hacienda los productos aunque yo haya pagado más o haya
+[08:22] pagado menos para haciendes un valor muy propio de ellos y ellos deciden a cuánto lo colocó por
+[08:28] eso es que cuando hay en ese en euros aquí voy a en el sistema de este ahorita coloco aquí el valor
+[08:34] en euros como aparezca en la factura para no enredarme pongo aquí a cómo lo pagué para que
+[08:40] haga la multiplicación de cada uno de los valores en euros que voy a poner acá que
+[08:45] voy a ir ingresando los vaya multiplicando por esto para que todo al final me den este valor
+[08:52] y este otro valor que voy a colocar aquí que es el mismo 19 826.78 todos esto
+[09:06] este valor será el que hacienda va a tomar para realizar el cálculo de impuestos entonces
+[09:13] no porque uso dos no sólo por tema informativo sino porque con este valor voy a calcular los
+[09:19] impuestos desde aquí y con este valor voy a calcular los costos reales no lo que hacienda
+[09:27] dice sino lo que en realidad yo pagué de esa manera tendría un mejor dato exacto para
+[09:34] poder darle un mejor precio al producto lo más ajustado o justo posible no es
+[09:41] mucha la variación pero al final de cuenta en el tema contable me puedo enredar y empiecen a
+[09:48] parecer número o valores que no cuadren por eso es importante que manejemos las dos cosas para
+[09:54] poder colocar euros según el tipo o cualquier otra moneda en este caso pues yo sólo en euros
+[09:59] he comprado y en dólares pero podría haber una opción ya verás vos si es necesario con la
+[10:05] otra explicación quedaré para ver si es necesario colocar otro otro tipo de control para manejar las
+[10:13] monedas variantes que podemos que podríamos en algún momento comprar pero yo por ahorita sólo
+[10:18] compro en estado entonces sigamos después explico mejor esto aquí pues los gastos que aparecen acá
+[10:27] al final todo estos son datos de equipos del duca de lo que hacienda toma de los datos que hacienda
+[10:36] se le ocurrió tomar para poder decir bueno todos estos productos que están aquí en listados este
+[10:41] este van separados por estos recuadros esto es para un solo producto esto es para otro y así
+[10:47] va entonces él dice todos estos documentos hacienda dice todos estos documentos yo los
+[10:55] he tomado para poder considerar tu compra y decirte cuánto vas a pagar de IVA por todo este proceso
+[11:03] entonces aquí vamos a recién cero y pues como dije hay dos cosas que ocurren uno es lo que hacienda
+[11:11] ocupa que vendrían siendo estos valores este este este para calcular impuestos y otra cosa es la
+[11:17] realidad de lo que se paga que sería esto más esto esto esto que qué es lo que va aquí es lo
+[11:23] que me cobró el transporte total no hacienda me dice que yo pague 334 por traer la mercadería
+[11:30] hasta el salvador pero no tome en cuenta multa mordidas de cualquier otra cosa que tenga que
+[11:36] pagarse en origen o adicionalmente cualquier pago que tenga que hacer de transporte hasta
+[11:43] hasta nuestra bodega o cualquier otro asunto verdad a veces hay recargos que no se transfieren a
+[11:51] este valor de flete porque este es el flete a veces debería colocarlo aquí pero yo no entiendo
+[11:56] por qué los tramitadores no lo colocan al final pues yo no me meto a pelear contra amitador
+[12:00] ni con aduana sino que llevo mis propios registros para poder hacer retaceo y pues aquello que no
+[12:06] se coloca aquí pues yo lo coloco acá para poder tener los los datos más más confiables
+[12:12] vamos a suponer que me cobraron esto este es el valor de la transferencia que yo hago o más
+[12:19] bien el valor que yo pago por transferencia 58 creo que son casi siempre son 58 pueden ser
+[12:27] diferentes valores todo dependerá de que sigen euros que sigen dólares a qué país etcétera
+[12:32] etcétera el almacén vamos a poner que fueron 100 dólares que pagamos de almacenaje todos
+[12:37] estos todos estos valores deben estar soportados en diferentes documentos así como hacienda usa
+[12:43] el duca y en el duca tienen ellos tienen ellos listados los documentos que tomaron en cuenta para
+[12:51] poder calcular impuestos así también yo tengo mis propios listados de documentos para poder tomar
+[12:56] en cuenta ya explicaremos adelante detalladamente es cómo va a ser aquí pues yo quiero poner otro
+[13:03] valor adicional digamos que bueno no mucho 40 dólares de gastos locales que ni siquiera
+[13:10] están reflejados en facturas simplemente pasó que se le estalló una llanta al transportista y al
+[13:15] final me la terminaron cobrando o cualquier otro incidente que se involucró dentro de la de la
+[13:21] del proceso de de de de ingreso de esa mercadería a nuestra bodega al final esto no es como dije
+[13:31] más que sólo para es para solamente para poder tener referencia de los precios que le
+[13:37] voy a dar a los productos y yo sé cuánto gasté con exactitud puedo saber cuánto quiero
+[13:42] ganar o cuánto necesito recibir para obtener una ganancia apropiada para mantener el negocio
+[13:49] funcionando y al mismo tiempo un el valor del dinero que necesito para recuperarlo de la inversión
+[13:56] así que por eso es necesario que sea muy muy certera la información para que a la hora de
+[14:04] hacer cálculos pues todo encaje correctamente aquí como pues puedo elegir ya sabes los productos
+[14:10] de aquí para ingresar obviamente no voy a ingresar exprés porque lo que compró desde fuera pasa
+[14:15] por aduana paga impuesto por lo tanto todo tiene que ser inventariable entonces no lo
+[14:20] ingresar desde aquí ya te había enseñado por ahí en el otro vídeo cómo suelo yo darle
+[14:25] ingreso a este montón de registros vamos a volver a hacer aquí quedó que por acá lo guardé
+[14:33] así aquí está todavía sirve ahí está enviamos los registros y parece que había uno que no me lo va
+[14:42] a reconocer imaginas el montón de tiempo que tendría que dedicarle ingresar uno por uno
+[14:48] era digamos que estás así para que vamos a ingresar ese otro bueno aquí los totales
+[14:54] obviamente no me acuara porque falta un producto pero vamos a suponer que esto es todo obviamente
+[15:00] el duque aquí me está dando un valor diferente porque pues para para el duque no es son son cinco
+[15:06] mil estoy usando un duque diferente al alistado este porque ni sé dónde está este listado
+[15:10] y no lo quiero buscar entonces voy a recalcular voy a aquí sencillamente yo puedo darle ya
+[15:15] finalizar el documento hace un cálculo todos los documentos los datos que se ingresaron aquí
+[15:21] ingresaron sin ningún valor de de retaceo ahorita lo que acabo de hacer yo es con
+[15:29] estos datos y los datos del de los impuestos que teóricamente debí pagar entonces
+[15:38] con todo esto se hace un un cálculo de retaceo de oculto debajo de este botón para distribuir
+[15:44] los costos de inversión de cada producto respectivamente lo que representen en el total de la factura
+[15:52] cada uno entonces ya están distribuidos los costos prácticamente en todos los productos de
+[15:58] manera apropiada o porcentual y me da el valor total de la inversión como dije según estos valores
+[16:06] me parece que debería pagar de iba esto obviamente no va a cuadrar porque es muchísimo más de lo que
+[16:13] de lo que pague en total estos datos yo lo suelo contrastar con esta información aquí digamos
+[16:19] aquí tengo el IVA que sería este obviamente no no pega como dije porque pues el valor total
+[16:26] es mucho menos porque porque este es un duque de otro proceso de otro de otra factura pero lo
+[16:32] estoy haciendo manera de ejemplo entonces aquí puedo contrastar por eso dije que era un dato
+[16:37] informativo porque el total de los impuestos están acá indicados estos no estos de arriba
+[16:43] estos están indicados acá entonces ya los comparo y pues si todo encaja digo a muy bien está bien
+[16:49] el proceso de cálculo se hizo correctamente porque todo encaja eso es prácticamente lo que
+[16:55] yo hago para darle ingreso a la mercadería que es lo que vemos acá es lo que puedo visualizar en
+[17:02] esta zona pues aparte de lo que ya vemos acá que lo lo lo lo lo lo común que ha visto en los otros
+[17:08] vídeos que la referencia que el código que si va para inventario dais y te fijas todos están marcados
+[17:14] por inventario aparece también de la descripción cantidad el costo lo que me costó el producto
+[17:20] según el valor de la factura que en este caso como dijimos la factura sería esto cada uno
+[17:25] de estos valores están aquí el total estos otros son asuntos para los DTE para la compra
+[17:33] nacional el total de la de sub total perdón de multiplicar esto por esto está aquí el IVA el IVA
+[17:42] que pague por cada uno de estos a aduan no es lo mismo nada más subirle el IVA esto multiplicarlo
+[17:50] por el 3 de por ciento y eso me va a dar este valor no es así porque cada uno tiene un pago que
+[17:57] realizar de acuerdo a este código arancelario no los viste porque no le expliqué pero aquí
+[18:02] estuvieron apareciendo cada vez que yo ingresaba uno acá lo buscaba en el registro de sistema
+[18:08] en el inventario lo traía y lo colocaba aquí cuando yo ingresé listado por aquí estaba todavía
+[18:14] listado cuando yo ingresé listado solo ingresé estos datos los que ya te envíen el en el vídeo
+[18:20] anterior por eso no lo voy a explicar pero una vez que se jala cada uno de estos datos y se colocan
+[18:26] aquí cada uno va a buscarse dentro de inventario la partida correspondiente de código arancelario
+[18:32] y se ingresa en este nuevo listado para para poder procesar juntamente con el IVA o perdón
+[18:42] con el código del porcentaje de DAI que se le va a incrementar DAI es un impuesto que se cobra o
+[18:50] se paga más bien de nuestra parte a aduana cada vez que un producto va a ingresar hay algunos que
+[18:56] pagan un 5 por ciento y de este 5 por ciento al incrementarle al valor del del producto se le
+[19:04] ingresa después el IVA o se le aumenta después del IVA o sea que pagamos un 5 por ciento de
+[19:09] este valor más el 13 por ciento de ese valor sumado con este 5 y no solo del costo sino de este
+[19:19] valor que ya hacienda tomó estos otros valores para hacer su propio retaseo hacienda hace su
+[19:26] retaseo coloca a este producto por ejemplo por unidad el valor correspondiente y es lo que lo
+[19:34] que muestran aquí pero ellos lo hacen por grupo de productos por ejemplo de aquí dice todos los
+[19:39] motores de arranque listados en esa factura o en esas facturas porque pueden ser varias no puede no
+[19:45] eso no sólo una factura pueden ser diferentes facturas en un duque entonces dice todos los
+[19:52] productos listados en esas facturas dan un total de este valor en sus facturas pero para nosotros
+[20:01] se le va a distribuir este valor de por gastos de transporte porque este total tiene un porcentaje
+[20:09] x y ese porcentaje x va a agarrar su pedacito de pastel de los gastos de transporte también del
+[20:15] seguro que se pagó a este grupo le toca pagar este poco y pues de otro gastos como no había
+[20:21] nada no paga nada el total de sumar esto esto y esto a esto a este valor pues es este entonces
+[20:32] a éste le puede incrementar el dai que es el porcentaje éste que lo indico yo se lo van a
+[20:40] incrementar y a la sumatoria del dai con este valor le van a cobrar el 13 por ciento que eso
+[20:47] sería entonces el impuesto que se paga de iva eso ese proceso engorroso y loco es el que se hace
+[20:53] cada vez que se ingresa un producto al país en este caso como éste tiene un cinco valor
+[21:00] porcentual asignado a ésta a éste a esta partida o código ancillario entonces éste
+[21:08] cinco por ciento de éste valor de y con todo el proceso que la unidad era ésto 6.95 digamos
+[21:16] aquí es un cálculo medio loco porque al final yo que habilité lo de euro y todos los cálculos
+[21:21] pues se hicieron como que si ésto era euron si yo le quito esto y lo vuelvo a recalcular
+[21:25] con este botón lo puedo hacer o cada vez que lo voy a finalizar si es un recálculo nuevamente
+[21:30] todos estos valores pues ahora van a ser basados en éste en que esto ya no es de
+[21:36] euro sino que es en puramente dólar entonces te decía éste éste que no tiene nada por
+[21:44] ejemplo pues simplemente da y no pago nada y va así pagó éste que si tiene cinco de da y pues
+[21:49] paga sus respectivo valor porcentual y aquí también paga íba entonces así para cada para
+[21:56] cada producto además aquí que más se mira se mira el sift del grupo esto es esto ya no te lo
+[22:03] voy a explicar porque te vas te van a hacer innecesario estos son datos importantes que
+[22:09] se sacan de este cálculo y que yo los decidí registrar aquí y los voy a querer registrar
+[22:14] también en las nuevas tablas por aquí están estos valores dicen valor dai dai dai pagado iba pagado
+[22:21] lo gastos costo divisa costo si todos estos valores son prácticamente éstos éste éstos del duca
+[22:31] pues son éstos datos por ejemplo el el nombre de proveedor el número del duca donde estaba aquí
+[22:41] etcétera son son son el encabezado como ya ya lo podrás entender entonces esto es como hago
+[22:48] y el proceso para poder ingresar a los registros al sistema aquí yo puedo a inventario aquí yo
+[22:57] puedo pues ya sin finalizar si te fijas otra vez el recalculo porque porque pueda hacer que
+[23:02] haya cambiado un valor y y y mejores que sólo al final ya listo para darle procesar es que se
+[23:12] pueda se pueda estar seguro que el cálculo ya se realizó por eso cada vez que yo le doy finalizar
+[23:19] acá o abrir el el cómo se llama el resumen es cuando cuando siempre va a ser un recalculo para
+[23:27] estar seguro pues si yo lo de procesar se va todo esto para inventario pero yo para que quiero que se
+[23:32] creen estas registros aunque pues este sistema solamente de prueba ahorita aquí anda una copia
+[23:38] en el laptop para eso entonces si yo lo de procesar pues se van como ya viste en otros
+[23:42] vídeos anteriormente ahora te voy a explicar en el otro vídeo te voy a explicar cómo debería
+[23:49] hacerse este proceso porque ya no me gusta porque es necesario que se mejore hasta ahorita funciona de
+[23:56] cierto modo pero hay que mejorarlo

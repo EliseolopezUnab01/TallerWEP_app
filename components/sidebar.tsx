@@ -13,17 +13,31 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
-  Settings,
-  DollarSign,
   Upload,
   ShoppingCart,
   Truck,
   BookOpen,
-  ListOrdered,
   FileInput,
+  ClipboardList,
+  Ship,
+  Wrench,
+  Users,
+  Car,
+  HardHat,
+  Tags,
+  Calculator,
+  FileSpreadsheet,
+  Library,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from './theme-toggle';
+
+const RUTAS_CATALOGOS = [
+  '/dashboard/compras/proveedores',
+  '/dashboard/compras/catalogo-contable',
+  '/dashboard/taller/clientes',
+  '/dashboard/taller/empleados',
+];
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -35,6 +49,8 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const [inventarioOpen, setInventarioOpen] = useState(false);
   const [comprasOpen, setComprasOpen] = useState(false);
+  const [tallerOpen, setTallerOpen] = useState(false);
+  const [catalogosOpen, setCatalogosOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -52,8 +68,11 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   }, []);
 
   useEffect(() => {
-    if (pathname?.startsWith('/dashboard/inventario')) setInventarioOpen(true);
-    if (pathname?.startsWith('/dashboard/compras')) setComprasOpen(true);
+    const catalogo = RUTAS_CATALOGOS.some((r) => pathname?.startsWith(r));
+    if (catalogo) setCatalogosOpen(true);
+    else if (pathname?.startsWith('/dashboard/inventario')) setInventarioOpen(true);
+    else if (pathname?.startsWith('/dashboard/compras')) setComprasOpen(true);
+    else if (pathname?.startsWith('/dashboard/taller')) setTallerOpen(true);
   }, [pathname]);
 
   const persistCollapsed = (next: boolean) => {
@@ -75,24 +94,6 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       href: '/dashboard',
       type: 'link' as const
     },
-    { 
-      icon: Package, 
-      label: 'Inventario', 
-      href: '#',
-      type: 'dropdown' as const,
-      isOpen: inventarioOpen,
-      toggle: () => setInventarioOpen(!inventarioOpen),
-      children: [
-        { icon: Plus, label: 'Nuevo Producto', href: '/dashboard/inventario/nuevo' },
-        { icon: Upload, label: 'Importar Productos', href: '/dashboard/inventario/importar' },
-        { icon: List, label: 'Administrar Producto', href: '/dashboard/inventario/administrar' },
-        { icon: Edit, label: 'Editar Producto', href: '/dashboard/inventario/editar-producto' },
-        { icon: Settings, label: 'Ajuste de Precios', href: '/dashboard/inventario/ajuste-precios' },
-        { icon: DollarSign, label: 'Gestión de Costos', href: '/dashboard/inventario/costos' },
-        { icon: DollarSign, label: 'Importar Costos', href: '/dashboard/inventario/importar-costos' },
-        { icon: FileText, label: 'Perfil del Producto', href: '/dashboard/inventario/perfil' },
-      ]
-    },
     {
       icon: ShoppingCart,
       label: 'Compras',
@@ -101,10 +102,52 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       isOpen: comprasOpen,
       toggle: () => setComprasOpen(!comprasOpen),
       children: [
-        { icon: FileInput, label: 'Ingreso de Compra', href: '/dashboard/compras/ingreso' },
+        { icon: FileInput, label: 'Ingreso de Compras', href: '/dashboard/compras/ingreso' },
+        { icon: ClipboardList, label: 'Cotizaciones y Órdenes', href: '/dashboard/compras/documentos' },
+        { icon: Ship, label: 'Procesos de Ingreso', href: '/dashboard/compras/procesos' },
+      ]
+    },
+    {
+      icon: Package,
+      label: 'Inventario',
+      href: '#inventario',
+      type: 'dropdown' as const,
+      isOpen: inventarioOpen,
+      toggle: () => setInventarioOpen(!inventarioOpen),
+      children: [
+        { icon: List, label: 'Productos', href: '/dashboard/inventario/administrar' },
+        { icon: Plus, label: 'Nuevo Producto', href: '/dashboard/inventario/nuevo' },
+        { icon: Edit, label: 'Editar Producto', href: '/dashboard/inventario/editar-producto' },
+        { icon: FileText, label: 'Perfil del Producto', href: '/dashboard/inventario/perfil' },
+        { icon: Tags, label: 'Ajuste de Precios', href: '/dashboard/inventario/ajuste-precios', grupo: 'Precios y costos' },
+        { icon: Calculator, label: 'Gestión de Costos', href: '/dashboard/inventario/costos' },
+        { icon: Upload, label: 'Importar Productos', href: '/dashboard/inventario/importar', grupo: 'Importar desde Excel' },
+        { icon: FileSpreadsheet, label: 'Importar Costos', href: '/dashboard/inventario/importar-costos' },
+      ]
+    },
+    {
+      icon: Wrench,
+      label: 'Taller',
+      href: '#taller',
+      type: 'dropdown' as const,
+      isOpen: tallerOpen,
+      toggle: () => setTallerOpen(!tallerOpen),
+      children: [
+        { icon: Car, label: 'Vehículos', href: '/dashboard/taller/vehiculos' },
+      ]
+    },
+    {
+      icon: Library,
+      label: 'Catálogos',
+      href: '#catalogos',
+      type: 'dropdown' as const,
+      isOpen: catalogosOpen,
+      toggle: () => setCatalogosOpen(!catalogosOpen),
+      children: [
         { icon: Truck, label: 'Proveedores', href: '/dashboard/compras/proveedores' },
+        { icon: Users, label: 'Clientes', href: '/dashboard/taller/clientes' },
+        { icon: HardHat, label: 'Empleados', href: '/dashboard/taller/empleados' },
         { icon: BookOpen, label: 'Catálogo Contable', href: '/dashboard/compras/catalogo-contable' },
-        { icon: ListOrdered, label: 'Líneas de Compra', href: '/dashboard/compras/lineas' },
       ]
     },
   ];
@@ -208,17 +251,25 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
                         <div className="ml-6 mt-1 space-y-1">
                           {item.children.map((child) => {
                             const childIsActive = isActive(child.href);
+                            const grupo = 'grupo' in child ? child.grupo : undefined;
                             return (
-                              <Link key={child.href} href={child.href} onClick={closeMobile}>
-                                <Button
-                                  variant="ghost"
-                                  className={`${childBtn} ${childIsActive ? childActive : ''}`}
-                                  size="sm"
-                                >
-                                  <child.icon className="h-3 w-3" />
-                                  {child.label}
-                                </Button>
-                              </Link>
+                              <div key={child.href}>
+                                {grupo && (
+                                  <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                                    {grupo}
+                                  </p>
+                                )}
+                                <Link href={child.href} onClick={closeMobile}>
+                                  <Button
+                                    variant="ghost"
+                                    className={`${childBtn} ${childIsActive ? childActive : ''}`}
+                                    size="sm"
+                                  >
+                                    <child.icon className="h-3 w-3" />
+                                    {child.label}
+                                  </Button>
+                                </Link>
+                              </div>
                             );
                           })}
                         </div>

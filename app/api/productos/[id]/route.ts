@@ -60,7 +60,7 @@ async function handleFullProductUpdate(request: Request, id: string) {
     const updateData: any = {};
     const fields = [
       'idprodprov', 'idprodpaquete', 'idprodfisico', 'OE',
-      'nombre', 'descripcion', 'etiquetas', 'marca', 'peso', 'codarancel',
+      'nombre', 'descripcion', 'etiquetas', 'marca', 'peso', 'codarancel', 'porcentaje_dai',
       'lado', 'modelo', 'clase', 'estilo', 'giro', 'capacidad', 'unimedida',
       'idcategoria', 'codigo_barras', 'info_reservada', 'info_publica',
       'info_referencias_directas', 'info_referencias_indirectas',
@@ -191,7 +191,7 @@ async function handleFullProductUpdate(request: Request, id: string) {
 
     // Obtener el producto actualizado con toda su información incluyendo precios e imagen
     const [updatedProduct]: any = await connection.execute(`
-      SELECT p.*, c.nombre as categoria_nombre,
+      SELECT p.*, cn.nombre as categoria_nombre,
         pr.precio_general as precio1, pr.precio_mayorista as precio2, 
         pr.precio_cliente as precio3, pr.precio_mecanico as precio4,
         pr.precio_minorista as precio5, pr.precio_especial as precio6, pr.precio_especial as precio7,
@@ -200,7 +200,7 @@ async function handleFullProductUpdate(request: Request, id: string) {
           (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY orden LIMIT 1)
         ) as imagen_principal
       FROM productos p
-      LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
+      LEFT JOIN categorias_nuevo cn ON p.idcategoria_nuevo = cn.idcategoria
       LEFT JOIN precios pr ON p.idprod = pr.idprod
       WHERE p.idprod = ?
     `, [id]);
@@ -342,7 +342,7 @@ export async function GET(
     const [products]: any = await connection.execute(
       `SELECT 
         p.*,
-        c.nombre as categoria_nombre,
+        cn.nombre as categoria_nombre,
         cn.nombre as categoria_nueva_nombre,
         pr.precio_general as precio1,
         pr.precio_mayorista as precio2,
@@ -353,7 +353,6 @@ export async function GET(
         pr.precio_especial as precio7,
         (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY es_principal DESC, orden ASC LIMIT 1) as imagen_principal
       FROM productos p
-      LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
       LEFT JOIN categorias_nuevo cn ON p.idcategoria_nuevo = cn.idcategoria
       LEFT JOIN precios pr ON p.idprod = pr.idprod
       WHERE p.idprod = ?`,

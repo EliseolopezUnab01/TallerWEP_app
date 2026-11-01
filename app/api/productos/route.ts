@@ -39,6 +39,8 @@ export async function GET(request: Request) {
         if (filterList.includes('codigo')) {
           searchFields.push('p.codigo_barras', 'p.idprodprov', 'p.idprodpaquete', 'p.idprodfisico');
         }
+        if (filterList.includes('referencia')) searchFields.push('p.idprodprov');
+        if (filterList.includes('idprod')) searchFields.push('CAST(p.idprod AS CHAR)');
         if (filterList.includes('oem')) searchFields.push('p.OE');
         if (filterList.includes('etiquetas')) searchFields.push('p.etiquetas');
         if (filterList.includes('aplicacion')) searchFields.push('p.aplicacion_marcas', 'p.marca');
@@ -96,7 +98,7 @@ export async function GET(request: Request) {
     const [products]: any = await connection.execute(`
       SELECT 
         p.*,
-        c.nombre as categoria_nombre,
+        cn.nombre as categoria_nombre,
         cn.nombre as categoria_nueva_nombre,
         g.codigo as grupo_codigo,
         g.nombre as grupo_nombre,
@@ -116,7 +118,6 @@ export async function GET(request: Request) {
         co.costo_proveedor,
         (SELECT imagen_url FROM producto_imagenes WHERE idprod = p.idprod ORDER BY es_principal DESC, orden ASC LIMIT 1) as imagen_principal
       FROM productos p
-      LEFT JOIN categorias c ON p.idcategoria = c.idcategoria
       LEFT JOIN categorias_nuevo cn ON p.idcategoria_nuevo = cn.idcategoria
       LEFT JOIN grupos g ON p.id_grupo = g.id_grupo
       LEFT JOIN subgrupos sg ON p.id_subgrupo = sg.id_subgrupo

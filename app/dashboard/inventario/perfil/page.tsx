@@ -17,6 +17,7 @@ import { UserDropdown } from '@/components/user-dropdown';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { getCodigoCatalogo } from '@/lib/format-utils';
 import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
+import { FichaCompras, GloboStock } from '@/components/ui/globo-stock';
 
 interface Producto {
   idprod: number;
@@ -862,11 +863,13 @@ function PerfilProductoPageContent() {
                       </div>
                       <div className="p-4">
                         <div className="text-xs text-slate-500 dark:text-slate-400 uppercase">Stock</div>
-                        <div className={`text-2xl font-bold ${producto.stock_contable > 0 ? 'text-emerald-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        <div className={`flex items-center gap-2 text-2xl font-bold ${producto.stock_contable > 0 ? 'text-emerald-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           {producto.stock_contable}
+                          <GloboStock idprod={producto.idprod} />
                         </div>
                       </div>
                     </div>
+                    <FichaCompras idprod={producto.idprod} />
 
                     {/* Código Catálogo */}
                     <div className="p-4 border-b border-slate-200 dark:border-secondary">

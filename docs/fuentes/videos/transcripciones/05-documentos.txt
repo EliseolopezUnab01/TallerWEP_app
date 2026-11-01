@@ -1,0 +1,214 @@
+# idioma=es duracion=1452s
+[00:00] y vamos a seguir con lo de la mejora del duca o más bien del proceso de de ingresos si te fijaste
+[00:11] no estoy utilizando ninguna de estas cosas en en este proceso solo estoy indicándole al
+[00:21] sistema que esto es una compra del exterior ingreso la factura ingreso los valores que
+[00:28] yo he tenido que sumar uno por uno acá citando los diferentes documentos que tengo en las
+[00:35] diferentes carpetas haciendo papeleo por mi cuenta para ver a de dónde saco cada uno de los valores
+[00:44] y sumar aquí los costos de transporte del proveedor de transporte lo que me con el banco y
+[00:53] todo lo demás todo lo tengo que hacer citando cada una de las carpetas que por aquí que por
+[01:00] allá porque no tengo hasta ahorita para eso se había creado esta parte pero no tengo hasta
+[01:08] ahorita manera de revisar o o ver todo esto tuve que incluso darle ingreso a todas las facturas
+[01:16] a todos los registros en el momento de que estoy dándole que estoy creando el documento de
+[01:25] importación porque así lo llamé yo el nombre correcto debería ser un proceso de importación
+[01:31] que es como lo estaba llamando o proceso de ingreso de compra o proceso de ingreso de productos
+[01:37] cualquiera que ayude a una mejor descripción si bien es una importación porque sí la es
+[01:43] pero no identifica todo lo que se va a hacer ahora que es que es lo que vamos a hacer
+[01:49] es esto un proceso de ingreso porque ocupamos esto porque con este proceso de ingreso englobamos
+[01:58] todito lo referente a ingresar los diferentes productos que vamos a meter en inventario y
+[02:08] que vamos a tener que darles precio después aparte de otras cosas cada uno de estos asuntos
+[02:16] tiene su propósito no pero no puedo solo solamente listar los ahorita vamos a tratar de
+[02:23] llevar según el proceso haciendo una explicación de cómo quiero que se haga y pues si sale la
+[02:30] necesidad de explicar alguno de los campos de estos pues lo voy a hacer primero pues como
+[02:36] dije este engloba todo y como es yo lo llamé así pues proceso de ingreso no sé si para empezar
+[02:45] no tengo por dónde crearlo aquí la idea es que cuando se cree creo que lo mejor va a ser empezar
+[02:52] desde acá la idea es que cuando se cree esto el tipo de documento creo que era este este es como
+[03:01] dije en las explicaciones que te di antes creo que ya te lo he dicho por texto en whatsapp teléfono
+[03:07] en persona y de todas maneras pero aquí te lo reexplico no lo remenciono cuando nosotros queremos
+[03:16] hacer una compra internacional hacemos una solicitud que es un listado de productos que creamos
+[03:24] una lista de listado de productos de de lo que nos interesa comprar el proveedor ellos nos
+[03:32] mandan entonces en respuesta de eso una cotización esa cotización trae los mismos productos nada
+[03:40] más que muy probablemente traigan unas referencias y dije muy probablemente porque no siempre las
+[03:46] traen pero pueda que traen unas referencias y con cada referencia su nombre su cantidad y el
+[03:52] precio que nos están ofreciendo cuando yo recibo eso pues entonces ya tengo este documento de
+[04:00] solicitud debería ser posible crearlo aquí digamos que así como ingreso producto así como ingreso
+[04:11] productos manualmente o como hago cualquier otro producto como la solicitud de la cotización la
+[04:19] puedo ingresar desde aquí digamos que estoy creando una y es ésta como voy a ingresar los
+[04:24] productos pues de esta manera eligiendo los desde el inventario si yo así quiero aquí pues
+[04:29] obviamente no le voy a poner precio porque es una solicitud de cotización debería permitir pasar
+[04:34] sin precio como es un ejemplo no podría pasar sin precio porque estoy creando listado lo puedo
+[04:42] ingresar así desde el inventario o repito esto es un ejemplo de explicación olvídate de lo que
+[04:49] haciendo porque esto no tendrá ninguna función de ser verdad porque aquí lo vas a adecuar según lo que
+[04:55] yo estoy manifestando que deseo que ocurra entonces como ya no lo voy a ingresar de aquí sino que lo
+[05:01] quiero ingresar manualmente porque no está inventario producto pero me interesa lo he visto en un
+[05:07] catálogo etcétera y pues obviamente órdenes no van gasto bueno como es que es un ejemplo verdad
+[05:17] y no haremos esto sólo voy a colocar aquí producto deseado entonces les quiero cinco vamos a poner
+[05:31] que mejor es porque me va a permitir otras cosas producto deseado en la referencia del catálogo
+[05:39] que encontré fue del catálogo del proveedor y la referencia 123 el número original es 4 y este
+[05:48] montón el nombre pues de productos tal quiero cinco de eso obviamente no conozco el precio así
+[05:54] que debería poder ir en cero vamos a poner uno para que me deje pasar pues ya listé estos dos
+[06:01] este que va dentro del inventario este que no es parte del inventario sino que yo los
+[06:05] quiero porque lo vienzo catálogo y digamos que ya toda la lista que crees entre inventario y producto
+[06:13] que no es todavía de mi inventario si no quiero uno pues lo borro al dar doble clic lo borro aquí
+[06:19] vos tendrás que hacer tus propios controles no sé cómo lo pasa a elegir una cosa que
+[06:25] no me permite foxes arrastrar tomarlo de aquí digamos esto y arrastrarlo a otro
+[06:30] lugar no lo permite sería bueno que me permita reordenar entonces este decía pues ya tengo la lista
+[06:39] que le voy a enviar a mi proveedor y le doy finalizar estos botones no existen aquí pero
+[06:45] estoy finalizar digamos clic a capa y ahora una vez finalizado el proceso guarda el documento
+[06:51] guarda este registro no lo va a guardar obviamente en compras sino en en estos documentos de compras
+[06:58] que se creó aquí en esta tabla el encabezado de sus detalles y pues me va a permitir crear un excel
+[07:04] por aquí digamos exportar excel o como yo quiero para que para que yo pueda agarrar ese documento
+[07:10] excel y enviárselo a mi proveedor por correo mi proveedor lo recibe me retorna entonces un una
+[07:17] cotización formal emitida por ellos estaba tipo documento aquí está me regresa entonces
+[07:23] la cotización y con esta cotización yo tengo que crear una orden es decir que de lo que ellos
+[07:30] me han ofrecido yo tengo que elegir los productos y devolvérsela ellos ellos me regresen la
+[07:36] cotización pues en si yo yo pues acá digamos digamos está todo en blanco yo vengo y digo
+[07:45] el hijo una cotización una cotización voy a crear una cotización una cotización más bien
+[07:51] no para mí mis clientes obviamente sino que voy a darle ingreso a una cotización
+[07:59] al ingresar esta cotización tengo que poner la fecha en de la cotización de mi proveedor
+[08:06] también pues obviamente puedo cargar es que no sé ni cómo explicarlo porque no tengo de dónde
+[08:15] vamos a ver empiezo otra vez deseo entonces crear un registro de una cotización recibida he
+[08:22] elegido aquí la cotización la fecha mi proveedor lo lo elijo voy a suponer que lo elijo desde aquí
+[08:33] verdad que lo elijo desde el selector de proveedores buscándolo por diferentes cuestiones nombre código
+[08:42] etcétera y pues pongo el número de la cotización bla bla bla y listo ya tengo el
+[08:49] encabezado ya puedo poner aquí también los detalles que los términos de compra no al contado
+[08:55] tanto días que si el término de pagos que el incoterm que fue que son prácticamente todos
+[09:01] estos campos que están acá o la gran mayoría no lo de los que correspondan el encabezado
+[09:07] es de condición de pago en cotérptico tipo de cambio la moneda bueno es lo mismo que divisa
+[09:14] etcétera la ley de proveedor pues esto todo eso se va a cargar de alguna manera en variables
+[09:20] y más que todo cosas no visibles en objetos pero ya teniendo cargado el encabezado creado
+[09:29] el encabezado no sé si antes o hasta ese momento que ya lo cree poder tener quizá un botón por
+[09:37] acá vamos a suponer que este recuadro que dice referencia documento es para eso entonces un botón
+[09:44] que diga cargar la solicitud de cotización que es la razón por la que me ha emitido mi proveedor
+[09:53] esta cotización formal entonces cargo la solicitud de cotización de las que existan por ahí que
+[10:01] no tengan ningún vínculo porque todas van a tener un proceso un proceso de hecho eso sí se me
+[10:09] olvidó explicarlo cuando yo creo el en la solicitud de cotización en ese momento el sistema deber
+[10:19] entender que yo estoy iniciando un proceso de negociación con un cliente y por lo tanto va a crear
+[10:26] un proceso de ingreso puede hacerlo en ese momento cuando yo le dé finalizar me puede preguntar quiere
+[10:33] crear un proceso de ingreso ya o sólo está cotizando por preguntón o sea está decidido a comprar le
+[10:41] creo un proceso de ingreso con todos estos registros para empezar a amarrar todos los
+[10:45] documentos empezando por el de la solicitud de cotización que está haciendo o lo va a crear
+[10:50] después puedo tener las dos opciones a hacerlo en el momento o hacerlo hasta ahorita por aquí crear
+[10:56] proceso de ingreso porque como ya recibió la cotización quizá quizá ya va a depender de
+[11:01] cada uno de mis proveedores sabré yo a quién si le quiero comprar y a quién solo le estoy cotizando
+[11:06] entonces digamos que lo voy a crear en este momento de crear proceso digamos un clic por
+[11:11] acá o por acá que se yo qué botón y que me permita en un recuadro pues colocar estos
+[11:16] valores o que los que tengan que colocar automáticamente pues que se coloquen y empiece a armar no todo todo
+[11:23] el estructura entonces va voy a ingresar a ese proceso como dije este cuadro vamos a suponer
+[11:30] qué es para eso voy a ingresar a ese proceso uno de los documentos de de la cotización perdón uno
+[11:41] de los documentos que se han creado en este caso la solicitud de cotización y lo llamo vamos a vamos a
+[11:47] ocupar de ejemplo a esto digamos que aquí están las solicitudes de cotización que se han realizado
+[11:52] digamos que esta ya tienen sus respectivas referencias de otros procesos pero vamos a suponer que hasta
+[11:58] que tiene 54 0 no está sin nada ninguno entonces yo la debería poder arrastrar o asignar o
+[12:04] enviar como sea puede ser adicional de un de un como le llamo yo le llamo formulario no sé
+[12:13] como que le llama ventanas de una ventana de un formulario de un pop ups no sé cómo se va a llamar
+[12:18] pero que de otro lugar puede llamarlo y colocarla digamos acá digamos que este sea para poder
+[12:23] visualizar todos estos documentos que ya están relacionados como no hay ninguno relacionado
+[12:28] pues está vacío pero una vez el hijo de acá pues lo puedo agregar y ahora ya está aquí el
+[12:35] documento aquí está listado vamos a imaginarlo ahí entonces tengo el documento listado y aquí
+[12:41] puedo elegir qué tipo de documento es o aquí a me debería parecer en la referencia del documento
+[12:48] la fecha el proveedor el total en vez de parecer este como referencia de pago debería
+[12:53] aparecer tipo de documento que por aquí te lo te lo mencioné digamos acá por acá estaba entre
+[13:01] los documentos tipo de documento aquí está lo que estábamos diciendo solicitud si escotización
+[13:07] si eso orden bla bla bla como es una solicitud pues aparece como solicitud y el no doctor que es para
+[13:13] para enlazarlo todos o lo que sea pues lo más básico los datos básicos que permita más que
+[13:19] todo el valor del total el proveedor y el tipo de documento que es entonces ya tengo aquí el primer
+[13:26] documento listado ahora con este yo le doy doble clic suponiendo y automáticamente carga todos
+[13:32] los registros que yo le envía a mi proveedor o a mi posible proveedor como me retorna pues
+[13:40] una cotización me mando una cotización con lo mismo con lo mismo registro con lo mismo listado
+[13:44] con mismos productos listados perdón si está vamos aquí
+[13:54] cuando yo lo tengo pues debo decidir qué producto voy a querer y en ese momento se crea una orden como
+[13:59] ya los cargué empiezo a elegir digo de este quiero tan esto no lo quiero que salió muy caro este
+[14:05] tampoco pero de este si si voy a querer porque está barato puse veinte voy a querer 50 aquí
+[14:12] no los puedo cambiar lamentablemente porque no es para eso esto pero entonces yo aquí si
+[14:17] lo puedo tener que cambiar y obviamente va a cambiar los totales de como el valor me ha dado
+[14:22] un precio de obviamente yo no tenía los precios debo poder ponerle los precios a cada uno verdad
+[14:27] para que me dé el sub total de cada de cada producto y al final pues me dé por aquí o por
+[14:33] donde sea que le coloquéis los controles en el nuevo formulario me dé pues el total de lo
+[14:38] que de lo que voy a supuestamente pagar el proveedor o de lo que pretendo comprar entonces una vez
+[14:44] tengo listado se lo envío o lo guardo perdón lo guardo primero obviamente lo proceso lo guardo
+[14:52] dentro del sistema y me va a permitir entonces poderlo exportar también otra vez a excel si
+[14:57] quiero y si no una especie de pdf bonito para mandarlo ahí bien vistoso al proveedor que se
+[15:02] sienta que está tratando con una empresa bien grandota entonces ya les mando la orden de compra
+[15:08] que le estoy yo emitiendo y ellos cuando reciben y después me mandan me mandan la pro forma
+[15:14] que es como la aceptación de la orden de compra diciéndome ok estoy de acuerdo con los productos
+[15:18] que me estás pidiendo pero te digo que tal fecha tal hora tal día bueno la hora no tal fecha tantas
+[15:25] cantidades te voy a poder proveer porque esta cantidad si puedo estas no puedo el precio a veces
+[15:31] yo puedo ingresarle un precio a propósito diferente en mi orden de compra pidiéndole que
+[15:38] prácticamente con ese cambio del precio que me mandó yo le pongo otro con ese dato yo le
+[15:43] estoy diciendo y no me lo deja más barato es de una manera le llama precio target ellos yo puedo
+[15:48] hacer mi oferta entonces todo lo que haya cambiado pues yo ya lo tengo que poder ingresar porque pues
+[15:56] ya me respondió él con él como decía con la con la orden muy perdón con la pro forma entonces
+[16:04] yo agarro la pro forma doy aquí ingresar pro forma y pues ingreso los datos si así quiero o bien puedo
+[16:15] quizá un clic por acá y ver procesos de ingreso y me sale listado de los procesos de ingreso ahora
+[16:22] vamos a imaginar que es esto que se me hizo lo que estaba haciendo aquí está aquí están los
+[16:28] procesos de ingreso era éste el que tengo pun lo cargo y me aparece listado automáticamente y
+[16:33] me aparece el tanto la solicitud de cotización como la cotización recibida como la orden de
+[16:41] compra enviada y la pro forma que voy a ingresar entonces yo como ingresar pro forma pues ya este
+[16:47] tengo tengo tres documentos listados y como ingresar la pro forma ya sería el cuarto ingreso la
+[16:53] pro forma porque para darle para darle información a mi sistema y obviamente a lo al stock de
+[17:00] inventario que existe le puedo empezar a decir entonces yo mi sistema ya este producto está en
+[17:05] producción está en proceso de de compra ya incluso voy a pagar por ahí puedo poner que
+[17:13] voy a pagar según el término de de compra que me emitió mi proveedor tal vez quiere un 30
+[17:19] por ciento 50 por ciento pues tengo que este enviar ese ese ese pago de anticipo y entonces
+[17:28] tengo que agregar otro documento porque ya tengo todos los primeros cuatro que dije solicitud en la
+[17:34] cotización la orden de compra la pro forma y ahora voy a también generar un pago me va a dar el
+[17:39] van el vancumboucher una una factura lo que sea lo que yo quiera referenciar lo tengo que agregar
+[17:46] obviamente aquí al sistema este si es que me dan un crédito fiscal o una factura auditable una
+[17:54] factura que me permita presentar a contabilidad si no es así es para eso está este otro bueno
+[18:03] una de las tantas tablas esto no sé cuál de todas es pero si no es así si no me dan ni siquiera un
+[18:09] voucher pero yo me dan un voucher pues supongamos que no me dan factura en el banco pero me dan un
+[18:14] voucher entonces no lo puedo ingresar porque esto no tiene para ingresar voucher o tal vez si le
+[18:19] podemos hacer algo ahí por ejemplo parece que habíamos creado ya ni me acuerdo ni lo que yo he hecho
+[18:24] parece que sí gastos sin documentos aquí está esto para gastos sin documentos pero de repente quiero
+[18:30] sacar una foto un escaneo entonces lo tengo que poder documentos relacionados creo que éste es ruta
+[18:38] de archivos si para los documentos que estoy ingresando referentes a este proceso de compra o
+[18:46] a a estas documentos de aquí también estos creo que se puede gastos sin documentos creo que
+[18:52] podríamos hacer una referencia para acá para poder ingresar fotos o imágenes o archivos lo
+[19:02] que sea referenciados a estos gastos sin documentos para yo poder tener como un mejor control de de
+[19:09] lo que voy haciendo con cada uno de los documentos que corresponde o de los procesos que
+[19:15] corresponden a esa compra entonces una vez que ya ingrese eso y ingrese el pago ya tengo
+[19:22] un montón de datos aquí ya ya no sólo son tres cuatro ya son diez y ya está listo el producto
+[19:28] para venir al país o me lo van a despachar y me dicen fabricante sabe que me tiene que pagar
+[19:35] el el el complemento para que yo le haga la factura entonces aquí ya sería el momento de ingresar
+[19:44] la factura como tal como lo anterior pues el hijo desde un proceso o como yo quiero hacer
+[19:54] aquí desde aquí puedo crear la factura ingresar factura o aquí el proceso dar clic por aquí
+[20:00] verdad ingresar factura de procesos existentes me aparece el cuadrito de las facturas de los
+[20:05] procesos existentes cargo todo el proceso y veo que ya sólo falta la factura pues le doy
+[20:10] por aquí ingresar factura o no sé por dónde como dije pues esto es ejemplo y ahora ya voy a
+[20:16] ingresar nuevamente bueno no voy a ingresar nuevamente porque están todos los productos
+[20:21] ingresados todo listado pero voy a refiltrar más bien cuáles son los que sí me van a me han
+[20:27] facturado cuáles son los que sí me han vendido o los que me los que voy a tener que pagar
+[20:32] porque muy probablemente algunos no salieron a tiempo y como sea el proveedor necesita despachar
+[20:37] eso ya y así suele ocurrir entonces le voy a pagar el complemento de lo que sumen todos estos
+[20:44] productos que están disponibles y voy a tener que colocar aquí las referencias o los archivos o
+[20:51] los voucher o los pdf o lo que sea agregados nuevamente al proceso de ingreso de esta compra
+[20:58] y esto para cada proveedor porque podría ser pero esto lo explico después mejor pero bueno
+[21:06] entonces decía una vez que ingresé esto que ya lo filtré bien que lo lo revalué y veo que
+[21:13] el total de esta nueva documento que estoy creando que es documento de factura encaja
+[21:19] correctamente pues entonces lo proceso en este momento de procesar lo va a ocurrir lo siguiente
+[21:24] que es que se van a actualizar los stock por aquí estaba lo del bacorder tal vez te acordás
+[21:30] y eso para qué pedidos pendiente este se va a actualizar lo del bacorder porque va a empezar a
+[21:39] calcular y decir bueno usted pidió tantos ahí te lo he explicado que todavía esté errado esto
+[21:44] porque estoy cargando el que te compartí que no había sido este como se llama editado entonces
+[21:52] estoy me dice cuánto cuanto le pedí cantidad que le cotice cantidad que ordené cantidad según
+[22:01] la pro forma cantidad según la factura esto de recibido está pendiente porque todavía no le
+[22:06] recibido en bodega pero aquí dice el bacorder que quedó reservado si es que lo voy a ver así es
+[22:12] que ya lo pagué el bacorder que está en proceso el total que es la sumatoria de ellos lo que
+[22:18] pagué y lo que no pagué etcétera ya te lo había explicado en aquel creo que texto anteriormente
+[22:23] o video ya ni me acuerdo que fue pero por ahí te lo expliqué antes entonces todos esos registros se
+[22:29] van a actualizar y de esa manera yo en el inventario así como estoy viendo esto aquí me va a poder
+[22:35] dar así como estos dos que es un stock de lo que puedo de lo que tengo disponible y esto digamos
+[22:42] esto y un stock de lo que según contabilidad debo tener aquí me hace falta cuatro productos
+[22:48] que no los he facturado o más bien que se me perdieron y ni cuenta me di entonces este se va a
+[22:56] actualizar los otros stock suponiendo que esto sean otros esto que aquí va a decir en vez de
+[23:01] disponible y completo y lo demás puede decir lo que estén bacorder o todo eso para eso me
+[23:07] va a servir información para poder tener claro si es que ya pedí algunos productos si están
+[23:12] en procesos y van a venir algún día qué fecha es la fecha porque por aquí está el dato de la
+[23:16] fecha qué fecha será que me lo van a entregar qué fecha van a estar listos etcétera etcétera todo
+[23:22] eso me sirve porque algunos clientes me preguntan y va a traer de vuelta entonces necesito tener
+[23:27] todos esos registros ahí indicados entonces ya con eso con esa actualización creo que ya
+[23:35] sería todo lo que lo que corresponda a la compra así que de ahí ya voy a poder yo
+[23:46] procesar o finalizar el documento de compra y se va a guardar ya entonces está todo preparado para
+[23:54] que la mercadería venga que le demos ingreso a luduca cómo se va a ser ese nuevo ingreso bueno
+[24:00] pues en ese caso mejor que te lo explico en otro vídeo porque este va a ser muy largo
+[24:05] pero digamos que queda la continuación para para explicar el nuevo proceso de educa

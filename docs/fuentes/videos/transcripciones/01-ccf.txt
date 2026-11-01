@@ -1,0 +1,241 @@
+# idioma=es duracion=880s
+[00:00] Bueno, voy a tratar de explicarte cómo es que funciona este asunto del sistema actualmente
+[00:07] para ver si te sirve ahí en el nuevo sistema que se está desarrollando.
+[00:14] Bien, vamos a suponer que es un crédito fiscal que vamos a dar el ingreso.
+[00:18] Tenemos acá la información del primer control, aquí elegí prácticamente qué tipo de documentos
+[00:25] el que voy a ingresar, ahí va a depender de los nuevos menús que vas a ingresar,
+[00:32] que vas a colocar vos, cuáles son las opciones, pues estas son las que están ahorita.
+[00:37] Pero vamos a pensar que un crédito fiscal y se despliegue el primer control
+[00:41] que nos ayuda a clasificar el tipo de documentos o a categorizarles.
+[00:46] Una clasificación previa porque luego el contador va a ser la clasificación final.
+[00:53] Si aquí te lo puse, creo que está en categoría operación, en documentos de compras.
+[01:00] Es donde se puede elegir indicaba yo fiscal, gasto o mixto, correspondientemente.
+[01:07] Una vez se clasifica, pues esto va a venir a dar, va a formar parte obviamente de la tabla de compras
+[01:15] y se va a poder visualizar después mediante el módulo de contabilidad
+[01:23] para que ya el contador decida cómo es que lo va a clasificar finalmente el documento.
+[01:30] Esto viene siendo como para darle una idea o para que pues nos critique
+[01:35] o nos regule el contador mismo cómo es que vamos a clasificar posteriormente los documentos.
+[01:41] Actualmente ahorita en sistema no aparecen esas opciones, sino que aparecen contables, gastos y otros.
+[01:47] Y es que contable viene siendo lo mismo de fiscal y expres también,
+[01:51] pero es una manera de indicar desde aquí a este otro control que está acá
+[01:59] cómo vamos a tratar a los registros que vamos a ingresar aquí.
+[02:05] Cuando ingresemos uno te vas a dar cuenta más o menos,
+[02:08] pero esto yo principalmente lo estoy usando para, como te digo, darle a éste la funcionabilidad.
+[02:18] Por ejemplo, si el hijo contable pues simplemente puedo mantenerlo como parte del inventario,
+[02:24] no puedo cambiar, si el hijo expres, pues sí, tampoco puedo cambiar de ninguna de las otras opciones solo expres.
+[02:31] Si el hijo gastos pues en este caso pues hay un pequeño error que no sé qué pasó,
+[02:37] pero otro pues ya me permite elegir entre inventario, expres y gasto, cualquiera de las tres.
+[02:43] En este otro entonces estas opciones vendrían a ser reemplazadas por las anteriores,
+[02:48] o si se quiere se pueden dejar las mismas opciones con un control similar,
+[02:53] porque nos permitirá que en contable y en expres podamos clasificar el documento como fiscal,
+[03:00] porque todo lo que va a ingresar pues tiene una función de comercio
+[03:05] por lo tanto se va a deducir IVA de esas compras y de esas ventas.
+[03:10] Entonces si es contable es todo lo que o inventario debería hacer aquí,
+[03:15] si es de inventario pues entonces vamos a agarrar toda la información solamente de inventario.
+[03:21] Si éste expres significa que todos los registros que se van a ingresar
+[03:27] van a ser considerados como una compra rápida para poder darle salida a todos los productos,
+[03:34] los productos mediante una factura o dos facturas o varias facturas,
+[03:38] pero en el mismo día no van a formar parte de inventario en gastos
+[03:42] pues es para considerar todo lo que se va a ingresar como gastos
+[03:45] y en este otro que le vio haber sido mixto es para poder elegir cuál de los tipos de registro voy a ingresar,
+[03:52] porque podría ser como te decía la vez pasada que una factura de un producto que yo compre
+[03:57] digamos en superrepuestos puedo comprar un herramienta y puedo comprar al mismo tiempo
+[04:02] una pieza para un cliente y quiero una sola factura,
+[04:06] entonces en esa factura voy a tener que separar los productos
+[04:12] o simplemente voy a considerar pedir dos, pero no en todos los casos
+[04:19] los proveedores están dispuestos, muchas veces hay diferentes razones,
+[04:23] así que por esa razón vamos a permitir que se puedan ingresar datos mixtos dentro de un mismo documento.
+[04:31] Pero como te digo esto acá a acá ahorita sólo me ayuda a controlar
+[04:37] aunque hay un error aquí en gastos me ayuda a controlar este control,
+[04:41] embalga la redundancia ahí, vamos a ver vamos a considerar que lo vamos a dejar en otro
+[04:47] para que me permita elegir lo que yo quiera acá,
+[04:49] entonces la factura pues la fecha digamos que de ahora
+[04:53] esto es para ponerte decía la referencia contable
+[04:57] digamos que la contadora diga que es del libro de compra,
+[05:02] esto pongamos el libro 20-26, lo que hace le quiera poner lo que digan,
+[05:07] ahí va a ser cuando la contadora lo que diga, regularmente yo lo dejo en blanco
+[05:11] porque se entiende que todas las compras pues desde el mismo año
+[05:14] todo la filtro después por fecha y no hay problema
+[05:17] pero hay contradores que sí requieren que todo se haga
+[05:21] mejor señalado mejor marcado así que dependerá de eso
+[05:25] el nuevo sistema hay que dejar esas opciones siempre
+[05:28] el registro pues el registro del proveedor
+[05:31] en este caso lo voy a buscar y que la verdad que sí será siempre mejor
+[05:36] que sean los proveedores siempre registrados
+[05:40] no debe haber posibilidad de ingresar un proveedor que no esté registrado
+[05:44] voy a elegir a cualquiera de estos hacia el azar Castellas Agarra
+[05:48] creo que es una verotería que una sola vez creo que le he comprado
+[05:52] la factura pues el número del documento
+[05:55] que tipo de condición de compra contado
+[05:58] pues si es crédito aquí debe desplegarse las opciones que tengo
+[06:02] ahí voy a poner las opciones
+[06:04] creo que esto que es lo más básico me lo voy a saltar
+[06:07] vamos a dejar así de contado, erosito porque debería borrarse
+[06:10] entonces aquí pues ya me voy directamente a ingresar los productos
+[06:15] viste que aquí se desplegó algo pero era porque originalmente
+[06:19] yo lo tenía luego te explico esto
+[06:22] para poder distribuir diferentes documentos
+[06:26] relacionados a esta compra que es lo que vamos a hacer
+[06:29] de otra manera ya en el nuevo sistema
+[06:32] entonces puedo agregar desde acá o puedo buscar acá
+[06:35] como yo lo deseé en este caso para hacerlo rápido
+[06:37] vamos a agregar esto rápido vamos a decir que es una pieza
+[06:40] en la especie está bien y listo ya la agregamos
+[06:44] es el código 1.85 y lo que hice fue poner la cantidad
+[06:48] el precio de la factura sin IVA
+[06:52] si le pongo aquí el chequecito pues me permite
+[06:55] ingresar el valor con IVA y eso lo deduce
+[06:57] pero es mejor que ya siempre hacerlo conforme el documento
+[07:00] pues no había descuento así que lo deje en cero
+[07:03] y lo trasladé con entera hasta acá
+[07:05] entonces acá ya puedo ver que me dice que es
+[07:09] forma parte del inventario porque aquí estaba seleccionado
+[07:13] este pequeño cheque que indica que es de inventario
+[07:16] pero que pasa si yo coloco express
+[07:21] no me permite ya o al menos no debería
+[07:24] permitirme seleccionar desde aquí
+[07:26] porque pues si voy a ingresar un producto express
+[07:29] es algo que no esté en inventario
+[07:31] o que tal vez sí este pero que no lo quiero ingresar
+[07:34] al inventario mismo sino que lo quiero
+[07:38] catalogar como express como dije lo mejor es
+[07:41] que no debería estar acá al dar clic aquí
+[07:44] no me debería dejar seleccionarlos desde acá
+[07:47] pero pues por ahorita que el sistema tiene sus fallitos
+[07:50] vamos a ver digamos que aquí colocamos la orden
+[07:53] de compra de perdón la orden de trabajo
+[07:56] del trabajo que está realizando digamos
+[07:59] que es el orden número 4444
+[08:02] y la referencia del proveedor por si lo trae en la factura
+[08:05] digamos que dice que el producto es un producto
+[08:08] pro 30 y esto ya
+[08:11] preferencia oven pues el número original del producto
+[08:14] si acaso me lo conozco
+[08:17] o pues pongo algo si no lo dejo así
+[08:20] y el producto pues un producto express
+[08:23] el producto express
+[08:25] esto es la descripción yo les puse así
+[08:27] verdad pero entiende que es la descripción
+[08:29] cantidad pues son es uno
+[08:31] y el precio de un 130 dólares
+[08:34] pues ahí está ya con iliva el valor
+[08:37] que parece ahorita no hay descuento así que lo agrego
+[08:40] automáticamente quien parece que la orden
+[08:43] que está indicada acá que coloque desde aquí
+[08:46] es para el trabajo 4444
+[08:49] es considerado un tipo express o sea que no va
+[08:52] a ingresar al inventario sino que a otro registro
+[08:55] de inventario digamos así más express
+[08:58] para poder darle salida rápido eso
+[09:01] no puede quedarse ahí más de dos o tres días
+[09:04] porque entonces estamos haciendo mal uso del
+[09:07] del segundo inventario
+[09:10] así desde aquí yo puedo
+[09:13] ingresar si te fijás estoy
+[09:16] usando esto por eso puedo ingresar
+[09:19] diferentes tipos si yo usar a digamos
+[09:22] cambiar la categoría contable pues ya no me
+[09:25] permite ingresar gastos ni express
+[09:28] pero como empecé desde mixto que sería
+[09:31] lo que sería mixto más bien que aquí es otro
+[09:34] me permite ingresar los dos obviamente si yo
+[09:37] cambio aquí a contable debería de darme un error
+[09:40] en el sistema donde no me permita porque me diga
+[09:43] acabo de ingresar un inventario en expreso o sea ya empezó a revolver
+[09:46] todo en la factura no puede seguir ingresando
+[09:49] o no puede cambiar el tipo de documento debe anular
+[09:52] este o eliminarlo desde acá y volver a crear
+[09:55] uno nuevo o eliminar los registros mixtos para
+[09:58] que se pueda recategorizar todo
+[10:01] o pues bien ya dependerá
+[10:04] si vos querés al finalizar el documento y que
+[10:07] esto no sea digamos
+[10:10] esto no sea totalmente
+[10:13] vinculante esta esta parte esta no que no sea
+[10:16] totalmente vinculante del tipo de documento
+[10:19] sino un control para controlar este
+[10:22] que cualquier hería bueno pero qué sentido tiene usar esto
+[10:25] y si voy a estar cambiando aquí mejor quito
+[10:27] este y dejo este pues
+[10:30] yo creo que a la larga si funciona ahorita no sé
+[10:33] me ocurre pero ya va a saber que si funciona
+[10:35] porque en vano no creo que lo haya hecho así
+[10:38] que creo que lo podemos dejar sería algo
+[10:41] redundante pero nos está sirviendo por ahorita
+[10:44] entonces sigamos con esto como estaba en
+[10:47] otro y podemos ingresar como decía de diferentes
+[10:50] lugares pero qué pasa si yo quiero cambiar desde aquí
+[10:53] y este quiere inventario me arrepiento y ya no quiero
+[10:56] considerar ese producto como inventario sino
+[10:59] expres pues lo cambio o lo intento cambiar y vas a ver
+[11:02] que no me deja sin embargo
+[11:05] si yo quiero cambiar este expres y volverlo
+[11:08] gasto si puedo hacerlo pero no puedo
+[11:11] hacerlo para cambiarlo como inventario
+[11:14] porque porque supone que lo inventario tiene que ingresar
+[11:17] desde aquí y no escrito desde acá
+[11:20] porque si lo agrego desde aquí el no cuenta
+[11:23] un código un código que lo identifique
+[11:26] sino que es un producto
+[11:29] de movimiento rápido y por lo tanto
+[11:32] no trae un código de inventario
+[11:35] así que no puedo cambiarlo si puedo
+[11:38] cambiar entre expres y entre gasto
+[11:41] por si así lo deseo me vas a decir para qué le hizo
+[11:44] eso más engorroso más ya te voy a mostrar en otro
+[11:47] vídeo cómo es necesario que sí lo tenga
+[11:50] entonces vamos a seguir con
+[11:53] con el
+[11:56] procedimiento del proceso
+[11:59] de ingreso de este documento lo vamos a mantener en gasto
+[12:02] perdón lo teníamos en expres
+[12:05] si te fijas cambia el código
+[12:08] porque este código es genérico al final
+[12:11] es un incremental que se va dando ahorita para
+[12:14] dar el ingreso el solito pone el mismo código para todo
+[12:17] si ingreso otro en expres
+[12:20] siempre digamos que es la orden esta
+[12:23] la la la la la y le pongo
+[12:26] aquí lo que sea y me da
+[12:29] siempre me va a dar el mismo código
+[12:34] siempre me va a dar el mismo código pero una vez
+[12:37] que esto ingresa al listado
+[12:40] de productos pues simplemente este código
+[12:43] cambio y es reemplazado por un número incremental
+[12:46] que ya está registrado y pues el siguiente
+[12:49] pues le sigue a este y así sucedamente
+[12:52] esto sólo para los expres para los que ya tienen
+[12:55] código pues obviamente se respeta y se va para inventario
+[12:58] con los de gasto vamos a cambiarlo a gasto nuevamente
+[13:01] este para ver con los de gasto
+[13:04] el número 500 es
+[13:07] una invención mía para ayudar a clasificar o para
+[13:10] para para separarlo de más código
+[13:13] si te fijas tiene tres dígitos tiene cuatro y este tiene muchos
+[13:16] vamos a dejarlo así
+[13:19] mezclado no hay ningún problema y lo vamos a
+[13:22] saber
+[13:25] si creo que ya no vamos a agregar más vamos a finalizar
+[13:28] el documento y pues aquí vemos el resultado
+[13:31] el resumen perdón de toda la operación
+[13:34] son 127 37 sin IVA
+[13:37] más el IVA y en lo tanto tal de 240
+[13:40] y 3 centavos y vamos a poner el comentario pues la agregamos
+[13:43] y listo si vemos el que el código es el 11
+[13:46] 85 lo vamos a buscar aquí para ver
+[13:49] funciona y
+[13:52] pues no hay ningún producto
+[13:55] está a cero
+[13:58] vamos a terminar entonces de dar ingreso
+[14:01] procesamos está actualizando
+[14:04] y aquí atendría que aparecer y si aparece
+[14:07] y cambió la fecha del día del
+[14:10] última compra la cantidad que se encompró la cantidad
+[14:13] actualmente disponible la última venta pues no se ha
+[14:16] vendido y aquí la referencia
+[14:19] del costo que es el número que colocamos aquí de la factura
+[14:22] esto es lo que actualmente es el sistema para darle ingreso
+[14:25] a un documento de crédito fiscal ya
+[14:28] lo de las otras categorizaciones y demás datos pues lo vamos
+[14:31] a ver en los demás módulos según lo vayamos
+[14:34] preparando

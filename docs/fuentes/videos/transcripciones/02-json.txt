@@ -1,0 +1,53 @@
+# idioma=es duracion=354s
+[00:00] bien ahora ya hicimos un ingreso de una y un crédito fiscal vamos a ingresar otro documento en
+[00:08] este caso a propósito voy a dejar todo en blanco y voy a tomar desde aquí y tengo uno ya y son
+[00:16] listos para poder soltarlo dentro de esta zona tengo que elegir qué tipo de documento es perdón
+[00:26] es un crédito fiscal si lo voy a ir que es contable para que lo reconozca ahora suelto si
+[00:36] ahí está me lleno todos los campos que que regularmente tiene que después el proveedor en este
+[00:42] caso es un proveedor de servicios que el banco agrícola su respectivo registro el número de la
+[00:46] factura el DTE código generación y el serial de recepción que debería estar probablemente el
+[00:51] Jason no lo trae no sé cómo está estructurado o a lo mejor algún fallo dentro de esta cuestión
+[00:57] ya ves que esto lo hice antes de que ustedes me terminarán el servicio yo creo que ha sufrido
+[01:02] como dos o tres actualizaciones y yo pues no he cambiado nada en las estructuras de lectura
+[01:07] de este Jason porque como ya sabes no le estoy invirtiendo tiempo a mejorar este sistema
+[01:10] sino que lo que quiero es que hagamos uno nuevo así que aquí nos podemos ver las
+[01:17] opciones que tenemos que nos permite colocar aquí arriba el número de orden si esto
+[01:23] fuera una factura de un proveedor de productos de digamos nacionales obviamente por el DTE solo
+[01:31] puede ser nacional entonces me podría permitir sin que yo tenga que estar ingresando uno a uno los
+[01:38] productos desde acá aquí puedo elegir colocarles el número de la orden a donde quiero que vayan a
+[01:44] parar estos productos o cómo deben ser considerados estos productos porque al final desde el módulo
+[01:51] de las órdenes de trabajo debo poder visualizar estos productos que estoy asignando a cada una
+[01:58] de esas órdenes ahorita pues no vamos a ver eso porque obviamente no funciona este módulo y es el
+[02:04] que vamos a crear más adelante no vamos a tener ahí ahora puedo elegir entonces si es inventario
+[02:10] expres o gasto para la clasificación de categoría contable puedo elegir inventario no lo puedo
+[02:18] hacer porque porque supone que los productos de inventario están acá no puede simplemente inventarse
+[02:24] un registro sin códigos como ves aquí y simplemente decir a este de inventario y ya por arte de magia
+[02:31] tiene que aparecer un código no funciona así hay que crear la ficha hay que dar el ingreso a la
+[02:35] ficha luego hay que llamarla desde aquí para que se pueda ingresar a la factura que ya se está
+[02:41] procesando como no puedo hacer elegir un inventario pues puede ser expres eso sí porque no es
+[02:47] necesario que sea parte del inventario para ser expres de hecho es absolutamente lógico es
+[02:52] aquí me pregunta como siempre de si estoy seguro y le asigné el código que ya viste anteriormente
+[02:59] que es el mismo o puedo elegir gasto y le asigné siempre el 500 para todos los gastos de lo
+[03:05] mismo entonces vamos a ver dejémoslo como gasto pues porque hay que categorizar bueno pero los
+[03:11] demás no los quiero modificar los quiero dejar tal cual venía la factura es un problema no puedo
+[03:18] hacerlo porque debo decirle al contador o al sistema en este caso también qué tipo de registro es
+[03:25] esto debo debo tener que hacerlo si yo quiero finalizar el documento pues me va a decir que debo elegir
+[03:31] una condición de compra esto es acá no la había elegido no leíó esto tampoco obviamente no
+[03:38] todas las json pueden traer creo esta condición o no sé si lo traen yo simplemente no lo ma pie
+[03:42] pero ya se la coloque vamos a ver qué pasa ahora es tu mismo que salta y me dice es obligatorio que
+[03:52] elija una opción para el tipo de producto que es esto está parapadeando ya tengo que ponerle
+[03:59] qué tipo de producto es vamos a decir que este es expres y si es expres pues ya le pone acá el
+[04:05] código y si es el gasto pues aquí va a aparecer también el 500 ahora sí debería poder finalizar
+[04:15] debe indicar a qué orden será signado producto expres obviamente no le había puesto porque si es
+[04:22] un producto expres no puede ingresar así como así nada más y decir hola soy un producto expres
+[04:28] alguien me va a necesitar pero sin decirle quién es que lo va a necesitar así que la orden
+[04:33] de trabajo que lo va a necesitar es esta a esto es extraño pero si se le puede asignar un gasto
+[04:41] a una orden de trabajo así que es permisible que tenga una un dato de una orden de trabajo y aún
+[04:52] así se un gasto y aquí tiene una orden de trabajo y también es un producto nada más que te expresa
+[04:58] ahora sí debería de poder permitirme finalizar y ahí está lo puedo procesar y listo ya en
+[05:06] mi daría le quiero poner un comentario la la la y se va ingresamos y se fue ahora esto
+[05:17] estas son las dos opciones que tenemos para crédito fiscal y para y para para consumidor final
+[05:25] pues es prácticamente lo mismo nada más que pues este va a dar a un lugar diferente o es
+[05:31] clasificado de una manera diferente ya te voy a explicar en el otro vídeo cómo manejo lo de
+[05:37] las importaciones para que son estos controles y ver qué podemos modificar en eso yo creo que
+[05:44] esto es lo más básico y es lo que ya seguramente puedes hacer vos con el sistema actual

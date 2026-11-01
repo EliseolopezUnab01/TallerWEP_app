@@ -1,10 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { RowDataPacket } from 'mysql2/promise';
 import { connectDB } from '@/lib/db';
 import {
+  AVISOS_COMPRA,
+  esCategoriaOperacion,
   esTipoDteCompra,
   tipoDteRequiereRelacionados,
 } from '@/lib/compras-constantes';
-import { calcularFechaVencimiento, calcularResumen } from '@/lib/compras-resumen';
+import { calcularFechaVencimiento, calcularResumen, type LineaResumen } from '@/lib/compras-resumen';
+import { nuevoNodocto, siguienteCorrelativo } from '@/lib/correlativos';
+import { errorDestinoLinea, type CompraReglas } from '@/lib/compras-detalle-db';
+import { aplicarStockAlRegistrar, revertirStockAlAnular } from '@/lib/compras-stock';
+import { erroresTopeNota } from '@/lib/compras-nota';
+
+const CLASES_DOCUMENTO = ['DTE', 'IMPORTACION'] as const;
+
+/** Errores de las líneas contra la categoría y la clase del documento (máx. 3 mensajes distintos). */
+async function erroresDeLineas(
+  connection: Awaited<ReturnType<typeof connectDB>>,
+  idcompra: number,
+  reglas: CompraReglas
+) {
+  const [lineas] = await connection.execute<RowDataPacket[]>(
+    'SELECT numero_linea, destino, idprod FROM compras_detalle WHERE idcompra = ? ORDER BY numero_linea',
+    [idcompra]
+  );
+  const porMensaje = new Map<string, number[]>();
+  for (const l of lineas) {
+    const error = errorDestinoLinea(reglas, { destino: l.destino, idprod: l.idprod ? Number(l.idprod) : null });
+    if (error) porMensaje.set(error, [...(porMensaje.get(error) || []), Number(l.numero_linea)]);
+  }
+  return [...porMensaje.entries()].slice(0, 3).map(([m, nums]) => `${m} (línea ${nums.join(', ')})`);
+}
 
 function limpiar(valor: unknown) {
   if (valor === undefined || valor === null) return null;
@@ -19,6 +46,8 @@ function aNumero(valor: unknown, defecto = 0): number {
 
 const CAMPOS_ENCABEZADO = [
   'idproveedor',
+  'clase_documento',
+  'categoria_operacion',
   'notas',
   'tipo_dte',
   'numero_control',
@@ -55,8 +84,8 @@ async function recalcularTotales(
     retencion_renta?: number;
   } = {}
 ) {
-  const [lineas]: any = await connection.execute(
-    `SELECT condicion_iva, subtotal_sin_iva, iva_unitario, cantidad,
+  const [lineas] = await connection.execute<RowDataPacket[]>(
+    `SELECT condicion_iva, subtotal_sin_iva, iva_unitario, cantidad, costo_unitario,
             descuento_porcentaje, cargos_no_afectos
      FROM compras_detalle WHERE idcompra = ?`,
     [idcompra]
@@ -71,7 +100,7 @@ async function recalcularTotales(
 
   const base = encabezado[0] || {};
   const resumen = calcularResumen({
-    lineas,
+    lineas: lineas as LineaResumen[],
     descuento_global_gravado: extras.descuento_global_gravado ?? aNumero(base.descuento_global_gravado),
     descuento_global_exento: extras.descuento_global_exento ?? aNumero(base.descuento_global_exento),
     descuento_global_no_sujeto: extras.descuento_global_no_sujeto ?? aNumero(base.descuento_global_no_sujeto),
@@ -115,6 +144,14 @@ function extraerEncabezado(body: Record<string, unknown>) {
     datos.idproveedor =
       body.idproveedor === null || body.idproveedor === '' ? null : Number(body.idproveedor);
   }
+  if (body.clase_documento !== undefined) {
+    const clase = String(body.clase_documento);
+    datos.clase_documento = (CLASES_DOCUMENTO as readonly string[]).includes(clase) ? clase : 'DTE';
+  }
+  if (body.categoria_operacion !== undefined) {
+    const categoria = String(body.categoria_operacion);
+    datos.categoria_operacion = esCategoriaOperacion(categoria) ? categoria : 'CONTABLE';
+  }
   if (body.notas !== undefined) datos.notas = limpiar(body.notas);
   if (body.tipo_dte !== undefined) datos.tipo_dte = limpiar(body.tipo_dte);
   if (body.numero_control !== undefined) datos.numero_control = limpiar(body.numero_control);
@@ -142,8 +179,8 @@ function extraerEncabezado(body: Record<string, unknown>) {
   }
 
   if (body.condicion_operacion !== undefined) {
-    const c = Number(body.condicion_operacion);
-    datos.condicion_operacion = [1, 2, 3].includes(c) ? c : 1;
+    const c = body.condicion_operacion === null || body.condicion_operacion === '' ? 0 : Number(body.condicion_operacion);
+    datos.condicion_operacion = [1, 2, 3].includes(c) ? c : null;
   }
   if (body.plazo_tipo !== undefined) datos.plazo_tipo = limpiar(body.plazo_tipo);
   if (body.plazo_periodo !== undefined) {
@@ -153,6 +190,12 @@ function extraerEncabezado(body: Record<string, unknown>) {
   }
   if (body.fecha_vencimiento_pago !== undefined) {
     datos.fecha_vencimiento_pago = limpiar(body.fecha_vencimiento_pago);
+  }
+
+  if (datos.clase_documento === 'IMPORTACION') {
+    datos.tipo_dte = null;
+    datos.numero_control = null;
+    datos.sello_recepcion = null;
   }
 
   return datos;
@@ -173,10 +216,14 @@ export async function GET(request: NextRequest) {
       const [rows]: any = await connection.execute(
         `SELECT c.*, p.codigo AS proveedor_codigo, p.nombre_legal AS proveedor_nombre,
                 p.nrc AS proveedor_nrc, p.nit AS proveedor_nit,
-                t.nombre AS tipo_dte_nombre, t.abreviatura AS tipo_dte_abrev
+                t.nombre AS tipo_dte_nombre, t.abreviatura AS tipo_dte_abrev,
+                pi.codigo AS proceso_codigo,
+                COALESCE(o.numero_factura, o.numero_interno) AS origen_numero
          FROM compras c
          LEFT JOIN proveedores p ON p.idproveedor = c.idproveedor
          LEFT JOIN cat_tipos_dte t ON t.codigo = c.tipo_dte
+         LEFT JOIN proceso_ingreso pi ON pi.idproceso = c.idproceso
+         LEFT JOIN compras o ON o.idcompra = c.idcompra_origen
          WHERE c.idcompra = ?`,
         [id]
       );
@@ -201,16 +248,18 @@ export async function GET(request: NextRequest) {
     }
     if (q) {
       filtros.push(
-        '(c.numero_factura LIKE ? OR c.codigo_generacion LIKE ? OR p.nombre_legal LIKE ? OR p.codigo LIKE ?)'
+        `(c.numero_factura LIKE ? OR c.codigo_generacion LIKE ? OR p.nombre_legal LIKE ?
+          OR p.codigo LIKE ? OR c.numero_interno LIKE ? OR c.nodocto LIKE ?)`
       );
       const like = `%${q}%`;
-      valores.push(like, like, like, like);
+      valores.push(like, like, like, like, like, like);
     }
 
     const where = filtros.length > 0 ? `WHERE ${filtros.join(' AND ')}` : '';
 
     const [rows]: any = await connection.execute(
-      `SELECT c.idcompra, c.estado, c.tipo_dte, c.idproveedor, c.notas,
+      `SELECT c.idcompra, c.nodocto, c.numero_interno, c.clase_documento, c.categoria_operacion,
+              c.estado, c.tipo_dte, c.idproveedor, c.notas,
               c.numero_factura, c.fecha_emision, c.total_pagar, c.total_gravado,
               c.created_at, c.updated_at,
               p.codigo AS proveedor_codigo, p.nombre_legal AS proveedor_nombre,
@@ -273,7 +322,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const columnas = ['estado', ...CAMPOS_ENCABEZADO.filter((c) => datos[c] !== undefined)];
+    datos.nodocto = await nuevoNodocto(connection);
+    datos.numero_interno = (
+      await siguienteCorrelativo(connection, datos.clase_documento === 'IMPORTACION' ? 'CI' : 'CP')
+    ).codigo;
+
+    const columnas = [
+      'estado',
+      'nodocto',
+      'numero_interno',
+      ...CAMPOS_ENCABEZADO.filter((c) => datos[c] !== undefined),
+    ];
     const valores = columnas.map((c) => (c === 'estado' ? 'BORRADOR' : datos[c]));
 
     const [resultado]: any = await connection.execute(
@@ -285,6 +344,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       idcompra: resultado.insertId,
+      nodocto: datos.nodocto,
+      numero_interno: datos.numero_interno,
       mensaje: 'Borrador de compra creado',
     });
   } catch (error: any) {
@@ -295,6 +356,20 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/** Un borrador que cambia entre nacional e importación toma un número de la serie correcta (CP / CI). */
+async function ajustarNumeroInterno(
+  connection: Awaited<ReturnType<typeof connectDB>>,
+  compra: { clase_documento?: string; numero_interno?: string | null; fecha_emision?: string | Date | null },
+  datos: Record<string, unknown>
+) {
+  const clase = (datos.clase_documento as string | undefined) ?? compra.clase_documento ?? 'DTE';
+  const serie = clase === 'IMPORTACION' ? 'CI' : 'CP';
+  if (compra.numero_interno?.startsWith(serie)) return;
+  const fecha = datos.fecha_emision || compra.fecha_emision;
+  const { codigo } = await siguienteCorrelativo(connection, serie, fecha ? new Date(fecha as string) : new Date());
+  datos.numero_interno = codigo;
 }
 
 export async function PUT(request: NextRequest) {
@@ -335,12 +410,42 @@ export async function PUT(request: NextRequest) {
           { status: 400 }
         );
       }
+      if (compra.idproceso) {
+        const [proc] = await connection.execute<RowDataPacket[]>(
+          'SELECT codigo, estado_documento FROM proceso_ingreso WHERE idproceso = ?',
+          [compra.idproceso]
+        );
+        if (proc[0]?.estado_documento === 'FINALIZADO') {
+          await connection.end();
+          return NextResponse.json(
+            { error: `La factura es parte del proceso ${proc[0].codigo} con retaceo aplicado; reabra el retaceo primero` },
+            { status: 400 }
+          );
+        }
+      }
+      const [notas] = await connection.execute<RowDataPacket[]>(
+        "SELECT COALESCE(numero_factura, numero_interno) AS numero FROM compras WHERE idcompra_origen = ? AND estado = 'REGISTRADA'",
+        [body.idcompra]
+      );
+      if (notas.length > 0) {
+        await connection.end();
+        return NextResponse.json(
+          { error: `Tiene notas registradas sobre esta factura (${notas.map((n) => n.numero).join(', ')}); anúlelas primero` },
+          { status: 400 }
+        );
+      }
+      await connection.beginTransaction();
+      const productos = await revertirStockAlAnular(connection, Number(body.idcompra));
       await connection.execute(
         "UPDATE compras SET estado = 'ANULADA' WHERE idcompra = ?",
         [body.idcompra]
       );
+      await connection.commit();
       await connection.end();
-      return NextResponse.json({ success: true, mensaje: 'Compra anulada' });
+      return NextResponse.json({
+        success: true,
+        mensaje: productos ? `Compra anulada; se revirtió el stock de ${productos} producto(s)` : 'Compra anulada',
+      });
     }
 
     if (compra.estado !== 'BORRADOR') {
@@ -353,11 +458,58 @@ export async function PUT(request: NextRequest) {
 
     if (accion === 'registrar') {
       const errores: string[] = [];
-      if (!compra.tipo_dte && !body.tipo_dte) errores.push('Tipo de DTE');
+      const claseFinal = body.clase_documento ?? compra.clase_documento ?? 'DTE';
+      const categoriaFinal = body.categoria_operacion ?? compra.categoria_operacion ?? 'CONTABLE';
+      const tipoDteFinal = claseFinal === 'IMPORTACION' ? null : body.tipo_dte ?? compra.tipo_dte;
+
+      const condicionElegida =
+        body.condicion_operacion !== undefined ? body.condicion_operacion : compra.condicion_operacion;
+      if (![1, 2, 3].includes(Number(condicionElegida))) {
+        await connection.end();
+        return NextResponse.json({ error: AVISOS_COMPRA.condicion }, { status: 400 });
+      }
+      const [sinTipo] = await connection.execute<RowDataPacket[]>(
+        'SELECT numero_linea FROM compras_detalle WHERE idcompra = ? AND destino IS NULL ORDER BY numero_linea',
+        [body.idcompra]
+      );
+      if (sinTipo.length > 0) {
+        await connection.end();
+        return NextResponse.json(
+          {
+            error: `${AVISOS_COMPRA.tipoProducto} (línea ${sinTipo.map((l) => l.numero_linea).join(', ')})`,
+          },
+          { status: 400 }
+        );
+      }
+
+      if (claseFinal === 'DTE' && !tipoDteFinal) errores.push('Tipo de DTE');
+      if (claseFinal === 'IMPORTACION' && !compra.numero_factura && !body.numero_factura) {
+        errores.push('Número de factura del proveedor');
+      }
+      errores.push(
+        ...(await erroresDeLineas(connection, Number(body.idcompra), {
+          categoria_operacion: categoriaFinal,
+          clase_documento: claseFinal,
+          tipo_dte: tipoDteFinal,
+        }))
+      );
+      const [incompletas] = await connection.execute<RowDataPacket[]>(
+        `SELECT
+           GROUP_CONCAT(IF(destino = 'EXPRESS' AND (numero_orden IS NULL OR numero_orden = ''), numero_linea, NULL)) AS sin_orden,
+           GROUP_CONCAT(IF(destino IN ('GASTOS','ACTIVOS') AND idcatalogo IS NULL, numero_linea, NULL)) AS sin_rubro
+         FROM compras_detalle WHERE idcompra = ?`,
+        [body.idcompra]
+      );
+      if (incompletas[0]?.sin_orden) errores.push(`Orden de trabajo en las líneas express (línea ${incompletas[0].sin_orden})`);
+      if (incompletas[0]?.sin_rubro) errores.push(`Rubro contable en los gastos o activos (línea ${incompletas[0].sin_rubro})`);
+      if (tipoDteFinal === '05' || tipoDteFinal === '06') {
+        if (!compra.idcompra_origen) errores.push('Factura original de la nota');
+        if (tipoDteFinal === '05') errores.push(...(await erroresTopeNota(connection, Number(body.idcompra))));
+      }
       if (!compra.idproveedor && !body.idproveedor) errores.push('Proveedor');
       if (!compra.fecha_emision && !body.fecha_emision) errores.push('Fecha de emisión');
 
-      const [lineas]: any = await connection.execute(
+      const [lineas] = await connection.execute<RowDataPacket[]>(
         'SELECT COUNT(*) AS total FROM compras_detalle WHERE idcompra = ?',
         [body.idcompra]
       );
@@ -374,7 +526,7 @@ export async function PUT(request: NextRequest) {
         }
       }
 
-      const condicion = Number(body.condicion_operacion ?? compra.condicion_operacion ?? 1);
+      const condicion = Number(condicionElegida);
       if (condicion === 2) {
         const plazoTipo = body.plazo_tipo ?? compra.plazo_tipo;
         const plazoPeriodo = body.plazo_periodo ?? compra.plazo_periodo;
@@ -394,6 +546,7 @@ export async function PUT(request: NextRequest) {
         await connection.end();
         return NextResponse.json({ error: 'Tipo de DTE no válido' }, { status: 400 });
       }
+      await ajustarNumeroInterno(connection, compra, datos);
 
       if (!datos.fecha_registro) {
         datos.fecha_registro = new Date().toISOString().slice(0, 10);
@@ -424,13 +577,20 @@ export async function PUT(request: NextRequest) {
         retencion_renta: datos.retencion_renta as number | undefined,
       });
 
+      await connection.beginTransaction();
       await connection.execute(
         "UPDATE compras SET estado = 'REGISTRADA' WHERE idcompra = ?",
         [body.idcompra]
       );
+      const productos = await aplicarStockAlRegistrar(connection, Number(body.idcompra));
+      await connection.commit();
 
       await connection.end();
-      return NextResponse.json({ success: true, mensaje: 'Compra registrada' });
+      const efecto = tipoDteFinal === '05' ? 'se restó del' : 'se sumó al';
+      return NextResponse.json({
+        success: true,
+        mensaje: productos ? `Compra registrada; ${efecto} stock de ${productos} producto(s)` : 'Compra registrada',
+      });
     }
 
     const datos = extraerEncabezado(body);
@@ -438,6 +598,41 @@ export async function PUT(request: NextRequest) {
       await connection.end();
       return NextResponse.json({ error: 'Tipo de DTE no válido para compras nacionales' }, { status: 400 });
     }
+    const cambiaCategoria =
+      (datos.categoria_operacion !== undefined && datos.categoria_operacion !== compra.categoria_operacion) ||
+      (datos.clase_documento !== undefined && datos.clase_documento !== compra.clase_documento);
+    if (cambiaCategoria) {
+      const errores = await erroresDeLineas(connection, Number(body.idcompra), {
+        categoria_operacion: String(datos.categoria_operacion ?? compra.categoria_operacion),
+        clase_documento: String(datos.clase_documento ?? compra.clase_documento),
+      });
+      if (errores.length > 0) {
+        await connection.end();
+        return NextResponse.json(
+          { error: `No se puede cambiar: ${errores.join('; ')}. Cambie o elimine esas líneas primero.` },
+          { status: 400 }
+        );
+      }
+    }
+    const cambiaProveedor =
+      compra.idcompra_origen && datos.idproveedor !== undefined && Number(datos.idproveedor) !== Number(compra.idproveedor);
+    const dejaDeSerNota =
+      datos.tipo_dte !== undefined && !tipoDteRequiereRelacionados(datos.tipo_dte as string | null) && compra.idcompra_origen;
+    if (cambiaProveedor || dejaDeSerNota) {
+      const [deOrigen] = await connection.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) AS total FROM compras_detalle WHERE idcompra = ? AND iddetalle_origen IS NOT NULL',
+        [body.idcompra]
+      );
+      if (Number(deOrigen[0].total) > 0) {
+        await connection.end();
+        return NextResponse.json(
+          { error: 'La nota tiene líneas cargadas de la factura original; elimínelas antes de cambiar el proveedor o el tipo' },
+          { status: 400 }
+        );
+      }
+      datos.idcompra_origen = null;
+    }
+    await ajustarNumeroInterno(connection, compra, datos);
 
     if (datos.idproveedor) {
       const [prov]: any = await connection.execute(
@@ -505,7 +700,7 @@ export async function DELETE(request: NextRequest) {
     connection = await connectDB();
 
     const [existente]: any = await connection.execute(
-      'SELECT estado FROM compras WHERE idcompra = ?',
+      'SELECT estado, nodocto FROM compras WHERE idcompra = ?',
       [id]
     );
 
@@ -523,6 +718,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     await connection.execute('DELETE FROM compras WHERE idcompra = ?', [id]);
+    if (existente[0].nodocto) {
+      await connection.execute('DELETE FROM esquemas_dte WHERE nodocto = ?', [existente[0].nodocto]);
+      await connection.execute('DELETE FROM ruta_archivos WHERE nodocto = ?', [existente[0].nodocto]);
+    }
     await connection.end();
 
     return NextResponse.json({ success: true, mensaje: 'Borrador eliminado' });

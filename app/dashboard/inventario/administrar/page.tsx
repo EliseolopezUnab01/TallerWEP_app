@@ -14,6 +14,7 @@ import { UserDropdown } from '@/components/user-dropdown';
 import { generateCatalogPDF } from '@/lib/generate-catalog-pdf';
 import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
+import { GloboStock, useDisponibilidad } from '@/components/ui/globo-stock';
 
 interface Producto {
   idprod: number;
@@ -31,12 +32,6 @@ interface Producto {
   created_at: string;
   grupo?: string;
   subgrupo?: string;
-}
-
-interface Categoria {
-  idcategoria: string;
-  nombre: string;
-  descripcion?: string;
 }
 
 interface CategoriaNueva {
@@ -68,8 +63,6 @@ interface Subgrupo {
 export default function AdministrarProductoPage() {
   const { openFloatingWindow } = useFloatingWindows();
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  // Nuevos estados para el sistema jerárquico
   const [categoriasNuevas, setCategoriasNuevas] = useState<CategoriaNueva[]>([]);
   const [gruposDB, setGruposDB] = useState<Grupo[]>([]);
   const [subgruposDB, setSubgruposDB] = useState<Subgrupo[]>([]);
@@ -170,14 +163,12 @@ export default function AdministrarProductoPage() {
       if (filterCategoria) params.append('categoria', filterCategoria);
       if (selectedFilters.length > 0) params.append('filters', selectedFilters.join(','));
       
-      const [productosResponse, categoriasResponse, jerarquiaResponse] = await Promise.all([
+      const [productosResponse, jerarquiaResponse] = await Promise.all([
         fetch(`/api/productos?${params.toString()}`),
-        fetch('/api/categorias'),
         fetch('/api/categorias-jerarquia')
       ]);
 
       const productosData = await productosResponse.json();
-      const categoriasData = await categoriasResponse.json();
       const jerarquiaData = await jerarquiaResponse.json();
 
       if (productosResponse.ok) {
@@ -203,11 +194,6 @@ export default function AdministrarProductoPage() {
         setSubgrupos(subgruposUnicos.sort());
       }
 
-      if (categoriasResponse.ok) {
-        setCategorias(categoriasData.categorias || []);
-      }
-
-      // Cargar datos del sistema jerárquico
       if (jerarquiaResponse.ok) {
         setCategoriasNuevas(jerarquiaData.categorias || []);
         setGruposDB(jerarquiaData.grupos || []);
@@ -479,6 +465,7 @@ export default function AdministrarProductoPage() {
 
   // Los productos ya vienen filtrados del servidor, solo aplicamos filtros locales adicionales si es necesario
   const productosFiltrados = productos;
+  const disponibilidad = useDisponibilidad(productosFiltrados.map((p) => p.idprod));
 
   if (loading) {
     return (
@@ -636,7 +623,7 @@ export default function AdministrarProductoPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Categorías</p>
-                    <p className="text-2xl font-bold text-purple-400">{categorias.length}</p>
+                    <p className="text-2xl font-bold text-purple-400">{categoriasNuevas.length}</p>
                   </div>
                   <Filter className="h-8 w-8 text-purple-500" />
                 </div>
@@ -755,11 +742,14 @@ export default function AdministrarProductoPage() {
                               )}
                             </div>
                           </td>
-                          <td className="py-2 px-2 text-slate-200 max-w-[200px] truncate">{producto.nombre}</td>
+                          <td className="py-2 px-2 text-slate-900 dark:text-slate-200 max-w-[200px] truncate">{producto.nombre}</td>
                           <td className="py-2 px-2 text-slate-300">{producto.OE}</td>
                           <td className="py-2 px-2"><Badge variant="outline" className="text-xs">{producto.categoria_nombre || producto.idcategoria || '-'}</Badge></td>
                           <td className="py-2 px-2">
-                            <span className={`font-medium ${producto.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>{producto.stock_contable}</span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <GloboStock idprod={producto.idprod} datos={disponibilidad[producto.idprod]} />
+                              <span className={`font-medium ${producto.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>{producto.stock_contable}</span>
+                            </span>
                           </td>
                           <td className="py-2 px-2">
                             <div className="flex gap-1">
@@ -789,12 +779,13 @@ export default function AdministrarProductoPage() {
                         ) : (
                           <div className="flex items-center justify-center h-full"><Package className="h-12 w-12 text-slate-600" /></div>
                         )}
-                        <Badge className={`absolute top-2 right-2 ${producto.stock_contable > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+                        <Badge className={`absolute top-2 right-2 gap-1 ${producto.stock_contable > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+                          <GloboStock idprod={producto.idprod} datos={disponibilidad[producto.idprod]} className="text-white!" />
                           {producto.stock_contable} en stock
                         </Badge>
                       </div>
                       <CardContent className="p-3">
-                        <h3 className="font-semibold text-sm line-clamp-1 text-slate-100 mb-1">{producto.nombre}</h3>
+                        <h3 className="font-semibold text-sm line-clamp-1 text-slate-900 dark:text-slate-100 mb-1">{producto.nombre}</h3>
                         <p className="text-xs text-slate-400 mb-2">OE: {producto.OE}</p>
                         <div className="flex gap-1">
                           <Link href={`/dashboard/inventario/perfil?id=${producto.idprod}`}>

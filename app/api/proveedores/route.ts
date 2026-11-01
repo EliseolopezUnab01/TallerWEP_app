@@ -157,9 +157,12 @@ export async function GET(request: NextRequest) {
         OR nombre_legal LIKE ?
         OR nombre_comercial LIKE ?
         OR nit LIKE ?
+        OR nrc LIKE ?
+        OR idproveedor = ?
       )`);
       const like = `%${q}%`;
-      valores.push(like, like, like, like, like);
+      const id = /^\d+$/.test(q.trim()) ? Number(q.trim()) : -1;
+      valores.push(like, like, like, like, like, like, id);
     }
 
     if (tipo) {
