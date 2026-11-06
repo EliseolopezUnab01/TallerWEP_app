@@ -83,6 +83,8 @@ Tipo de impuesto *"tal como viene documentado en la factura del proveedor"*.
 | `NO SUJETO` | Pagos sin relación con la ley del IVA: tasas municipales, aranceles estatales, etc. |
 | `XCOMPROBAR` | *Gasto por comprobar*: pagos que **no alterarán el total FISCAL** de la operación, pero que se necesita documentar por control contable interno |
 
+**Cerrado por el cliente (05/11):** la condición es una clasificación de cada registro y se puede editar después de importar. No hay un valor fijo por proveedor. El rubro del catálogo contable la sugiere (`condicion_iva_sugerida`) y el selector de la línea sigue editable.
+
 ---
 
 ## 4. Control 29 (NUEVO) — Destino o naturaleza del registro
@@ -95,6 +97,8 @@ Tipo de impuesto *"tal como viene documentado en la factura del proveedor"*.
 | `EXPRESS` | Producto que se guarda como registro de compra y venta posterior, **sin formar parte del inventario**, porque no estará en bodega más de un día |
 | `ACTIVOS` | Equipo, herramientas y otros bienes duraderos que no se venden como inventario, sino de uso operativo de la empresa |
 | `GASTOS` | Artículos de uso o consumo de la empresa. **Despliega opciones adicionales** (control 29.1) |
+
+**Cantidades (cliente, 05/11):** este taller trabaja con unidades enteras, pero el sistema debe poder manejar fracciones para otros clientes. El stock se guarda con 4 decimales (migración 026) y el interruptor "Trabajar con cantidades decimales" de Configuración > Sistema (`configuracion_sistema.cantidades_decimales`, apagado) decide si una línea `INVENTARIO` o un ajuste de inventario acepta fracciones. Express y gastos aceptan decimales siempre.
 
 ---
 

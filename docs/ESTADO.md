@@ -1,6 +1,6 @@
 # Estado del proyecto — Taller Web
 
-**Última actualización:** 2026-11-01 (plan de mejora integral cerrado. Fase 6, migración 025: el vehículo guarda número de tarjeta y código de serie; las órdenes de trabajo tienen correlativo OT, tareas y repuestos previstos; la línea express o de gastos se enlaza a la orden por `idorden`.)  
+**Última actualización:** 2026-11-05 (plan de mejora de rendimiento y diseño del video del 04/11, fases A–G. Migración 026: stock con decimales y Configuración > Sistema.)  
 **Propósito:** documento vivo para que Cursor (y cualquier chat nuevo) sepa en qué va el sistema sin depender del historial de Windsurf.
 
 ---
@@ -10,13 +10,16 @@
 - **Nombre:** Taller Web (`TallerWEP_app`)
 - **Stack:** Next.js 16, React 19, TypeScript, Tailwind, MySQL (`mysql2`), JWT en `localStorage`
 - **Dominio:** inventario de taller automotriz, El Salvador, IVA 13%
-- **Arranque:** `npm run dev` desde `TallerWEP_app/` → `http://localhost:3000`
+- **Arranque:** `npm run dev` desde `TallerWEP_app/` → `http://localhost:3000`. En desarrollo, Next compila cada ruta la primera vez que se abre (de 5 a 20 s), por eso el primer clic en cada pantalla tarda.
+- **Para el cliente o una demo:** `npm run build` y luego `npm run start`. Así las rutas ya van compiladas y abren al instante. Hay que volver a hacer `build` después de cada cambio de código.
+- **Windows Defender:** revisa cada archivo que Next escribe en `.next/` y `node_modules/` y vuelve lento el arranque. Conviene excluir la carpeta del proyecto: Seguridad de Windows > Protección contra virus y amenazas > Administrar la configuración > Exclusiones > Agregar una carpeta (`...\SISTEMA TALLER\TallerWEP_app`). Lo hace un administrador del equipo.
 
 ### Convenciones técnicas
 
 - BD: `lib/db.ts` — conexión MySQL
 - Auth: `lib/auth.ts` — JWT 7 días; login en `/`; dashboard exige token en cliente (APIs sin middleware aún)
-- Migraciones numeradas en `migrations/` (004–017)
+- Migraciones numeradas en `migrations/` (004–026), aplicadas con `npm run migrate`
+- Configuraciones generales del sistema en `configuracion_sistema` (`lib/configuracion.ts`, pantalla Configuración > Sistema)
 - Datos de la empresa para el PDF de la orden de compra: variables `NEXT_PUBLIC_EMPRESA_NOMBRE`, `_NIT`, `_NRC`, `_DIRECCION`, `_TELEFONO`, `_EMAIL` en `.env.local` (`lib/empresa.ts`). No hay tabla de empresa.
 - **Aplicar migraciones con redirección de `cmd`, no con tubería de PowerShell.** PowerShell 5 cambia tildes y ñ por `?` al pasar el texto a `mysql`. Forma correcta:
   `cmd /c "C:\xampp\mysql\bin\mysql.exe -uroot --default-character-set=utf8mb4 taller_web < migrations\0NN_archivo.sql"`
@@ -86,7 +89,25 @@ Archivos originales en [`docs/fuentes/`](fuentes/):
 
 ## Dónde me quedé
 
-**Fecha:** 2026-11-01
+**Fecha:** 2026-11-05
+**Último trabajo:** plan de mejora salido del video del 04/11 (sin audio) y de las respuestas del cliente del 05/11. Rama `seguimiento/ricardo`, sin push.
+
+- **Rendimiento.** El menú y la barra ya no se vuelven a montar al navegar: `app/dashboard/layout.tsx` envuelve todo con `DashboardLayout`, y las 24 páginas dejaron de hacerlo cada una. Hay `loading.tsx` con un esqueleto mientras carga la ruta. La verificación de la hora se hace una vez cada 30 min (`lib/reloj-cliente.ts`) y el servidor guarda la referencia 10 min (`/api/server-time`); ya no deja una notificación en cada pantalla. recharts y el PDF del catálogo se cargan solo cuando se usan.
+- **Errores visibles.** El pastel del panel salía vacío porque MySQL devuelve los SUM como texto. El panel muestra las órdenes de taller reales y los accesos de Taller, Cotizaciones, Clientes y Sujeto excluido. Las fechas de archivos y ajustes usan la fecha local (`fechaLocalISO`). Los costos se ven con 2 a 4 decimales y el stock sin ceros sobrantes (`lib/decimales.ts`). Las fichas sin imagen ocupan menos.
+- **Diseño.** Encabezado compacto único (`BarraPantalla`) en inventario, proveedores, catálogo, órdenes y Mi contraseña. El tema claro/oscuro queda solo en el menú. Barras de desplazamiento oscuras en modo oscuro. Órdenes y Vehículos piden registrar primero un cliente cuando no hay. En Empresa, el municipio es una lista que depende del departamento (CAT-013 de 2024 en `lib/hacienda-catalogos.ts`); un código guardado que no esté en la lista se conserva.
+- **Pantallas pesadas.** Editar, Administrar, Nuevo y Proveedores pasaron diálogos, galerías y pestañas a `_components/`. Perfil es solo de consulta: se quitó el código muerto, las referencias de ejemplo fijas y el cuadro duplicado; "Editar producto" aparece solo con permiso `inventario.editar`.
+- **Categorías.** Se muestra "Sin categoría asignada" en vez del código viejo. Los 146 productos siguen con `idcategoria_nuevo` vacío; la migración `027_mapeo_categorias.sql` espera la equivalencia de los 35 códigos viejos.
+- **Cantidades (migración 026).** `stock_contable` y `stock_fisico` son `DECIMAL(18,4)`. Tabla `configuracion_sistema` con `cantidades_decimales = 0`. Pantalla Configuración > Sistema. Con el interruptor apagado, las líneas de inventario y los ajustes rechazan fracciones en pantalla y en la API; express y gastos no cambian.
+- **Datos de prueba.** Se limpió la marca "edit vacia" de 11 productos (el respaldo del 01/11 ya la traía, así que no había valor original). El proveedor "hhbhghghj" (PL0001) **no** se borró: es el único proveedor y tiene 3 compras registradas con 5 líneas que ya sumaron stock. Borrarlo exige anular esas compras; queda a decisión del usuario.
+- DBML regenerado (56 tablas).
+
+**Decisiones del cliente (05/11):** la condición de IVA (control 19) es de cada registro y editable, sin valor por proveedor. Cantidades enteras con el interruptor para otros clientes. La factura de sujeto excluido solo se anula; corregirla por reemplazo queda como mejora futura.
+
+**Siguiente paso:** recorrer con el cliente. Pendiente: mapeo de categorías (027), decidir qué hacer con el proveedor de prueba, llenar Empresa y el `.env.local` del DTE, arrancar el firmador y registrar el respaldo diario.
+
+---
+
+**Fecha anterior:** 2026-11-01
 **Último trabajo:** fase 6 (migración `025_taller_ordenes.sql`). Vehículo con número de tarjeta y código de serie. Pantalla Taller > Órdenes de trabajo sobre `ordenes_trabajo`, con tareas en `orden_reparaciones` y repuestos previstos en `orden_repuestos`. El correlativo es `OT`. Al guardar una línea express o de gastos, si el número de orden existe se guarda `compras_detalle.idorden`; si no existe, la API rechaza la línea. Lo que se compra sigue en la línea express y no mueve stock por estar en la orden. Se borraron los usuarios de prueba `zz.admin@local` y `zz.consulta@local`. Queda llenar Empresa y el `.env.local` del DTE, arrancar el firmador y registrar el respaldo diario como administrador (`scripts/registrar-respaldo.ps1`).
 
 **Fecha anterior inmediata:** 2026-11-01
