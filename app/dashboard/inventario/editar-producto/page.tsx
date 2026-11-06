@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Search, ChevronLeft, ChevronRight, X, Package, Save, Trash2, ArrowLeft, Upload, Edit, Eye, Lock, Unlock, History, Calendar, User, AlertTriangle
+  X, Package, Save, ArrowLeft, Edit
 } from 'lucide-react';
 import Image from 'next/image';
 import { NotificationDropdown } from '@/components/notification-dropdown';
@@ -21,7 +21,11 @@ import { UserDropdown } from '@/components/user-dropdown';
 import { useNotifications } from '@/contexts/notification-context';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { getCodigoCatalogo } from '@/lib/format-utils';
-import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
+import { SearchFilters, SingleFilterType } from '@/components/search-filters';
+import { ConfirmarEdicion } from './_components/ConfirmarEdicion';
+import { EdicionMasivaDialog } from './_components/EdicionMasivaDialog';
+import { GaleriaImagenes } from './_components/GaleriaImagenes';
+import { EDICION_MASIVA_VACIA, LADOS, UNIDADES_MEDIDA, type DatosEdicionMasiva } from './_components/tipos';
 
 interface Producto {
   idprod: number;
@@ -106,22 +110,14 @@ function EditarProductoContent() {
   const [productosSeleccionados, setProductosSeleccionados] = useState<Set<number>>(new Set());
   const [showEdicionMasiva, setShowEdicionMasiva] = useState(false);
   const [savingMasivo, setSavingMasivo] = useState(false);
-  const [edicionMasivaData, setEdicionMasivaData] = useState({
-    marca: '',
-    idcategoria_nuevo: '',
-    id_grupo: '',
-    id_subgrupo: '',
-    unimedida: '',
-    lado: '',
-    exento: '' as '' | 'true' | 'false',
-  });
+  const [edicionMasivaData, setEdicionMasivaData] = useState<DatosEdicionMasiva>(EDICION_MASIVA_VACIA);
   
   // Debounce para búsqueda en servidor
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const unidadesMedida = ['UNIDAD', 'PAR', 'JUEGO', 'KIT', 'LITRO', 'GALON', 'METRO'];
-  const lados = ['IZQUIERDO', 'DERECHO', 'AMBOS', 'NO APLICA'];
+  const unidadesMedida = UNIDADES_MEDIDA;
+  const lados = LADOS;
 
   // Debounce del término de búsqueda
   useEffect(() => {
@@ -408,15 +404,7 @@ function EditarProductoContent() {
         // Recargar productos y limpiar selección
         fetchAllProductos();
         cancelarModoSeleccion();
-        setEdicionMasivaData({
-          marca: '',
-          idcategoria_nuevo: '',
-          id_grupo: '',
-          id_subgrupo: '',
-          unimedida: '',
-          lado: '',
-          exento: '',
-        });
+        setEdicionMasivaData(EDICION_MASIVA_VACIA);
       } else {
         const error = await response.json();
         avisar(`Error: ${error.error || 'No se pudo completar la edición masiva'}`);
@@ -621,38 +609,7 @@ function EditarProductoContent() {
 
         {/* Diálogo de confirmación */}
         {showConfirmDialog && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-            <div className="bg-gradient-to-br from-white to-slate-50 dark:from-card dark:to-background border border-sky-200/70 dark:border-primary/30 rounded-xl p-6 max-w-md w-full mx-4 shadow-[0_0_30px_rgba(14,136,201,0.3)]">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-yellow-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Confirmar Edición</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Esta acción modificará el producto</p>
-                </div>
-              </div>
-              <p className="text-slate-300 mb-6">
-                ¿Está seguro que desea guardar los cambios realizados al producto <span className="font-semibold text-primary">"{producto?.nombre}"</span>?
-              </p>
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowConfirmDialog(false)}
-                  className="border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleConfirmSave}
-                  className="bg-primary hover:bg-primary/90 text-white"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Sí, Guardar Cambios
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ConfirmarEdicion producto={producto} setShowConfirmDialog={setShowConfirmDialog} handleConfirmSave={handleConfirmSave} />
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -857,72 +814,16 @@ function EditarProductoContent() {
             {isEditing && producto ? (
               <form id="product-form" onSubmit={handleSubmitClick} className="space-y-4">
                 {/* Galería de Imágenes - Centrada arriba */}
-                <Card className="bg-gradient-to-br from-white to-slate-50 dark:from-card dark:to-background border border-sky-200/70 dark:border-primary/30 shadow-[0_8px_30px_rgba(14,136,201,0.1)] dark:shadow-[0_0_20px_rgba(14,136,201,0.25)] rounded-xl overflow-hidden max-w-md mx-auto">
-                  <CardHeader className="py-2 px-3 flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm text-slate-700 dark:text-slate-200 tracking-wide">GALERÍA DE IMÁGENES</CardTitle>
-                    <span className="text-xs text-emerald-400">{allImages.length + newImages.length}/10</span>
-                  </CardHeader>
-                  <CardContent className="p-3 space-y-3">
-                    <div className="relative w-full h-[180px] bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden">
-                    {allImages.length > 0 ? (
-                      <>
-                        <div className="relative h-full w-full">
-                          <Image src={allImages[currentImageIndex]} alt="Producto" fill className="object-contain" />
-                        </div>
-                        <button type="button" onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
-                          <ChevronLeft className="h-6 w-6" />
-                        </button>
-                        <button type="button" onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">
-                          <ChevronRight className="h-6 w-6" />
-                        </button>
-                        <button type="button" onClick={deleteCurrentImage} className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 text-white p-2 rounded-full">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 px-3 py-1 rounded-full text-xs text-white">
-                          {currentImageIndex + 1} / {allImages.length}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-center h-full w-full p-4">
-                        <div className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-300 dark:border-slate-700/40 bg-slate-950/60 p-4 w-full h-full flex flex-col items-center justify-center">
-                          <Upload className="h-12 w-12 text-slate-800 dark:text-slate-500 mb-3" />
-                          <label htmlFor="image-upload-main" className="cursor-pointer">
-                            <div className="border border-primary/60 bg-primary/10 text-primary hover:bg-primary/20 px-4 py-2 rounded-lg text-sm font-medium">
-                              Seleccionar Imágenes
-                            </div>
-                          </label>
-                          <input id="image-upload-main" type="file" multiple accept="image/*" onChange={handleNewImagesChange} className="hidden" />
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">PNG, JPG, JPEG hasta 10MB</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {/* Miniaturas */}
-                  <div className="flex flex-wrap gap-2 items-center justify-center">
-                    {allImages.map((img, idx) => (
-                      <button key={idx} type="button" onClick={() => setCurrentImageIndex(idx)}
-                        className={`h-14 w-20 flex-shrink-0 rounded-md border overflow-hidden ${idx === currentImageIndex ? 'border-2 border-cyan-500' : 'border border-slate-700'}`}>
-                        <div className="relative h-full w-full">
-                          <Image src={img} alt="" fill className="object-cover" />
-                        </div>
-                      </button>
-                    ))}
-                    {newImages.map((img, idx) => (
-                      <div key={`new-${idx}`} className="h-14 w-20 flex-shrink-0 rounded-md border-2 border-emerald-500 bg-slate-100 dark:bg-slate-900 overflow-hidden">
-                        <img src={URL.createObjectURL(img)} alt={`Nueva ${idx + 1}`} className="h-full w-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                  {allImages.length > 0 && (
-                    <div className="border-t border-slate-300 dark:border-slate-700/40 pt-3 text-center">
-                      <label htmlFor="image-upload-add" className="cursor-pointer inline-flex items-center gap-2 border border-primary/60 bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-lg text-xs font-medium">
-                        <Upload className="h-3 w-3" /> Agregar Nuevas Imágenes
-                      </label>
-                      <input id="image-upload-add" type="file" multiple accept="image/*" onChange={handleNewImagesChange} className="hidden" />
-                    </div>
-                  )}
-                  </CardContent>
-                </Card>
+                <GaleriaImagenes
+                  allImages={allImages}
+                  newImages={newImages}
+                  currentImageIndex={currentImageIndex}
+                  setCurrentImageIndex={setCurrentImageIndex}
+                  prevImage={prevImage}
+                  nextImage={nextImage}
+                  deleteCurrentImage={deleteCurrentImage}
+                  handleNewImagesChange={handleNewImagesChange}
+                />
 
                 {/* UN SOLO CUADRO: Información del Producto */}
                 <Card className="bg-gradient-to-br from-white to-slate-50 dark:from-card dark:to-background border border-sky-200/70 dark:border-primary/30 rounded-xl">
@@ -1274,198 +1175,17 @@ function EditarProductoContent() {
       </div>
     {/* Modal de Edición Masiva */}
         {showEdicionMasiva && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-white to-violet-50/40 dark:from-card dark:to-background border border-violet-300 dark:border-purple-500/30 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-              <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Edición Masiva</h3>
-                  <p className="text-sm text-purple-400">{productosSeleccionados.size} productos seleccionados</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowEdicionMasiva(false)}
-                  className="text-slate-400 hover:text-slate-200"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              
-              <div className="p-4 space-y-4">
-                <p className="text-xs text-slate-400 bg-slate-800/50 p-2 rounded">
-                  Solo los campos que completes se actualizarán. Los campos vacíos no se modificarán.
-                </p>
-                
-                {/* Marca */}
-                <div className="space-y-1">
-                  <Label className="text-slate-600 dark:text-slate-300">Marca</Label>
-                  <Input
-                    placeholder="Dejar vacío para no modificar"
-                    value={edicionMasivaData.marca}
-                    onChange={(e) => setEdicionMasivaData(prev => ({ ...prev, marca: e.target.value }))}
-                    className="bg-slate-100 dark:bg-slate-900 border-slate-700 text-slate-200"
-                  />
-                </div>
-                
-                {/* Categoría */}
-                <div className="space-y-1">
-                  <Label className="text-slate-600 dark:text-slate-300">Categoría</Label>
-                  <Select
-                    value={edicionMasivaData.idcategoria_nuevo}
-                    onValueChange={(value) => setEdicionMasivaData(prev => ({ 
-                      ...prev, 
-                      idcategoria_nuevo: value,
-                      id_grupo: '',
-                      id_subgrupo: ''
-                    }))}
-                  >
-                    <SelectTrigger className="bg-slate-100 dark:bg-slate-900 border-slate-700 text-slate-200">
-                      <SelectValue placeholder="No modificar" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-100 dark:bg-slate-900 border-slate-700">
-                      {categoriasNuevo.map(cat => (
-                        <SelectItem key={cat.idcategoria} value={String(cat.idcategoria)}>
-                          {cat.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Grupo (si hay categoría seleccionada) */}
-                {edicionMasivaData.idcategoria_nuevo && (
-                  <div className="space-y-1">
-                    <Label className="text-slate-600 dark:text-slate-300">Grupo</Label>
-                    <Select
-                      value={edicionMasivaData.id_grupo}
-                      onValueChange={(value) => setEdicionMasivaData(prev => ({ 
-                        ...prev, 
-                        id_grupo: value,
-                        id_subgrupo: ''
-                      }))}
-                    >
-                      <SelectTrigger className="bg-slate-100 dark:bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectValue placeholder="No modificar" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-100 dark:bg-slate-900 border-slate-700">
-                        {grupos
-                          .filter(g => Number(g.idcategoria) === Number(edicionMasivaData.idcategoria_nuevo))
-                          .map(grupo => (
-                            <SelectItem key={grupo.id_grupo} value={String(grupo.id_grupo)}>
-                              {grupo.codigo} - {grupo.nombre}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                
-                {/* Subgrupo (si hay grupo seleccionado) */}
-                {edicionMasivaData.id_grupo && (
-                  <div className="space-y-1">
-                    <Label className="text-slate-600 dark:text-slate-300">Subgrupo</Label>
-                    <Select
-                      value={edicionMasivaData.id_subgrupo}
-                      onValueChange={(value) => setEdicionMasivaData(prev => ({ ...prev, id_subgrupo: value }))}
-                    >
-                      <SelectTrigger className="bg-slate-100 dark:bg-slate-900 border-slate-700 text-slate-200">
-                        <SelectValue placeholder="No modificar" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-100 dark:bg-slate-900 border-slate-700">
-                        {subgrupos
-                          .filter(s => Number(s.id_grupo) === Number(edicionMasivaData.id_grupo))
-                          .map(sub => (
-                            <SelectItem key={sub.id_subgrupo} value={String(sub.id_subgrupo)}>
-                              {sub.codigo} - {sub.nombre}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                
-                {/* Unidad de Medida */}
-                <div className="space-y-1">
-                  <Label className="text-slate-600 dark:text-slate-300">Unidad de Medida</Label>
-                  <Select
-                    value={edicionMasivaData.unimedida}
-                    onValueChange={(value) => setEdicionMasivaData(prev => ({ ...prev, unimedida: value }))}
-                  >
-                    <SelectTrigger className="bg-slate-100 dark:bg-slate-900 border-slate-700 text-slate-200">
-                      <SelectValue placeholder="No modificar" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-100 dark:bg-slate-900 border-slate-700">
-                      {unidadesMedida.map(u => (
-                        <SelectItem key={u} value={u}>{u}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Lado */}
-                <div className="space-y-1">
-                  <Label className="text-slate-600 dark:text-slate-300">Lado</Label>
-                  <Select
-                    value={edicionMasivaData.lado}
-                    onValueChange={(value) => setEdicionMasivaData(prev => ({ ...prev, lado: value }))}
-                  >
-                    <SelectTrigger className="bg-slate-100 dark:bg-slate-900 border-slate-700 text-slate-200">
-                      <SelectValue placeholder="No modificar" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-100 dark:bg-slate-900 border-slate-700">
-                      {lados.map(l => (
-                        <SelectItem key={l} value={l}>{l}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* Exento de Impuestos */}
-                <div className="space-y-1">
-                  <Label className="text-slate-600 dark:text-slate-300">Exento de Impuestos</Label>
-                  <Select
-                    value={edicionMasivaData.exento}
-                    onValueChange={(value) => setEdicionMasivaData(prev => ({ ...prev, exento: value as '' | 'true' | 'false' }))}
-                  >
-                    <SelectTrigger className="bg-slate-100 dark:bg-slate-900 border-slate-700 text-slate-200">
-                      <SelectValue placeholder="No modificar" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-100 dark:bg-slate-900 border-slate-700">
-                      <SelectItem value="true">Sí - Exento</SelectItem>
-                      <SelectItem value="false">No - Con impuestos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="p-4 border-t border-slate-700 flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowEdicionMasiva(false)}
-                  className="border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleGuardarEdicionMasiva}
-                  disabled={savingMasivo}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  {savingMasivo ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Aplicar a {productosSeleccionados.size} productos
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
+          <EdicionMasivaDialog
+            productosSeleccionados={productosSeleccionados}
+            edicionMasivaData={edicionMasivaData}
+            setEdicionMasivaData={setEdicionMasivaData}
+            categoriasNuevo={categoriasNuevo}
+            grupos={grupos}
+            subgrupos={subgrupos}
+            savingMasivo={savingMasivo}
+            setShowEdicionMasiva={setShowEdicionMasiva}
+            handleGuardarEdicionMasiva={handleGuardarEdicionMasiva}
+          />
         )}
       </div>
     </>

@@ -11,10 +11,17 @@ import {
   Car, ClipboardList, Loader2, TrendingUp,
   AlertTriangle, CheckCircle2, BarChart3,
 } from 'lucide-react';
-import {
-  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar,
-  XAxis, YAxis, Tooltip, CartesianGrid,
-} from 'recharts';
+import dynamic from 'next/dynamic';
+
+const cargandoGrafico = () => <div className="h-[240px] animate-pulse rounded-lg bg-muted/50" />;
+const GraficoStock = dynamic(() => import('./_components/GraficosPanel').then((m) => m.GraficoStock), {
+  ssr: false,
+  loading: cargandoGrafico,
+});
+const GraficoCategorias = dynamic(() => import('./_components/GraficosPanel').then((m) => m.GraficoCategorias), {
+  ssr: false,
+  loading: cargandoGrafico,
+});
 
 interface DashboardStats {
   inventario: {
@@ -32,18 +39,9 @@ interface DashboardStats {
 }
 
 const STOCK_COLORS = ['#10b981', '#f59e0b', '#64748b', '#ef4444'];
-const BAR_COLOR = '#0e88c9';
 
 const CARD =
   'bg-card border border-border shadow-[0_8px_30px_rgba(14,136,201,0.08)] dark:shadow-[0_0_30px_rgba(14,136,201,0.08)] rounded-xl';
-
-const CHART_TOOLTIP = {
-  background: 'var(--tooltip-bg)',
-  border: '1px solid var(--tooltip-border)',
-  borderRadius: 8,
-  fontSize: 12,
-  color: '#e2e8f0',
-};
 
 const ACCIONES = [
   {
@@ -416,26 +414,7 @@ export default function DashboardPage() {
                       Distribución de stock
                     </h3>
                     {stockPie.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={240} minWidth={200}>
-                        <PieChart>
-                          <Pie
-                            data={stockPie}
-                            isAnimationActive={false}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={55}
-                            outerRadius={85}
-                            paddingAngle={3}
-                            dataKey="value"
-                            stroke="none"
-                          >
-                            {stockPie.map((_, i) => (
-                              <Cell key={i} fill={STOCK_COLORS[i % STOCK_COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip contentStyle={CHART_TOOLTIP} />
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <GraficoStock datos={stockPie} />
                     ) : (
                       <p className="text-center text-slate-500 py-16 text-sm">Sin datos de inventario</p>
                     )}
@@ -459,20 +438,7 @@ export default function DashboardPage() {
                       Productos por categoría
                     </h3>
                     {catBars.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={catBars} layout="vertical" margin={{ left: 8, right: 16 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                          <XAxis type="number" tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }} />
-                          <YAxis
-                            type="category"
-                            dataKey="nombre"
-                            width={100}
-                            tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
-                          />
-                          <Tooltip contentStyle={CHART_TOOLTIP} />
-                          <Bar dataKey="cantidad" fill={BAR_COLOR} radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <GraficoCategorias datos={catBars} />
                     ) : (
                       <p className="text-center text-slate-500 py-16 text-sm">Sin categorías asignadas</p>
                     )}

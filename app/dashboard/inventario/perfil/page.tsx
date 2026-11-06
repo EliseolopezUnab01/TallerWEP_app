@@ -5,19 +5,16 @@ import { formatoCosto, formatoCantidad } from '@/lib/decimales';
 import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Search, ChevronLeft, ChevronRight, 
-  Package, Wrench, Briefcase, Settings, Edit, Save, X, Plus, Trash2, ExternalLink, Layers, Eye
-} from 'lucide-react';
+import { Card, CardHeader } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight, Package, Edit, X, ExternalLink, Layers } from 'lucide-react';
 import Image from 'next/image';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { getCodigoCatalogo } from '@/lib/format-utils';
 import { NIVELES_PRECIO } from '@/lib/precios-niveles';
-import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
+import { SearchFilters, SingleFilterType } from '@/components/search-filters';
 import { FichaCompras, GloboStock } from '@/components/ui/globo-stock';
+import { useSesion } from '@/lib/sesion-cliente';
 
 interface Producto {
   idprod: number;
@@ -83,17 +80,13 @@ function PerfilProductoPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const idParam = searchParams?.get('id');
-  
-  console.log('PerfilProductoPage - ID recibido:', idParam);
+  const { puede } = useSesion();
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [producto, setProducto] = useState<Producto | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<SingleFilterType[]>([]);
-  const [searchResults, setSearchResults] = useState<Producto[]>([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
   
   // Sistema de pestañas dinámicas
   const [openTabs, setOpenTabs] = useState<ProductTab[]>([]);
@@ -121,32 +114,6 @@ function PerfilProductoPageContent() {
   // Precios múltiples
   const [precios, setPrecios] = useState<Precio[]>([]);
 
-  // Sistema de categorías jerárquico
-  const [categoriasNuevas, setCategoriasNuevas] = useState<{idcategoria: number, nombre: string}[]>([]);
-  const [gruposDB, setGruposDB] = useState<{id_grupo: number, codigo: string, nombre: string, idcategoria: number}[]>([]);
-  const [subgruposDB, setSubgruposDB] = useState<{id_subgrupo: number, codigo: string, nombre: string, id_grupo: number}[]>([]);
-
-  // Referencias OEM/Cruces
-  const [referencias, setReferencias] = useState([
-    { fabricante: 'DAF', codigo: '1251720' },
-    { fabricante: 'DAF', codigo: '1265391' },
-    { fabricante: 'IVECO', codigo: '47272495' },
-    { fabricante: 'IVECO', codigo: '46217155' },
-    { fabricante: 'IVECO', codigo: '46888615' },
-    { fabricante: 'MAN', codigo: '06507311' },
-    { fabricante: 'MERCEDES', codigo: 'A0039972792' },
-    { fabricante: 'MERCEDES', codigo: '0039972792' },
-    { fabricante: 'VOLVO', codigo: '966385' },
-  ]);
-
-  // Aplicaciones/Detalles
-  const [aplicaciones, setAplicaciones] = useState<string[]>([]);
-
-  // Ubicaciones
-  const [ubicaciones, setUbicaciones] = useState([
-    { codigo: 'E9-A6', stock: 33 },
-  ]);
-
   // Debounce del término de búsqueda
   useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -171,7 +138,6 @@ function PerfilProductoPageContent() {
 
   useEffect(() => {
     fetchAllProductos();
-    fetchCategoriasJerarquia();
   }, [currentPage, debouncedSearch, selectedFilters]);
 
   // Cargar producto específico si viene con idParam (solo una vez al inicio)
@@ -182,42 +148,6 @@ function PerfilProductoPageContent() {
       fetchProductoById(Number(idParam));
     }
   }, [idParam]);
-
-  // Cargar categorías jerárquicas
-  const fetchCategoriasJerarquia = async () => {
-    try {
-      const response = await fetch('/api/categorias-jerarquia');
-      if (response.ok) {
-        const data = await response.json();
-        setCategoriasNuevas(data.categorias || []);
-        setGruposDB(data.grupos || []);
-        setSubgruposDB(data.subgrupos || []);
-      }
-    } catch (error) {
-      console.error('Error al cargar categorías:', error);
-    }
-  };
-
-  // Obtener nombre de categoría por ID
-  const getCategoriaNombre = (idcategoria_nuevo: number | null) => {
-    if (!idcategoria_nuevo) return null;
-    const cat = categoriasNuevas.find(c => c.idcategoria === idcategoria_nuevo);
-    return cat ? `${cat.idcategoria} - ${cat.nombre}` : null;
-  };
-
-  // Obtener nombre de grupo por ID
-  const getGrupoNombre = (id_grupo: number | null) => {
-    if (!id_grupo) return null;
-    const grupo = gruposDB.find(g => g.id_grupo === id_grupo);
-    return grupo ? `${grupo.codigo} - ${grupo.nombre}` : null;
-  };
-
-  // Obtener nombre de subgrupo por ID
-  const getSubgrupoNombre = (id_subgrupo: number | null) => {
-    if (!id_subgrupo) return null;
-    const subgrupo = subgruposDB.find(s => s.id_subgrupo === id_subgrupo);
-    return subgrupo ? `${subgrupo.codigo} - ${subgrupo.nombre}` : null;
-  };
 
   useEffect(() => {
     if (idParam && allProductos.length > 0) {
@@ -351,109 +281,6 @@ function PerfilProductoPageContent() {
   // Función para abrir ventana flotante usando el contexto global
   const openFloatingWindow = (prod: Producto) => {
     openGlobalFloatingWindow(prod as any);
-  };
-
-  const fetchProducto = async () => {
-    try {
-      const response = await fetch(`/api/productos/${Number(idParam)}`);
-      if (response.ok || response.status === 404) {
-        const data = await response.json();
-        const found = data.product;
-        if (found) {
-          setProducto(found);
-          
-          // Agregar automáticamente como pestaña si viene de URL
-          setOpenTabs(prev => {
-            const existingTab = prev.find(tab => tab.id === found.idprod);
-            if (existingTab) {
-              return prev; // Ya existe, no agregar duplicado
-            }
-            const newTab: ProductTab = {
-              id: found.idprod,
-              nombre: found.nombre,
-              producto: found
-            };
-            return [...prev, newTab];
-          });
-          setActiveTabId(found.idprod);
-          
-          loadPrecios(found);
-          
-          // Cargar aplicaciones/detalles
-          const apps: string[] = [];
-          if (found.info_publica) apps.push(found.info_publica);
-          if (found.info_referencias_directas) apps.push(found.info_referencias_directas);
-          if (found.aplicacion_marcas) apps.push(found.aplicacion_marcas);
-          setAplicaciones(apps.length > 0 ? apps : ['Sin información de aplicaciones disponible']);
-        } else {
-          setError('Producto no encontrado');
-        }
-      } else {
-        setError('Error al cargar productos');
-      }
-    } catch (error) {
-      console.error('Error al cargar producto:', error);
-      setError('Error de conexión');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (query.length < 2) {
-      setSearchResults([]);
-      setShowSearchResults(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/productos?search=${encodeURIComponent(query)}&limit=30`);
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResults(data.products || []);
-        setShowSearchResults(true);
-      }
-    } catch (error) {
-      console.error('Error al buscar:', error);
-    }
-  };
-
-  // Función para agregar producto como nueva pestaña
-  const addProductTab = async (productId: number) => {
-    // Buscar el producto en los resultados o cargar
-    try {
-      const response = await fetch(`/api/productos/${productId}`);
-      if (response.ok) {
-        const data = await response.json();
-        const found: Producto | undefined = data.product;
-        if (found) {
-          // Agregar pestaña verificando duplicados con el estado más reciente
-          setOpenTabs(prev => {
-            const existingTab = prev.find(tab => tab.id === found.idprod);
-            if (existingTab) {
-              return prev; // Ya existe, no agregar duplicado
-            }
-            const newTab: ProductTab = {
-              id: found.idprod,
-              nombre: found.nombre,
-              producto: found
-            };
-            return [...prev, newTab];
-          });
-          setActiveTabId(productId);
-          setProducto(found);
-          setCurrentImageIndex(0);
-          
-          loadPrecios(found);
-        }
-      }
-    } catch (error) {
-      console.error('Error al cargar producto:', error);
-    }
-    
-    setShowSearchResults(false);
-    setSearchQuery('');
   };
 
   // Función para cerrar una pestaña
@@ -639,59 +466,6 @@ function PerfilProductoPageContent() {
               )}
             </Card>
 
-            {/* Info del producto seleccionado (preview) */}
-            {productoPreview && (
-              <Card className="bg-white dark:bg-gradient-to-br dark:from-card dark:to-background border border-slate-200/90 dark:border-primary/30 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_10px_28px_rgba(15,23,42,0.07)] dark:shadow-lg rounded-xl">
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">Producto Seleccionado</span>
-                    <div className="flex gap-1">
-                      {/* Botón para abrir en pestaña */}
-                      <Button 
-                        size="sm" 
-                        onClick={() => selectProduct(productoPreview.idprod)}
-                        className="h-7 text-xs bg-primary/10 text-primary border border-primary/40 hover:bg-primary/20"
-                        title="Abrir en pestaña"
-                      >
-                        <Layers className="h-3 w-3 mr-1" />
-                        Pestaña
-                      </Button>
-                      {/* Botón para abrir en ventana flotante - usa producto seleccionado si existe, sino el preview */}
-                      <Button 
-                        size="sm" 
-                        onClick={() => openFloatingWindow(producto || productoPreview)}
-                        className="h-7 text-xs bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
-                        title="Abrir en ventana flotante"
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Flotante
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-slate-500">ID:</span>
-                      <span className="text-slate-800 dark:text-slate-300 ml-1">{productoPreview.idprod}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Marca:</span>
-                      <span className="text-slate-800 dark:text-slate-300 ml-1">{productoPreview.marca || '-'}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Stock:</span>
-                      <span className={`ml-1 ${productoPreview.stock_contable > 0 ? 'text-emerald-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {formatoCantidad(productoPreview.stock_contable)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Costo:</span>
-                      <span className="text-slate-800 dark:text-slate-300 ml-1">${formatoCosto(productoPreview.costo)}</span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 italic">Doble click en lista para ver perfil completo</p>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Columna Derecha: Información del producto */}
@@ -734,13 +508,15 @@ function PerfilProductoPageContent() {
                     <div className="text-xl font-bold text-slate-900 dark:text-slate-200">{producto.nombre}</div>
                     <div className="text-sm text-slate-500">{producto.descripcion || ''}</div>
                   </div>
-                  <Button
-                    onClick={() => router.push(`/dashboard/inventario/editar-producto?id=${producto.idprod}`)}
-                    className="bg-primary hover:bg-primary/80 text-white"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar Producto
-                  </Button>
+                  {puede('inventario.editar') && (
+                    <Button
+                      onClick={() => router.push(`/dashboard/inventario/editar-producto?id=${producto.idprod}`)}
+                      className="bg-primary hover:bg-primary/80 text-white"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar Producto
+                    </Button>
+                  )}
                 </div>
 
                 {/* Contenido principal: Imagen + Info */}
@@ -939,13 +715,16 @@ function PerfilProductoPageContent() {
                     <div className="text-xl font-bold text-slate-900 dark:text-slate-200">{productoPreview.nombre}</div>
                     <div className="text-sm text-slate-500">{productoPreview.descripcion || ''}</div>
                   </div>
-                  <Button
-                    onClick={() => router.push(`/dashboard/inventario/editar-producto?id=${productoPreview.idprod}`)}
-                    className="bg-primary hover:bg-primary/80 text-white"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar Producto
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => selectProduct(productoPreview.idprod)} title="Abrir el perfil completo en una pestaña">
+                      <Layers className="h-3.5 w-3.5 mr-1.5" />
+                      Ver perfil
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openFloatingWindow(productoPreview)} title="Abrir en ventana flotante">
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      Flotante
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Contenido principal: Imagen + Info */}

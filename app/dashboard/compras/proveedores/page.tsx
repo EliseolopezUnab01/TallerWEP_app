@@ -13,10 +13,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Search, Plus, Save, Trash2, Building2, Users, Landmark,
-  Globe, MapPin, X, Loader2, AlertCircle, CheckCircle2, Pencil,
+  Globe, MapPin, Loader2, AlertCircle, CheckCircle2,
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
   FileSpreadsheet, Printer,
 } from 'lucide-react';
+import { PestanaContactos } from './_components/PestanaContactos';
+import { PestanaCuentas } from './_components/PestanaCuentas';
+import {
+  CONTACTO_VACIO, INPUT_CLS, LABEL_CLS, SELECT_CLS,
+  type AlCambiarTexto, type Contacto, type Cuenta, type ModoFicha,
+} from './_components/tipos';
 
 // ---------- Tipos ----------
 
@@ -33,39 +39,6 @@ interface ProveedorLista {
   total_contactos: number;
   total_cuentas: number;
 }
-
-interface Contacto {
-  orden: number;
-  nombre: string;
-  puesto_cargo: string;
-  telefono: string;
-  movil: string;
-  email: string;
-}
-
-interface Cuenta {
-  idcuenta?: number;
-  numero_cuenta: string;
-  beneficiario: string;
-  direccion_beneficiario: string;
-  banco: string;
-  direccion_banco: string;
-  codigo_aba: string;
-  codigo_swift: string;
-  codigo_iban: string;
-  moneda: string;
-  comentarios: string;
-}
-
-const CONTACTO_VACIO = (orden: number): Contacto => ({
-  orden, nombre: '', puesto_cargo: '', telefono: '', movil: '', email: '',
-});
-
-const CUENTA_VACIA = (): Cuenta => ({
-  numero_cuenta: '', beneficiario: '', direccion_beneficiario: '', banco: '',
-  direccion_banco: '', codigo_aba: '', codigo_swift: '', codigo_iban: '',
-  moneda: '', comentarios: '',
-});
 
 const FORM_VACIO = {
   idproveedor: 0,
@@ -99,11 +72,6 @@ const FORM_VACIO = {
   saldo_vencido: '0.00',
 };
 
-// Clases reutilizadas para inputs y selects
-const INPUT_CLS = 'bg-white dark:bg-surface-deep border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus-visible:ring-primary';
-const SELECT_CLS = 'w-full h-9 rounded-md bg-white dark:bg-surface-deep border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-sm px-3 focus:outline-none focus:ring-2 focus:ring-primary';
-const LABEL_CLS = 'text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400';
-
 export default function ProveedoresPage() {
   const [lista, setLista] = useState<ProveedorLista[]>([]);
   const [busqueda, setBusqueda] = useState('');
@@ -121,7 +89,7 @@ export default function ProveedoresPage() {
   const [cuentas, setCuentas] = useState<Cuenta[]>([]);
   const [cuentaEditando, setCuentaEditando] = useState<Cuenta | null>(null);
 
-  const [modo, setModo] = useState<'vacio' | 'nuevo' | 'editar'>('vacio');
+  const [modo, setModo] = useState<ModoFicha>('vacio');
   const [aviso, setAviso] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
 
   const notificar = (tipo: 'ok' | 'error', texto: string) => {
@@ -516,14 +484,14 @@ export default function ProveedoresPage() {
     setSucio(true);
   };
 
-  const setContacto = (i: number, campo: keyof Contacto) => (e: any) => {
+  const setContacto = (i: number, campo: keyof Contacto): AlCambiarTexto => (e) => {
     setContactos((cs) =>
       cs.map((c, idx) => (idx === i ? { ...c, [campo]: e.target.value } : c))
     );
     setSucio(true);
   };
 
-  const setCuenta = (campo: keyof Cuenta) => (e: any) =>
+  const setCuenta = (campo: keyof Cuenta): AlCambiarTexto => (e) =>
     setCuentaEditando((c) => (c ? { ...c, [campo]: e.target.value } : c));
 
   const campo = (etiqueta: string, nombre: string, extra?: { placeholder?: string; maxLength?: number }) => (
@@ -892,255 +860,20 @@ export default function ProveedoresPage() {
 
                     {/* ---------- CONTACTOS ---------- */}
                     <TabsContent value="contactos" className="space-y-4 mt-5">
-                      <p className="text-xs text-slate-500 dark:text-slate-500">
-                        El formulario del cliente maneja dos contactos. Podés agregar más si
-                        el proveedor los tiene.
-                      </p>
-
-                      {contactos.map((c, i) => (
-                        <div key={i} className="rounded-lg border border-slate-700/50 p-4 space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs uppercase tracking-wider text-primary">
-                              Contacto {i + 1}
-                            </span>
-                            {contactos.length > 2 && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  setContactos((cs) => cs.filter((_, idx) => idx !== i))
-                                }
-                                className="text-slate-500 hover:text-red-400 h-7"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>Nombre</Label>
-                              <Input value={c.nombre} onChange={setContacto(i, 'nombre')} className={INPUT_CLS} maxLength={150} />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>Puesto / Cargo</Label>
-                              <Input value={c.puesto_cargo} onChange={setContacto(i, 'puesto_cargo')} className={INPUT_CLS} maxLength={100} />
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>Teléfono</Label>
-                              <Input value={c.telefono} onChange={setContacto(i, 'telefono')} className={INPUT_CLS} maxLength={30} />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>Móvil</Label>
-                              <Input value={c.movil} onChange={setContacto(i, 'movil')} className={INPUT_CLS} maxLength={30} />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>Email</Label>
-                              <Input value={c.email} onChange={setContacto(i, 'email')} className={INPUT_CLS} maxLength={150} />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          setContactos((cs) => [...cs, CONTACTO_VACIO(cs.length + 1)])
-                        }
-                        className="border-primary/50 text-primary hover:bg-primary/10 rounded-full"
-                      >
-                        <Plus className="h-4 w-4 mr-1" /> Agregar contacto
-                      </Button>
+                      <PestanaContactos contactos={contactos} setContactos={setContactos} setContacto={setContacto} />
                     </TabsContent>
 
                     {/* ---------- CUENTAS ---------- */}
                     <TabsContent value="cuentas" className="space-y-4 mt-5">
-                      {modo === 'nuevo' && (
-                        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4" />
-                          Guardá primero el proveedor para poder agregarle cuentas.
-                        </div>
-                      )}
-
-                      {/* Lista de cuentas */}
-                      {cuentas.length > 0 && (
-                        <div className="space-y-2">
-                          {cuentas.map((c) => (
-                            <div
-                              key={c.idcuenta}
-                              className="rounded-lg border border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-background px-4 py-3 flex items-center justify-between gap-3"
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-sm text-slate-700 dark:text-slate-200">{c.numero_cuenta}</span>
-                                  {c.moneda && (
-                                    <Badge variant="outline" className="text-[10px] border-slate-600 text-slate-400">
-                                      {c.moneda}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="text-xs text-slate-400 truncate">
-                                  {c.banco || 'Sin banco'}
-                                  {c.beneficiario ? ` · ${c.beneficiario}` : ''}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <Button
-                                  variant="ghost" size="icon"
-                                  onClick={() => setCuentaEditando({ ...c })}
-                                  className="text-slate-400 hover:text-primary h-8 w-8"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost" size="icon"
-                                  onClick={() => eliminarCuenta(c.idcuenta)}
-                                  className="text-slate-400 hover:text-red-400 h-8 w-8"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {!cuentaEditando ? (
-                        <Button
-                          variant="outline"
-                          disabled={modo === 'nuevo'}
-                          onClick={() => setCuentaEditando(CUENTA_VACIA())}
-                          className="border-primary/50 text-primary hover:bg-primary/10 rounded-full disabled:opacity-40"
-                        >
-                          <Plus className="h-4 w-4 mr-1" /> Agregar cuenta bancaria
-                        </Button>
-                      ) : (
-                        <div className="rounded-lg border border-primary/40 p-4 space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs uppercase tracking-wider text-primary">
-                              {cuentaEditando.idcuenta ? 'Editar cuenta' : 'Nueva cuenta'}
-                            </span>
-                            <Button
-                              variant="ghost" size="sm"
-                              onClick={() => setCuentaEditando(null)}
-                              className="text-slate-500 hover:text-slate-300 h-7"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="md:col-span-2 space-y-1.5">
-                              <Label className={LABEL_CLS}>
-                                Número de cuenta <span className="text-red-400">*</span>
-                              </Label>
-                              <Input
-                                value={cuentaEditando.numero_cuenta}
-                                onChange={setCuenta('numero_cuenta')}
-                                className={`${INPUT_CLS} font-mono`}
-                                maxLength={60}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>Moneda</Label>
-                              <Input
-                                value={cuentaEditando.moneda}
-                                onChange={setCuenta('moneda')}
-                                className={INPUT_CLS}
-                                placeholder="USD, EURO..."
-                                maxLength={20}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <Label className={LABEL_CLS}>Beneficiario</Label>
-                            <Input
-                              value={cuentaEditando.beneficiario}
-                              onChange={setCuenta('beneficiario')}
-                              className={INPUT_CLS}
-                              maxLength={200}
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <Label className={LABEL_CLS}>Dirección del beneficiario</Label>
-                            <Input
-                              value={cuentaEditando.direccion_beneficiario}
-                              onChange={setCuenta('direccion_beneficiario')}
-                              className={INPUT_CLS}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>Banco</Label>
-                              <Input
-                                value={cuentaEditando.banco}
-                                onChange={setCuenta('banco')}
-                                className={INPUT_CLS}
-                                maxLength={200}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>Dirección del banco</Label>
-                              <Input
-                                value={cuentaEditando.direccion_banco}
-                                onChange={setCuenta('direccion_banco')}
-                                className={INPUT_CLS}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>Cód. ABA (USA)</Label>
-                              <Input
-                                value={cuentaEditando.codigo_aba}
-                                onChange={setCuenta('codigo_aba')}
-                                className={`${INPUT_CLS} font-mono`}
-                                maxLength={30}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>SWIFT / BIC</Label>
-                              <Input
-                                value={cuentaEditando.codigo_swift}
-                                onChange={setCuenta('codigo_swift')}
-                                className={`${INPUT_CLS} font-mono`}
-                                maxLength={30}
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className={LABEL_CLS}>IBAN (Europa)</Label>
-                              <Input
-                                value={cuentaEditando.codigo_iban}
-                                onChange={setCuenta('codigo_iban')}
-                                className={`${INPUT_CLS} font-mono`}
-                                maxLength={60}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <Label className={LABEL_CLS}>Comentarios / Instrucciones</Label>
-                            <Textarea
-                              value={cuentaEditando.comentarios}
-                              onChange={setCuenta('comentarios')}
-                              rows={3}
-                              className={INPUT_CLS}
-                            />
-                          </div>
-
-                          <Button
-                            onClick={guardarCuenta}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full"
-                          >
-                            <Save className="h-4 w-4 mr-1" /> Guardar cuenta
-                          </Button>
-                        </div>
-                      )}
+                      <PestanaCuentas
+                        modo={modo}
+                        cuentas={cuentas}
+                        cuentaEditando={cuentaEditando}
+                        setCuentaEditando={setCuentaEditando}
+                        setCuenta={setCuenta}
+                        guardarCuenta={guardarCuenta}
+                        eliminarCuenta={eliminarCuenta}
+                      />
                     </TabsContent>
                   </Tabs>
                 )}

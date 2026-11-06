@@ -11,11 +11,17 @@ import { Search, Edit, Trash2, Eye, Package, Filter, Plus, X, LayoutGrid, List, 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { generateCatalogPDF } from '@/lib/generate-catalog-pdf';
 import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { GloboStock, useDisponibilidad } from '@/components/ui/globo-stock';
 import { fechaLocalISO } from '@/lib/fechas';
+import { ModalCategoria } from './_components/ModalCategoria';
+import { ModalGrupo } from './_components/ModalGrupo';
+import { ModalSubgrupo } from './_components/ModalSubgrupo';
+import {
+  CATEGORIA_VACIA, GRUPO_VACIO, SUBGRUPO_VACIO,
+  type CategoriaNueva, type Grupo, type Subgrupo,
+} from './_components/tipos';
 
 interface Producto {
   idprod: number;
@@ -33,31 +39,6 @@ interface Producto {
   created_at: string;
   grupo?: string;
   subgrupo?: string;
-}
-
-interface CategoriaNueva {
-  idcategoria: number;
-  nombre: string;
-  descripcion?: string;
-  activo?: number;
-}
-
-interface Grupo {
-  id_grupo: number;
-  codigo: string;
-  nombre: string;
-  descripcion?: string;
-  idcategoria: number;
-  categoria_nombre?: string;
-}
-
-interface Subgrupo {
-  id_subgrupo: number;
-  codigo: string;
-  nombre: string;
-  descripcion?: string;
-  id_grupo: number;
-  grupo_nombre?: string;
 }
 
 
@@ -78,23 +59,9 @@ export default function AdministrarProductoPage() {
   const [showModalCategoria, setShowModalCategoria] = useState(false);
   const [showModalGrupo, setShowModalGrupo] = useState(false);
   const [showModalSubgrupo, setShowModalSubgrupo] = useState(false);
-  const [categoriaForm, setCategoriaForm] = useState({
-    idcategoria: '',
-    nombre: '',
-    descripcion: ''
-  });
-  const [grupoForm, setGrupoForm] = useState({
-    codigo: '',
-    nombre: '',
-    descripcion: '',
-    idcategoria: 0
-  });
-  const [subgrupoForm, setSubgrupoForm] = useState({
-    codigo: '',
-    nombre: '',
-    descripcion: '',
-    id_grupo: 0
-  });
+  const [categoriaForm, setCategoriaForm] = useState(CATEGORIA_VACIA);
+  const [grupoForm, setGrupoForm] = useState(GRUPO_VACIO);
+  const [subgrupoForm, setSubgrupoForm] = useState(SUBGRUPO_VACIO);
   const [loadingCategoria, setLoadingCategoria] = useState(false);
   const [loadingGrupo, setLoadingGrupo] = useState(false);
   const [loadingSubgrupo, setLoadingSubgrupo] = useState(false);
@@ -234,7 +201,8 @@ export default function AdministrarProductoPage() {
   const handleDescargarCatalogo = async () => {
     setGenerandoPDF(true);
     try {
-      await generateCatalogPDF(productos as any);
+      const { generateCatalogPDF } = await import('@/lib/generate-catalog-pdf');
+      await generateCatalogPDF(productos as Parameters<typeof generateCatalogPDF>[0]);
     } catch (error) {
       console.error('Error al generar catálogo:', error);
       avisar('Error al generar el catálogo PDF');
@@ -1146,220 +1114,43 @@ export default function AdministrarProductoPage() {
 
           {/* Modal para Crear Categoría */}
           {showModalCategoria && (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-              <div className="bg-slate-950/95 border border-cyan-700/40 rounded-xl max-w-md w-full shadow-xl">
-                <div className="flex items-center justify-between p-6 border-b border-slate-800/30">
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Nueva Categoría</h3>
-                  <Button variant="ghost" size="icon" onClick={() => {
-                    setShowModalCategoria(false);
-                    setCategoriaForm({ idcategoria: '', nombre: '', descripcion: '' });
-                  }}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <form onSubmit={handleCrearCategoria} className="p-6 space-y-4">
-                  <div className="space-y-2">
-                    <label htmlFor="idcategoria" className="text-sm font-medium text-slate-200">Código de Categoría (auto-generado)</label>
-                    <Input
-                      id="idcategoria"
-                      value={categoriaForm.idcategoria || getSiguienteCodigoCategoria()}
-                      readOnly
-                      className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100"
-                    />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {getSiguienteCodigoCategoria() 
-                        ? `Siguiente código disponible: ${getSiguienteCodigoCategoria()}` 
-                        : '⚠️ No hay códigos disponibles (10-99 agotados)'}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="nombre" className="text-sm font-medium text-slate-200">Nombre de la Categoría *</label>
-                    <Input
-                      id="nombre"
-                      placeholder="Ej: Sistema de Frenos"
-                      value={categoriaForm.nombre}
-                      onChange={(e) => setCategoriaForm(prev => ({ ...prev, nombre: e.target.value }))}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="descripcion" className="text-sm font-medium text-slate-200">Descripción</label>
-                    <textarea
-                      id="descripcion"
-                      placeholder="Descripción opcional..."
-                      value={categoriaForm.descripcion}
-                      onChange={(e) => setCategoriaForm(prev => ({ ...prev, descripcion: e.target.value }))}
-                      className="w-full h-20 px-3 py-2 border border-slate-300 dark:border-slate-700/40 rounded-md bg-white dark:bg-slate-950/80 text-slate-800 dark:text-slate-100 text-sm resize-none"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="outline" className="border-primary/60 text-primary" onClick={() => setShowModalCategoria(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={loadingCategoria} className="bg-primary/10 text-primary border-primary/60 rounded-full">
-                      {loadingCategoria ? 'Creando...' : 'Crear Categoría'}
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            <ModalCategoria
+              categoriaForm={categoriaForm}
+              setCategoriaForm={setCategoriaForm}
+              setShowModalCategoria={setShowModalCategoria}
+              getSiguienteCodigoCategoria={getSiguienteCodigoCategoria}
+              handleCrearCategoria={handleCrearCategoria}
+              loadingCategoria={loadingCategoria}
+            />
           )}
 
           {/* Modal para Crear Grupo */}
           {showModalGrupo && (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-              <div className="bg-slate-950/95 border border-green-700/40 rounded-xl max-w-md w-full shadow-xl">
-                <div className="flex items-center justify-between p-6 border-b border-slate-800/30">
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Nuevo Grupo</h3>
-                  <Button variant="ghost" size="icon" onClick={() => setShowModalGrupo(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <form onSubmit={handleCrearGrupo} className="p-6 space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-200">Categoría *</label>
-                    <select
-                      value={grupoForm.idcategoria || ''}
-                      onChange={(e) => {
-                        const idcat = Number(e.target.value);
-                        const siguienteCodigo = idcat ? getSiguienteCodigoGrupo(idcat) : '';
-                        setGrupoForm(prev => ({ ...prev, idcategoria: idcat, codigo: siguienteCodigo }));
-                      }}
-                      required
-                      className="w-full bg-slate-950/80 border border-slate-300 dark:border-slate-700/40 rounded-md px-3 py-2 text-slate-100"
-                    >
-                      <option value="">Seleccione una categoría</option>
-                      {categoriasNuevas.map(c => (
-                        <option key={c.idcategoria} value={c.idcategoria}>{c.idcategoria} - {c.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-200">Código del Grupo (auto-generado)</label>
-                    <Input
-                      placeholder="Se genera automáticamente"
-                      value={grupoForm.codigo}
-                      onChange={(e) => setGrupoForm(prev => ({ ...prev, codigo: e.target.value.replace(/\D/g, '').slice(0, 3) }))}
-                      maxLength={3}
-                      className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100"
-                      readOnly
-                    />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">El código se genera automáticamente al seleccionar la categoría</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-200">Nombre del Grupo *</label>
-                    <Input
-                      placeholder="Ej: Bomba de Inyección"
-                      value={grupoForm.nombre}
-                      onChange={(e) => setGrupoForm(prev => ({ ...prev, nombre: e.target.value }))}
-                      required
-                      className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="outline" className="border-green-500/60 text-green-400" onClick={() => setShowModalGrupo(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={loadingGrupo} className="bg-green-500/10 text-green-400 border-green-500/60 rounded-full">
-                      {loadingGrupo ? 'Creando...' : 'Crear Grupo'}
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            <ModalGrupo
+              grupoForm={grupoForm}
+              setGrupoForm={setGrupoForm}
+              setShowModalGrupo={setShowModalGrupo}
+              categoriasNuevas={categoriasNuevas}
+              getSiguienteCodigoGrupo={getSiguienteCodigoGrupo}
+              handleCrearGrupo={handleCrearGrupo}
+              loadingGrupo={loadingGrupo}
+            />
           )}
 
           {/* Modal para Crear Subgrupo */}
           {showModalSubgrupo && (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-              <div className="bg-slate-950/95 border border-purple-700/40 rounded-xl max-w-md w-full shadow-xl">
-                <div className="flex items-center justify-between p-6 border-b border-slate-800/30">
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Nuevo Subgrupo</h3>
-                  <Button variant="ghost" size="icon" onClick={() => setShowModalSubgrupo(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <form onSubmit={handleCrearSubgrupo} className="p-6 space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-200">Categoría</label>
-                    <select
-                      value={selectedCategoriaFilter || ''}
-                      onChange={(e) => {
-                        setSelectedCategoriaFilter(e.target.value ? Number(e.target.value) : null);
-                        setSubgrupoForm(prev => ({ ...prev, id_grupo: 0 }));
-                      }}
-                      className="w-full bg-slate-950/80 border border-slate-300 dark:border-slate-700/40 rounded-md px-3 py-2 text-slate-100"
-                    >
-                      <option value="">Seleccione una categoría</option>
-                      {categoriasNuevas.map(c => (
-                        <option key={c.idcategoria} value={c.idcategoria}>{c.idcategoria} - {c.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-200">Grupo *</label>
-                    <select
-                      value={subgrupoForm.id_grupo || ''}
-                      onChange={(e) => {
-                        const idGrupo = Number(e.target.value);
-                        const siguienteCodigo = idGrupo ? getSiguienteCodigoSubgrupo(idGrupo) : '';
-                        setSubgrupoForm(prev => ({ ...prev, id_grupo: idGrupo, codigo: siguienteCodigo }));
-                      }}
-                      required
-                      className="w-full bg-slate-950/80 border border-slate-300 dark:border-slate-700/40 rounded-md px-3 py-2 text-slate-100"
-                    >
-                      <option value="">Seleccione un grupo</option>
-                      {gruposFiltradosPorCategoria.map(g => (
-                        <option key={g.id_grupo} value={g.id_grupo}>{g.codigo} - {g.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-200">Código del Subgrupo (auto-generado)</label>
-                    <Input
-                      placeholder="Se genera automáticamente"
-                      value={subgrupoForm.codigo}
-                      onChange={(e) => setSubgrupoForm(prev => ({ ...prev, codigo: e.target.value.replace(/\D/g, '').slice(0, 3) }))}
-                      maxLength={3}
-                      className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100"
-                      readOnly
-                    />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">El código se genera automáticamente al seleccionar el grupo</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-200">Nombre del Subgrupo *</label>
-                    <Input
-                      placeholder="Ej: Sellos"
-                      value={subgrupoForm.nombre}
-                      onChange={(e) => setSubgrupoForm(prev => ({ ...prev, nombre: e.target.value }))}
-                      required
-                      className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button type="button" variant="outline" className="border-purple-500/60 text-purple-400" onClick={() => setShowModalSubgrupo(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={loadingSubgrupo} className="bg-purple-500/10 text-purple-400 border-purple-500/60 rounded-full">
-                      {loadingSubgrupo ? 'Creando...' : 'Crear Subgrupo'}
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            <ModalSubgrupo
+              subgrupoForm={subgrupoForm}
+              setSubgrupoForm={setSubgrupoForm}
+              setShowModalSubgrupo={setShowModalSubgrupo}
+              categoriasNuevas={categoriasNuevas}
+              gruposFiltradosPorCategoria={gruposFiltradosPorCategoria}
+              selectedCategoriaFilter={selectedCategoriaFilter}
+              setSelectedCategoriaFilter={setSelectedCategoriaFilter}
+              getSiguienteCodigoSubgrupo={getSiguienteCodigoSubgrupo}
+              handleCrearSubgrupo={handleCrearSubgrupo}
+              loadingSubgrupo={loadingSubgrupo}
+            />
           )}
 
         </div>

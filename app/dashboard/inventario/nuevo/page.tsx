@@ -9,10 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ImageUpload } from '@/components/image-upload';
+import { ConfirmarAbandono } from './_components/ConfirmarAbandono';
+import { ConfirmarCreacion } from './_components/ConfirmarCreacion';
+import { ImagenesProducto } from './_components/ImagenesProducto';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, Save, X } from 'lucide-react';
 import Link from 'next/link';
 import { useNotifications } from '@/contexts/notification-context';
 
@@ -526,120 +528,13 @@ export default function NuevoProductoPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {/* Columna 1: Imágenes / ficha visual como en Figma */}
             <div className="space-y-6 lg:order-1">
-              <Card className="bg-gradient-to-br from-white to-slate-50 dark:from-card dark:to-background border border-sky-200/70 dark:border-primary/30 shadow-[0_8px_30px_rgba(14,136,201,0.1)] dark:shadow-[0_0_20px_rgba(14,136,201,0.25)] rounded-xl overflow-hidden">
-                <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm text-slate-700 dark:text-slate-200 tracking-wide">IMÁGENES</CardTitle>
-                  <span className="text-xs text-emerald-400">{images.length}/10</span>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Imagen principal grande */}
-                  <div className="relative w-full h-[200px] bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-hidden">
-                    {images.length > 0 ? (
-                      <>
-                        <img 
-                          src={URL.createObjectURL(images[selectedImageIndex] || images[0])} 
-                          alt="Vista previa" 
-                          className="h-full w-full object-contain"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImages(prev => prev.filter((_, i) => i !== selectedImageIndex));
-                            setSelectedImageIndex(0);
-                          }}
-                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg transition-colors"
-                        >
-                          ×
-                        </button>
-                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                          {selectedImageIndex + 1} / {images.length}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-center h-full w-full p-4">
-                        <div className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-300 dark:border-slate-700/40 bg-slate-950/60 p-4 w-full h-full flex flex-col items-center justify-center">
-                          <ImageUpload onImagesChange={handleImagesChange} />
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                            PNG, JPG, JPEG hasta 10MB. Máximo 10 imágenes.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Botón agregar más y miniaturas */}
-                  {images.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="flex justify-center">
-                        <ImageUpload onImagesChange={handleImagesChange} />
-                      </div>
-                      
-                      {/* Grid de miniaturas con drag & drop */}
-                      {images.length > 1 && (
-                        <div className="space-y-2">
-                          <p className="text-xs text-slate-400">Arrastra para reordenar</p>
-                          <div className="grid grid-cols-5 gap-2">
-                            {images.map((img, idx) => (
-                              <div 
-                                key={idx} 
-                                className={`relative aspect-square rounded-lg border-2 overflow-hidden group cursor-pointer ${
-                                  idx === selectedImageIndex 
-                                    ? 'border-primary bg-slate-800 ring-2 ring-primary/50' 
-                                    : 'border-slate-700/50 bg-slate-100 dark:bg-slate-900 hover:border-slate-500'
-                                }`}
-                                draggable
-                                onDragStart={(e) => {
-                                  e.dataTransfer.setData('text/plain', idx.toString());
-                                  e.currentTarget.style.opacity = '0.5';
-                                }}
-                                onDragEnd={(e) => {
-                                  e.currentTarget.style.opacity = '1';
-                                }}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={(e) => {
-                                  e.preventDefault();
-                                  const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                                  const targetIndex = idx;
-                                  
-                                  if (draggedIndex !== targetIndex) {
-                                    const newImages = [...images];
-                                    const [draggedImage] = newImages.splice(draggedIndex, 1);
-                                    newImages.splice(targetIndex, 0, draggedImage);
-                                    setImages(newImages);
-                                  }
-                                }}
-                              >
-                                <img 
-                                  src={URL.createObjectURL(img)} 
-                                  alt={`Imagen ${idx + 1}`} 
-                                  className="h-full w-full object-cover"
-                                  onClick={() => setSelectedImageIndex(idx)}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setImages(prev => prev.filter((_, i) => i !== idx));
-                                    if (selectedImageIndex >= idx && selectedImageIndex > 0) {
-                                      setSelectedImageIndex(prev => prev - 1);
-                                    }
-                                  }}
-                                  className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  ×
-                                </button>
-                                {idx === selectedImageIndex && (
-                                  <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none"></div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <ImagenesProducto
+                images={images}
+                setImages={setImages}
+                selectedImageIndex={selectedImageIndex}
+                setSelectedImageIndex={setSelectedImageIndex}
+                handleImagesChange={handleImagesChange}
+              />
 
               {/* Botón de envío tipo barra inferior de panel */}
               <Card className="bg-gradient-to-br from-white to-slate-50 dark:from-card dark:to-background border border-sky-200/70 dark:border-primary/30 shadow-[0_8px_30px_rgba(14,136,201,0.08)] dark:shadow-lg rounded-xl">
@@ -1115,83 +1010,17 @@ export default function NuevoProductoPage() {
         
         {/* Modal de Confirmación de Guardado */}
         {showConfirmSave && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-gradient-to-br from-white to-slate-50 dark:from-card dark:to-background border border-sky-200/70 dark:border-primary/30 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-amber-500/20 rounded-lg">
-                  <AlertTriangle className="h-6 w-6 text-amber-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Confirmar Creación</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Esta acción creará un nuevo producto</p>
-                </div>
-              </div>
-              <p className="mt-4 text-slate-600 dark:text-slate-300">
-                ¿Está seguro que desea crear el producto "<span className="text-primary font-medium">{formData.nombre}</span>"?
-              </p>
-              <div className="flex justify-end gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowConfirmSave(false)}
-                  className="border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={confirmSave}
-                  disabled={loading}
-                  className="bg-primary text-white hover:bg-primary/80"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Guardando...' : 'Sí, Crear Producto'}
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ConfirmarCreacion formData={formData} loading={loading} setShowConfirmSave={setShowConfirmSave} confirmSave={confirmSave} />
         )}
         
         {/* Modal de Confirmación de Abandono */}
         {showConfirmLeave && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-gradient-to-br from-white to-slate-50 dark:from-card dark:to-background border border-sky-200/70 dark:border-primary/30 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-amber-500/20 rounded-lg">
-                  <AlertTriangle className="h-6 w-6 text-amber-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Cambios sin guardar</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Tiene información sin guardar</p>
-                </div>
-              </div>
-              <p className="mt-4 text-slate-600 dark:text-slate-300">
-                ¿Está seguro que desea abandonar la página? Los cambios no guardados se perderán.
-              </p>
-              <div className="flex justify-end gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowConfirmLeave(false);
-                    setPendingNavigation(null);
-                  }}
-                  className="border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full px-6"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowConfirmLeave(false);
-                    if (pendingNavigation) {
-                      router.push(pendingNavigation);
-                    }
-                  }}
-                  className="bg-primary text-white hover:bg-primary/80 rounded-full px-6"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Sí, Abandonar
-                </Button>
-              </div>
-            </div>
-          </div>
+          <ConfirmarAbandono
+            pendingNavigation={pendingNavigation}
+            setPendingNavigation={setPendingNavigation}
+            setShowConfirmLeave={setShowConfirmLeave}
+            router={router}
+          />
         )}
         </div>
       </div>
