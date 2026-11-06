@@ -1,10 +1,9 @@
 'use client';
+import { BarraPantalla } from '@/components/barra-pantalla';
 import { confirmar } from '@/components/ui/avisos';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/dashboard-layout';
-import { NotificationDropdown } from '@/components/notification-dropdown';
-import { UserDropdown } from '@/components/user-dropdown';
+import { fechaLocalISO } from '@/lib/fechas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -353,7 +352,7 @@ export default function ProveedoresPage() {
       const libro = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(libro, hoja, 'Proveedores');
 
-      const fecha = new Date().toISOString().slice(0, 10);
+      const fecha = fechaLocalISO();
       XLSX.writeFile(libro, `proveedores_${fecha}.xlsx`);
       notificar('ok', `${lista.length} proveedor(es) exportado(s)`);
     } catch {
@@ -544,22 +543,12 @@ export default function ProveedoresPage() {
   const hayFicha = modo !== 'vacio';
 
   return (
-    <DashboardLayout>
+    <>
       <div className="min-h-screen bg-slate-50 dark:bg-surface-deep p-6">
         <div className="space-y-6">
 
           {/* Navbar */}
-          <div className="rounded-xl border border-sky-200 dark:border-primary/30 bg-white dark:bg-background px-5 py-3 flex items-center justify-between gap-4 shadow-sm dark:shadow-[0_0_25px_rgba(15,23,42,0.9)]">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Compras</span>
-              <span className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-              <span className="text-sm tracking-[0.18em] uppercase text-slate-700 dark:text-slate-200">Proveedores</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <NotificationDropdown />
-              <UserDropdown />
-            </div>
-          </div>
+          <BarraPantalla modulo="Compras" titulo="Proveedores" />
 
           {/* Aviso */}
           {aviso && (
@@ -1263,6 +1252,6 @@ export default function ProveedoresPage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

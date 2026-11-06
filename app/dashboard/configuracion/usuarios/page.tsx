@@ -3,7 +3,6 @@ import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Save, ShieldCheck, Trash2, UserPlus } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { BarraPantalla } from '@/components/barra-pantalla';
 import { Toast, pedir, useAviso } from '@/app/dashboard/taller/_components/comun';
 import { MODULOS_PERMISO, PERMISOS } from '@/lib/permisos-constantes';
@@ -121,7 +120,7 @@ export default function UsuariosPage() {
   const rolBloqueado = rolActual?.es_admin ?? false;
 
   return (
-    <DashboardLayout>
+    <>
       <div className={`${UI.canvas} flex flex-col gap-2 lg:h-[calc(100vh-3rem)]`}>
         <BarraPantalla modulo="Configuración" titulo="Usuarios y roles" />
 
@@ -306,6 +305,6 @@ export default function UsuariosPage() {
         </div>
       </div>
       <Toast aviso={aviso} />
-    </DashboardLayout>
+    </>
   );
 }

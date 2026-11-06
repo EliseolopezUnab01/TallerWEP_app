@@ -16,6 +16,18 @@ export function formatoImpresion(valor: number | string | null | undefined, deci
   return n.toLocaleString('en-US', { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
 }
 
+/** Costo unitario en pantalla: al menos 2 decimales y hasta 4 si los tiene. */
+export function formatoCosto(valor: number | string | null | undefined): string {
+  const n = Number(valor) || 0;
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
+/** Cantidad o existencia en pantalla: sin decimales si es entera, hasta 4 si no. */
+export function formatoCantidad(valor: number | string | null | undefined): string {
+  const n = Number(valor) || 0;
+  return n.toLocaleString('en-US', { maximumFractionDigits: 4 });
+}
+
 export function redondeoImpresion(valor: number | string | null | undefined, decimales: 2 | 4 = 2): number {
   const n = Number(valor) || 0;
   const f = 10 ** decimales;

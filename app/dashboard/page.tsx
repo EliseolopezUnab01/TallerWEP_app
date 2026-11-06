@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Package, ShoppingCart, Truck, Users, FileText, Wrench,
   Car, ClipboardList, Loader2, TrendingUp,
-  AlertTriangle, CheckCircle2, Clock, BarChart3,
+  AlertTriangle, CheckCircle2, BarChart3,
 } from 'lucide-react';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar,
@@ -27,6 +26,7 @@ interface DashboardStats {
   };
   proveedores: { total: number; activos: number };
   compras: { borradores: number; lineas: number };
+  ordenes: { PROCESO: number; ESPERA: number; FINALIZADA: number; CANCELADA: number; abiertas: number };
   catalogo: { rubrosActivos: number };
   categorias: { nombre: string; cantidad: number }[];
 }
@@ -55,7 +55,7 @@ const ACCIONES = [
     iconColor: 'text-emerald-600 dark:text-emerald-400',
   },
   {
-    label: 'Compras', sub: 'Proveedores y líneas', href: '/dashboard/compras/proveedores', icon: ShoppingCart, ready: true,
+    label: 'Compras', sub: 'Ingreso de documentos', href: '/dashboard/compras/ingreso', icon: ShoppingCart, ready: true,
     tint: 'from-violet-50 to-white dark:from-background dark:to-background',
     border: 'border-violet-300/80 dark:border-violet-500/40',
     glow: 'shadow-violet-200/80 hover:shadow-violet-300/90 dark:hover:shadow-violet-500/20',
@@ -71,7 +71,7 @@ const ACCIONES = [
     iconColor: 'text-cyan-600 dark:text-cyan-400',
   },
   {
-    label: 'Recepción', sub: 'Vehículos', href: '#', icon: Car, ready: false,
+    label: 'Vehículos', sub: 'Recepción y fichas', href: '/dashboard/taller/vehiculos', icon: Car, ready: true,
     tint: 'from-blue-50/70 to-white dark:from-background dark:to-background',
     border: 'border-blue-200 dark:border-blue-500/30',
     glow: 'shadow-blue-100/60 dark:shadow-none',
@@ -79,7 +79,7 @@ const ACCIONES = [
     iconColor: 'text-blue-400 dark:text-blue-400/70',
   },
   {
-    label: 'Taller', sub: 'Órdenes de trabajo', href: '#', icon: Wrench, ready: false,
+    label: 'Taller', sub: 'Órdenes de trabajo', href: '/dashboard/taller/ordenes', icon: Wrench, ready: true,
     tint: 'from-orange-50/70 to-white dark:from-background dark:to-background',
     border: 'border-orange-200 dark:border-orange-500/30',
     glow: 'shadow-orange-100/60 dark:shadow-none',
@@ -87,7 +87,7 @@ const ACCIONES = [
     iconColor: 'text-orange-400 dark:text-orange-400/70',
   },
   {
-    label: 'Cotizaciones', sub: 'Presupuestos', href: '#', icon: ClipboardList, ready: false,
+    label: 'Cotizaciones', sub: 'Solicitudes y proformas', href: '/dashboard/compras/documentos', icon: ClipboardList, ready: true,
     tint: 'from-amber-50/70 to-white dark:from-background dark:to-background',
     border: 'border-amber-200 dark:border-amber-500/30',
     glow: 'shadow-amber-100/60 dark:shadow-none',
@@ -95,7 +95,7 @@ const ACCIONES = [
     iconColor: 'text-amber-400 dark:text-amber-400/70',
   },
   {
-    label: 'Clientes', sub: 'Directorio', href: '#', icon: Users, ready: false,
+    label: 'Clientes', sub: 'Directorio', href: '/dashboard/taller/clientes', icon: Users, ready: true,
     tint: 'from-pink-50/70 to-white dark:from-background dark:to-background',
     border: 'border-pink-200 dark:border-pink-500/30',
     glow: 'shadow-pink-100/60 dark:shadow-none',
@@ -103,7 +103,7 @@ const ACCIONES = [
     iconColor: 'text-pink-400 dark:text-pink-400/70',
   },
   {
-    label: 'Facturación', sub: 'DTE y ventas', href: '#', icon: FileText, ready: false,
+    label: 'Sujeto excluido', sub: 'Factura electrónica', href: '/dashboard/compras/sujeto-excluido', icon: FileText, ready: true,
     tint: 'from-rose-50/70 to-white dark:from-background dark:to-background',
     border: 'border-rose-200 dark:border-rose-500/30',
     glow: 'shadow-rose-100/60 dark:shadow-none',
@@ -113,15 +113,21 @@ const ACCIONES = [
 ];
 
 const MODULOS = [
-  { nombre: 'Inventario', pct: 95, estado: 'Operativo' },
-  { nombre: 'Compras — Proveedores', pct: 90, estado: 'Operativo' },
-  { nombre: 'Compras — Catálogo contable', pct: 100, estado: 'Operativo' },
-  { nombre: 'Compras — Líneas (Control 30)', pct: 100, estado: 'Operativo' },
-  { nombre: 'Compras — Factura completa', pct: 15, estado: 'Esperando cliente' },
-  { nombre: 'Órdenes de trabajo', pct: 10, estado: 'Pendiente' },
+  { nombre: 'Inventario', pct: 100, estado: 'Operativo' },
+  { nombre: 'Compras — Proveedores y catálogo', pct: 100, estado: 'Operativo' },
+  { nombre: 'Compras — Ingreso DTE y procesos', pct: 100, estado: 'Operativo' },
+  { nombre: 'Factura de sujeto excluido', pct: 90, estado: 'Falta firmador' },
+  { nombre: 'Taller — Clientes, vehículos y órdenes', pct: 100, estado: 'Operativo' },
   { nombre: 'Ventas / Facturación', pct: 0, estado: 'Pendiente' },
-  { nombre: 'Cuentas por pagar', pct: 0, estado: 'Pendiente' },
+  { nombre: 'Cuentas por pagar', pct: 0, estado: 'Bloqueado' },
 ];
+
+const ETAPAS_TALLER = [
+  { etapa: 'En proceso', clave: 'PROCESO' },
+  { etapa: 'En espera', clave: 'ESPERA' },
+  { etapa: 'Finalizadas', clave: 'FINALIZADA' },
+  { etapa: 'Canceladas', clave: 'CANCELADA' },
+] as const;
 
 function fmt(n: number) {
   return n.toLocaleString('es-SV');
@@ -206,7 +212,7 @@ export default function DashboardPage() {
   const catBars = stats?.categorias.slice(0, 6) || [];
 
   return (
-    <DashboardLayout>
+    <>
       <div className="-mx-6 -mt-6 space-y-6">
         {/* Hero */}
         <div className="relative h-[220px] sm:h-[260px] overflow-hidden">
@@ -251,7 +257,7 @@ export default function DashboardPage() {
                 Centro de operaciones
               </h1>
               <p className="text-slate-700 dark:text-white/80 text-sm sm:text-base mt-1 max-w-xl">
-                Vista general del taller — inventario, compras y módulos en desarrollo
+                Vista general del taller — inventario, compras y órdenes de trabajo
               </p>
             </div>
           </div>
@@ -315,8 +321,8 @@ export default function DashboardPage() {
                 />
                 <KpiCard
                   label="Órdenes taller"
-                  value="—"
-                  sub="Módulo pendiente"
+                  value={fmt(stats.ordenes?.abiertas ?? 0)}
+                  sub="Abiertas"
                   gradient="bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800"
                   icon={Wrench}
                 />
@@ -333,24 +339,24 @@ export default function DashboardPage() {
                         </h3>
                         <p className="text-xs text-slate-500 mt-0.5">Órdenes de trabajo por etapa</p>
                       </div>
-                      <Badge variant="outline" className="border-amber-400/60 text-amber-600 dark:text-amber-400 text-[10px] bg-amber-50 dark:bg-transparent">
-                        <Clock className="h-3 w-3 mr-1" /> En diseño
-                      </Badge>
+                      <Link href="/dashboard/taller/ordenes" className="text-xs text-primary hover:underline">
+                        Ver órdenes →
+                      </Link>
                     </div>
                     <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {['Diagnóstico', 'En proceso', 'Esperando repuesto', 'Listo entrega'].map((etapa) => (
+                      {ETAPAS_TALLER.map(({ etapa, clave }) => (
                         <div
-                          key={etapa}
+                          key={clave}
                           className="rounded-xl border border-border dark:border-dashed bg-muted/40 p-4 text-center shadow-sm dark:shadow-none"
                         >
                           <Car className="h-8 w-8 mx-auto text-slate-400 dark:text-slate-600 mb-2" />
                           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{etapa}</p>
-                          <p className="text-lg font-bold text-slate-700 dark:text-slate-600 mt-1">0</p>
+                          <p className="text-lg font-bold text-slate-700 dark:text-slate-200 mt-1">{fmt(stats.ordenes?.[clave] ?? 0)}</p>
                         </div>
                       ))}
                     </div>
                     <p className="px-5 pb-4 text-xs text-slate-500 text-center">
-                      Conectaremos esta sección cuando el módulo de órdenes de trabajo esté listo
+                      Finalizadas y canceladas: últimos 30 días
                     </p>
                   </CardContent>
                 </Card>
@@ -410,10 +416,11 @@ export default function DashboardPage() {
                       Distribución de stock
                     </h3>
                     {stockPie.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={240}>
+                      <ResponsiveContainer width="100%" height={240} minWidth={200}>
                         <PieChart>
                           <Pie
                             data={stockPie}
+                            isAnimationActive={false}
                             cx="50%"
                             cy="50%"
                             innerRadius={55}
@@ -536,6 +543,6 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

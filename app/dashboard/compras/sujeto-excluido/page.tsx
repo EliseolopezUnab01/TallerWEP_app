@@ -3,7 +3,6 @@ import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useState } from 'react';
 import { Ban, FileText, Loader2, Plus, Send, Save } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { UI } from '@/lib/ui';
@@ -281,7 +280,7 @@ export default function SujetoExcluidoPage() {
   );
 
   return (
-    <DashboardLayout>
+    <>
       <div className={UI.page}>
         <div className={UI.stack}>
           <div className={UI.navbar}>
@@ -452,6 +451,6 @@ export default function SujetoExcluidoPage() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

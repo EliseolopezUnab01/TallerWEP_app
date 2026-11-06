@@ -1,95 +1,87 @@
 import { NextResponse } from 'next/server';
 
-// API para obtener la hora de un servicio externo confiable
-// Acepta la zona horaria del cliente como parámetro
+const ESPERA_MS = 2000;
+const VIGENCIA_MS = 10 * 60 * 1000;
+
+// Diferencia entre la hora de referencia y el reloj del servidor; se reutiliza unos minutos.
+let referencia: { desfaseMs: number; fuente: 'external' | 'server_fallback'; hasta: number } | null = null;
+
+async function horaExterna(): Promise<Date | null> {
+  try {
+    const r = await fetch('http://worldtimeapi.org/api/timezone/Etc/UTC', { signal: AbortSignal.timeout(ESPERA_MS) });
+    if (r.ok) {
+      const data = await r.json();
+      if (data.unixtime) return new Date(Number(data.unixtime) * 1000);
+    }
+  } catch {
+    /* se intenta la alternativa */
+  }
+  try {
+    const r = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC', { signal: AbortSignal.timeout(ESPERA_MS) });
+    if (r.ok) {
+      const d = await r.json();
+      return new Date(Date.UTC(d.year, d.month - 1, d.day, d.hour, d.minute, d.seconds));
+    }
+  } catch {
+    /* sin servicios externos */
+  }
+  return null;
+}
+
+async function obtenerReferencia() {
+  if (referencia && referencia.hasta > Date.now()) return referencia;
+  const externa = await horaExterna();
+  referencia = externa
+    ? { desfaseMs: externa.getTime() - Date.now(), fuente: 'external', hasta: Date.now() + VIGENCIA_MS }
+    : { desfaseMs: 0, fuente: 'server_fallback', hasta: Date.now() + 60_000 };
+  return referencia;
+}
+
 export async function GET(request: Request) {
   try {
-    // Obtener zona horaria del cliente desde query params
     const { searchParams } = new URL(request.url);
-    const clientTimezone = searchParams.get('timezone') || 'America/El_Salvador';
-    
-    // Intentar obtener hora de WorldTimeAPI (servicio gratuito y confiable)
-    let externalTime = null;
-    let source = 'external';
-    
+    let zona = searchParams.get('timezone') || 'America/El_Salvador';
     try {
-      // WorldTimeAPI - servicio gratuito
-      const response = await fetch(`http://worldtimeapi.org/api/timezone/${clientTimezone}`, {
-        signal: AbortSignal.timeout(5000) // timeout de 5 segundos
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        externalTime = new Date(data.datetime);
-      }
-    } catch (e) {
-      console.log('WorldTimeAPI no disponible, intentando alternativa...');
+      new Intl.DateTimeFormat('es', { timeZone: zona });
+    } catch {
+      zona = 'America/El_Salvador';
     }
-    
-    // Si WorldTimeAPI falla, intentar con timeapi.io
-    if (!externalTime) {
-      try {
-        const response = await fetch(`https://timeapi.io/api/Time/current/zone?timeZone=${clientTimezone}`, {
-          signal: AbortSignal.timeout(5000)
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          // timeapi.io devuelve: { year, month, day, hour, minute, seconds, ... }
-          externalTime = new Date(data.year, data.month - 1, data.day, data.hour, data.minute, data.seconds);
-        }
-      } catch (e) {
-        console.log('timeapi.io no disponible');
-      }
-    }
-    
-    // Si ambos servicios fallan, usar hora del servidor como fallback (con advertencia)
-    if (!externalTime) {
-      externalTime = new Date();
-      source = 'server_fallback';
-      console.warn('⚠️ Usando hora del servidor local como fallback');
-    }
-    
-    // Formatear fecha/hora en la zona horaria del cliente
-    const formatter = new Intl.DateTimeFormat('es', {
-      timeZone: clientTimezone,
+
+    const ref = await obtenerReferencia();
+    const ahora = new Date(Date.now() + ref.desfaseMs);
+    const partes = new Intl.DateTimeFormat('es', {
+      timeZone: zona,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: false
-    });
-    
-    const parts = formatter.formatToParts(externalTime);
-    const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
-    
+      hour12: false,
+    }).formatToParts(ahora);
+    const p = (tipo: string) => partes.find((x) => x.type === tipo)?.value || '';
+
     return NextResponse.json({
       success: true,
       serverTime: {
-        iso: externalTime.toISOString(),
-        timestamp: externalTime.getTime(),
-        timezone: clientTimezone,
-        formatted: `${getPart('day')}/${getPart('month')}/${getPart('year')} ${getPart('hour')}:${getPart('minute')}:${getPart('second')}`,
-        date: `${getPart('year')}-${getPart('month')}-${getPart('day')}`,
-        time: `${getPart('hour')}:${getPart('minute')}:${getPart('second')}`,
-        year: parseInt(getPart('year')),
-        month: parseInt(getPart('month')),
-        day: parseInt(getPart('day')),
-        hour: parseInt(getPart('hour')),
-        minute: parseInt(getPart('minute')),
-        second: parseInt(getPart('second'))
+        iso: ahora.toISOString(),
+        timestamp: ahora.getTime(),
+        timezone: zona,
+        formatted: `${p('day')}/${p('month')}/${p('year')} ${p('hour')}:${p('minute')}:${p('second')}`,
+        date: `${p('year')}-${p('month')}-${p('day')}`,
+        time: `${p('hour')}:${p('minute')}:${p('second')}`,
+        year: parseInt(p('year')),
+        month: parseInt(p('month')),
+        day: parseInt(p('day')),
+        hour: parseInt(p('hour')),
+        minute: parseInt(p('minute')),
+        second: parseInt(p('second')),
       },
-      source: source, // 'external' o 'server_fallback'
-      // Tolerancia máxima en minutos (si la diferencia es mayor, hay problema)
-      maxToleranceMinutes: 5
+      source: ref.fuente,
+      maxToleranceMinutes: 5,
     });
   } catch (error) {
     console.error('Error obteniendo hora:', error);
-    return NextResponse.json(
-      { error: 'Error al obtener hora' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error al obtener hora' }, { status: 500 });
   }
 }

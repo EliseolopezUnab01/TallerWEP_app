@@ -4,6 +4,7 @@ import { calcularLinea, CONDICIONES_IVA, DESTINOS, type CondicionIva, type Desti
 import { calcularResumen, type LineaResumen } from '@/lib/compras-resumen';
 import { CATEGORIAS_OPERACION, NOMBRE_DESTINO, destinoPermitido } from '@/lib/compras-constantes';
 import { siguienteCorrelativo } from '@/lib/correlativos';
+import { errorCantidadInventario } from '@/lib/configuracion';
 
 export type Conexion = Awaited<ReturnType<typeof connectDB>>;
 
@@ -118,9 +119,14 @@ export interface CompraReglas {
 /** Reglas del destino según el control 2 y la clase del documento. Null = válida. */
 export function errorDestinoLinea(
   compra: CompraReglas,
-  linea: { destino: string | null; idprod: number | null }
+  linea: { destino: string | null; idprod: number | null; cantidad?: number },
+  decimales = true
 ): string | null {
   if (linea.destino === null) return null;
+  if (linea.destino === 'INVENTARIO' && linea.cantidad !== undefined) {
+    const error = errorCantidadInventario(linea.cantidad, decimales);
+    if (error) return error;
+  }
   if (compra.clase_documento === 'IMPORTACION' && linea.destino === 'EXPRESS') {
     return 'Una importación no admite productos express';
   }

@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/db';
 import { siguienteCorrelativo } from '@/lib/correlativos';
 import { aNumero, limpiar } from '@/lib/compras-detalle-db';
 import { requierePermiso, usuarioDeRequest } from '@/lib/sesion';
+import { errorCantidadInventario, permiteDecimales } from '@/lib/configuracion';
 
 export async function GET() {
   const connection = await connectDB();
@@ -44,12 +45,15 @@ export async function POST(request: NextRequest) {
       [codigo, fecha, motivo.slice(0, 200), idusuario]
     );
     const idajuste = res.insertId;
+    const decimales = await permiteDecimales(connection);
     for (const l of lineas as Record<string, unknown>[]) {
       const idprod = Number(l.idprod);
       const contable = aNumero(l.cantidad_contable);
       const fisico = aNumero(l.cantidad_fisico);
       if (!Number.isInteger(idprod) || idprod <= 0) throw new Error('Producto no válido');
       if (contable === 0 && fisico === 0) throw new Error(`El producto ${idprod} no tiene cantidad`);
+      const errorCantidad = errorCantidadInventario(contable, decimales) || errorCantidadInventario(fisico, decimales);
+      if (errorCantidad) throw new Error(errorCantidad);
       const [prod] = await connection.execute<RowDataPacket[]>(
         'SELECT stock_contable, stock_fisico, nombre FROM productos WHERE idprod = ? FOR UPDATE',
         [idprod]

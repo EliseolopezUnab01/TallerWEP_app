@@ -1,17 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Save, XCircle } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { BarraPantalla } from '@/components/barra-pantalla';
 import { Formulario, Toast, aValores, pedir, useAviso, type Seccion, type Valores } from '@/app/dashboard/taller/_components/comun';
 import { obtenerEmpresa } from '@/lib/empresa-cliente';
-import { AMBIENTES, DEPARTAMENTOS, TIPOS_DOCUMENTO_ID, TIPOS_ESTABLECIMIENTO } from '@/lib/hacienda-catalogos';
+import { AMBIENTES, DEPARTAMENTOS, MUNICIPIOS, TIPOS_DOCUMENTO_ID, TIPOS_ESTABLECIMIENTO } from '@/lib/hacienda-catalogos';
 import { useSesion } from '@/lib/sesion-cliente';
 import { UI } from '@/lib/ui';
 
 const op = (lista: { codigo: string | number; nombre: string }[]) =>
   lista.map((x) => ({ valor: String(x.codigo), etiqueta: `${x.codigo} · ${x.nombre}` }));
+
+/** Municipios del departamento elegido; conserva un código guardado que no esté en la lista. */
+function opcionesMunicipio(departamento: string, actual: string) {
+  const lista = op(MUNICIPIOS[departamento] ?? []);
+  if (actual && !lista.some((o) => o.valor === actual)) lista.unshift({ valor: actual, etiqueta: `${actual} · código guardado` });
+  return lista;
+}
 
 const SECCIONES: Seccion[] = [
   {
@@ -24,7 +30,7 @@ const SECCIONES: Seccion[] = [
       { campo: 'cod_actividad', etiqueta: 'Código de actividad (CAT-019)' },
       { campo: 'desc_actividad', etiqueta: 'Actividad económica' },
       { campo: 'departamento', etiqueta: 'Departamento', tipo: 'select', opciones: op(DEPARTAMENTOS) },
-      { campo: 'municipio', etiqueta: 'Municipio (código CAT-013)', placeholder: '14' },
+      { campo: 'municipio', etiqueta: 'Municipio', tipo: 'select', opciones: [] },
       { campo: 'direccion', etiqueta: 'Dirección', ancho: 2 },
       { campo: 'telefono', etiqueta: 'Teléfono' },
       { campo: 'correo', etiqueta: 'Correo' },
@@ -96,6 +102,16 @@ export default function EmpresaPage() {
   const editable = puede('configuracion.editar');
   const [valores, setValores] = useState<Valores>({});
   const [hacienda, setHacienda] = useState<EstadoHacienda | null>(null);
+  const departamento = String(valores.departamento ?? '');
+  const municipio = String(valores.municipio ?? '');
+  const secciones = useMemo(
+    () =>
+      SECCIONES.map((s) => ({
+        ...s,
+        campos: s.campos.map((c) => (c.campo === 'municipio' ? { ...c, opciones: opcionesMunicipio(departamento, municipio) } : c)),
+      })),
+    [departamento, municipio],
+  );
 
   const cargar = useCallback(async () => {
     try {
@@ -123,7 +139,7 @@ export default function EmpresaPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className={`${UI.canvas} flex flex-col gap-2 lg:h-[calc(100vh-3rem)]`}>
         <BarraPantalla modulo="Configuración" titulo="Empresa">
           {editable && (
@@ -135,7 +151,11 @@ export default function EmpresaPage() {
 
         <div className={`${UI.densePanel} min-h-0 flex-1 overflow-auto`}>
           <fieldset disabled={!editable}>
-            <Formulario secciones={SECCIONES} valores={valores} onCambio={(c, v) => setValores((x) => ({ ...x, [c]: v }))} />
+            <Formulario
+              secciones={secciones}
+              valores={valores}
+              onCambio={(c, v) => setValores((x) => ({ ...x, [c]: v, ...(c === 'departamento' ? { municipio: '' } : {}) }))}
+            />
           </fieldset>
           {hacienda && (
             <div className="border-t border-border p-3 text-xs">
@@ -150,6 +170,6 @@ export default function EmpresaPage() {
         </div>
       </div>
       <Toast aviso={aviso} />
-    </DashboardLayout>
+    </>
   );
 }

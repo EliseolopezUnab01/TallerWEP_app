@@ -2,16 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { DashboardLayout } from '@/components/dashboard-layout';
-import { NotificationDropdown } from '@/components/notification-dropdown';
-import { UserDropdown } from '@/components/user-dropdown';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { BarraPantalla } from '@/components/barra-pantalla';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Save, Loader2, AlertCircle, CheckCircle2, Lock, User, Moon,
+  Save, Loader2, AlertCircle, CheckCircle2, Lock, User,
 } from 'lucide-react';
 import { UI } from '@/lib/ui';
 
@@ -64,20 +61,10 @@ export default function ConfiguracionPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className={UI.page}>
-        <div className={`${UI.stack} max-w-2xl mx-auto`}>
-          <div className={UI.navbar}>
-            <div className="flex items-center gap-3">
-              <span className={UI.navLabel}>Cuenta</span>
-              <span className={UI.navDivider} />
-              <span className={UI.navTitle}>Configuración</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <NotificationDropdown />
-              <UserDropdown />
-            </div>
-          </div>
+    <>
+      <div className={`${UI.canvas} flex flex-col gap-3`}>
+        <BarraPantalla modulo="Configuración" titulo="Mi contraseña" />
+        <div className="space-y-4 max-w-2xl">
 
           {aviso && (
             <div className={`px-4 py-3 flex items-center gap-2 text-sm ${
@@ -87,29 +74,6 @@ export default function ConfiguracionPage() {
               {aviso.texto}
             </div>
           )}
-
-          <div>
-            <h1 className={UI.heading}>Configuración</h1>
-            <p className={`${UI.subheading} mt-1`}>Preferencias de cuenta y seguridad</p>
-          </div>
-
-          <Card className={UI.card}>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Moon className="h-4 w-4 text-primary" />
-                <h2 className={`text-sm font-semibold uppercase tracking-wider ${UI.textPrimary}`}>
-                  Apariencia
-                </h2>
-              </div>
-              <div className={`${UI.panel} flex items-center justify-between px-4 py-3`}>
-                <div>
-                  <p className={`text-sm ${UI.textPrimary}`}>Tema claro / oscuro</p>
-                  <p className={`text-xs ${UI.textFaint}`}>Alternar entre modos de visualización</p>
-                </div>
-                <ThemeToggle />
-              </div>
-            </CardContent>
-          </Card>
 
           <Card className={UI.card}>
             <CardContent className="p-6">
@@ -183,6 +147,6 @@ export default function ConfiguracionPage() {
           </Card>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

@@ -133,15 +133,39 @@
   --sidebar-ring: #0e88c9;
   --tooltip-bg: #0d1523;
   --tooltip-border: #0e88c9;
+  color-scheme: dark;
+}
+
+:root:not(.dark) {
+  color-scheme: light;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 45%, transparent) transparent;
   }
   body {
     @apply bg-background text-foreground;
   }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
 }
 
 /* Animación para la barra de progreso del toast */

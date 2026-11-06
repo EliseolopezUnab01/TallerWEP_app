@@ -7,6 +7,8 @@ import { UI } from '@/lib/ui';
 import { IVA_TASA, calcularLinea, requiereCatalogo, tipoCatalogoEsperado, type CondicionIva } from '@/lib/compras-detalle';
 import { AVISOS_COMPRA, CATEGORIAS_OPERACION, destinoPermitido, destinosDeCategoria } from '@/lib/compras-constantes';
 import { r8 } from '@/lib/decimales';
+import { AVISO_ENTEROS } from '@/lib/configuracion';
+import { useConfiguracion } from '@/lib/configuracion-cliente';
 import { GloboStock, useDisponibilidad } from '@/components/ui/globo-stock';
 import type { CompraCtx } from './useCompra';
 import {
@@ -48,6 +50,8 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
   const { compra, esBorrador, esImportacion, rubros } = ctx;
   const bloqueado = !compra || !esBorrador;
   const categoria = compra?.categoria_operacion;
+  const config = useConfiguracion();
+  const soloEnteros = form.destino === 'INVENTARIO' && config?.cantidades_decimales !== '1';
 
   const [filtro, setFiltro] = useState('');
   const [metodo, setMetodo] = useState('referencia');
@@ -171,6 +175,10 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
     }
     if (form.destino === 'INVENTARIO' && !form.idprod) {
       ctx.notificar('error', 'Los productos de inventario se eligen desde el buscador');
+      return;
+    }
+    if (soloEnteros && !Number.isInteger(Number(form.cantidad))) {
+      ctx.notificar('error', AVISO_ENTEROS);
       return;
     }
     if (requiereCatalogo(form.destino) && !form.idcatalogo) {
@@ -427,7 +435,8 @@ export function PanelInventario({ ctx, form, setForm, ivaDefault, setIvaDefault,
               <input
                 ref={refCantidad}
                 type="number"
-                step="any"
+                step={soloEnteros ? 1 : 'any'}
+                title={soloEnteros ? 'Unidades enteras (Configuración > Sistema)' : undefined}
                 min={0}
                 className={`${UI.denseInput} ${UI.denseMono} w-full text-right`}
                 value={form.cantidad}

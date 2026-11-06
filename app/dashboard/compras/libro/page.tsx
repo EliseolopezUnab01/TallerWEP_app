@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { FileSpreadsheet, FileText, Loader2, RefreshCw } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { UI } from '@/lib/ui';
@@ -153,7 +152,7 @@ export default function LibroComprasPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className={UI.page}>
         <div className={UI.stack}>
           <div className={UI.navbar}>
@@ -255,6 +254,6 @@ export default function LibroComprasPage() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

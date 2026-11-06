@@ -18,7 +18,6 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { UI } from '@/lib/ui';
@@ -316,7 +315,7 @@ export default function DocumentosCompraPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className={`${UI.canvas} flex flex-col gap-2 lg:h-[calc(100vh-3rem)]`}>
         <div className={`${UI.navbar} shrink-0`}>
           <div className="flex items-center gap-3">
@@ -771,6 +770,6 @@ export default function DocumentosCompraPage() {
           {aviso.texto}
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

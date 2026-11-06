@@ -15,6 +15,7 @@ import { nuevoNodocto, siguienteCorrelativo } from '@/lib/correlativos';
 import { errorDestinoLinea, persistirTotales, type CompraReglas } from '@/lib/compras-detalle-db';
 import { aplicarStockAlRegistrar, revertirStockAlAnular } from '@/lib/compras-stock';
 import { erroresTopeNota } from '@/lib/compras-nota';
+import { permiteDecimales } from '@/lib/configuracion';
 import { validarFormatoDte } from '@/lib/dte-validacion';
 import { sugerirRetenciones } from '@/lib/retenciones';
 
@@ -27,12 +28,17 @@ async function erroresDeLineas(
   reglas: CompraReglas
 ) {
   const [lineas] = await connection.execute<RowDataPacket[]>(
-    'SELECT numero_linea, destino, idprod FROM compras_detalle WHERE idcompra = ? ORDER BY numero_linea',
+    'SELECT numero_linea, destino, idprod, cantidad FROM compras_detalle WHERE idcompra = ? ORDER BY numero_linea',
     [idcompra]
   );
+  const decimales = await permiteDecimales(connection);
   const porMensaje = new Map<string, number[]>();
   for (const l of lineas) {
-    const error = errorDestinoLinea(reglas, { destino: l.destino, idprod: l.idprod ? Number(l.idprod) : null });
+    const error = errorDestinoLinea(
+      reglas,
+      { destino: l.destino, idprod: l.idprod ? Number(l.idprod) : null, cantidad: Number(l.cantidad) },
+      decimales
+    );
     if (error) porMensaje.set(error, [...(porMensaje.get(error) || []), Number(l.numero_linea)]);
   }
   return [...porMensaje.entries()].slice(0, 3).map(([m, nums]) => `${m} (línea ${nums.join(', ')})`);

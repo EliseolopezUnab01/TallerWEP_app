@@ -1,7 +1,7 @@
 'use client';
+import { BarraPantalla } from '@/components/barra-pantalla';
 import { avisar } from '@/components/ui/avisos';
 
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,8 +13,6 @@ import Image from 'next/image';
 import { SearchFilters, SingleFilterType } from '@/components/search-filters';
 import { useBuscarProductos } from '@/lib/buscar-productos';
 import { useSesion } from '@/lib/sesion-cliente';
-import { NotificationDropdown } from '@/components/notification-dropdown';
-import { UserDropdown } from '@/components/user-dropdown';
 
 interface Producto {
   idprod: number;
@@ -124,30 +122,20 @@ export default function CostosPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg text-slate-200">Cargando...</div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white dark:from-surface-deep dark:via-surface-deep dark:to-surface-deep p-6">
         <div className="space-y-6">
           {/* Navbar superior */}
-          <div className="rounded-xl border border-sky-200 dark:border-primary/30 bg-gradient-to-r from-white to-sky-50/50 dark:from-background dark:to-background px-5 py-3 flex items-center justify-between gap-4 shadow-[0_8px_24px_rgba(14,136,201,0.08)] dark:shadow-[0_0_25px_rgba(15,23,42,0.9)]">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Inventario</span>
-              <span className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-              <span className="text-sm tracking-[0.18em] uppercase text-slate-700 dark:text-slate-200">Gestión de Costos</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <NotificationDropdown />
-              <UserDropdown />
-            </div>
-          </div>
+          <BarraPantalla modulo="Inventario" titulo="Gestión de costos" />
 
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -360,6 +348,6 @@ export default function CostosPage() {
         </div>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

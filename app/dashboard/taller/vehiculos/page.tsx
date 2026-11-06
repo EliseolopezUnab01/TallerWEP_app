@@ -4,7 +4,6 @@ import { confirmar } from '@/components/ui/avisos';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, Plus, Save, Search, Trash2 } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { UI } from '@/lib/ui';
 import { UNIDADES_CAPACIDAD, estadoRecordatorio } from '@/lib/taller-constantes';
 import {
@@ -241,7 +240,7 @@ export default function VehiculosPage() {
   ];
 
   return (
-    <DashboardLayout>
+    <>
       <div
         className={`${UI.canvas} flex flex-col gap-2 lg:h-[calc(100vh-3rem)]`}
         onKeyDown={(e) => {
@@ -301,6 +300,12 @@ export default function VehiculosPage() {
             {!valores ? (
               <div className={`${UI.densePanel} flex-1 flex flex-col items-center justify-center gap-2 py-16 text-center`}>
                 <p className="text-sm text-muted-foreground">Elija un vehículo o registre uno nuevo.</p>
+                {clientes.length === 0 && (
+                  <p className="text-xs">
+                    Cada vehículo pertenece a un cliente: registre primero uno en{' '}
+                    <Link href="/dashboard/taller/clientes" className="text-primary hover:underline">Taller › Clientes</Link>.
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground max-w-md">
                   Cada vehículo guarda los datos de su tarjeta de circulación vigente, las partes que el taller documenta, las revisiones de
                   entrada y salida, y los recordatorios de mantenimiento.
@@ -397,6 +402,6 @@ export default function VehiculosPage() {
         </div>
       </div>
       <Toast aviso={aviso} />
-    </DashboardLayout>
+    </>
   );
 }

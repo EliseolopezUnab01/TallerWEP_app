@@ -34,6 +34,7 @@ import {
   FileSignature,
   BookMarked,
   KeyRound,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ThemeToggle } from './theme-toggle';
@@ -173,6 +174,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       toggle: () => setConfigOpen(!configOpen),
       children: [
         { icon: Building2, label: 'Empresa', href: '/dashboard/configuracion/empresa' },
+        { icon: SlidersHorizontal, label: 'Sistema', href: '/dashboard/configuracion/sistema' },
         { icon: UserCog, label: 'Usuarios y Roles', href: '/dashboard/configuracion/usuarios' },
         { icon: KeyRound, label: 'Mi Contraseña', href: '/dashboard/configuracion' },
       ]

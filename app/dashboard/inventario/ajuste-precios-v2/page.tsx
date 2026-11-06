@@ -1,8 +1,8 @@
 'use client';
 import { avisar } from '@/components/ui/avisos';
+import { UI } from '@/lib/ui';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -340,28 +340,28 @@ export default function AjustePreciosV2Page() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <>
         <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-surface-deep">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white dark:from-surface-deep dark:via-surface-deep dark:to-surface-deep p-4">
         {/* Navbar */}
-        <div className="rounded-xl border border-sky-200 dark:border-primary/30 bg-gradient-to-r from-white to-sky-50/50 dark:from-background dark:to-background px-5 py-3 flex items-center justify-between gap-4 shadow-[0_8px_24px_rgba(14,136,201,0.08)] dark:shadow-[0_0_25px_rgba(15,23,42,0.9)] mb-4">
+        <div className={`${UI.navbar} mb-4`}>
           <div className="flex items-center gap-3">
             {productoSeleccionado && (
-              <Button variant="ghost" size="icon" onClick={volverALista} className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
+              <Button variant="ghost" size="icon" onClick={volverALista} className="text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Inventario</span>
-            <span className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-            <span className="text-sm tracking-[0.18em] uppercase text-slate-700 dark:text-slate-200">
+            <span className={UI.navLabel}>Inventario</span>
+            <span className={UI.navDivider} />
+            <span className={UI.navTitle}>
               {productoSeleccionado ? 'Ajuste de Precios' : 'Seleccionar Producto'}
             </span>
           </div>
@@ -817,6 +817,6 @@ export default function AjustePreciosV2Page() {
           </>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }

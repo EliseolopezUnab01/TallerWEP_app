@@ -4,6 +4,7 @@ import { confirmar } from '@/components/ui/avisos';
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Ban, CheckCircle2, FilePlus2, FolderOpen, Save, Trash2, XCircle } from 'lucide-react';
 import { UI } from '@/lib/ui';
+import { verificarReloj } from '@/lib/reloj-cliente';
 import { AVISOS_COMPRA, CATEGORIAS_OPERACION, destinoPermitido, type CategoriaOperacion } from '@/lib/compras-constantes';
 import type { CompraCtx } from './useCompra';
 import { CODIGO_IMPORTACION, DOCUMENTOS_CLIENTE, codigoDocumento, documentoCliente, fechaInput } from './tipos';
@@ -13,17 +14,11 @@ function useDesfaseReloj() {
   const [desfase, setDesfase] = useState<{ minutos: number; referencia: string } | null>(null);
   useEffect(() => {
     let vigente = true;
-    const zona = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/El_Salvador';
-    fetch(`/api/server-time?timezone=${encodeURIComponent(zona)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!vigente || !data.success) return;
-        const minutos = Math.round((Date.now() - Number(data.serverTime.timestamp)) / 60000);
-        if (Math.abs(minutos) > Number(data.maxToleranceMinutes || 5)) {
-          setDesfase({ minutos, referencia: data.serverTime.formatted });
-        }
-      })
-      .catch(() => {});
+    verificarReloj().then((estado) => {
+      if (vigente && estado && Math.abs(estado.minutos) > estado.tolerancia) {
+        setDesfase({ minutos: estado.minutos, referencia: estado.referencia });
+      }
+    });
     return () => {
       vigente = false;
     };

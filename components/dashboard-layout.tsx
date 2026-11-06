@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from './sidebar';
+import { EsqueletoPagina } from './esqueleto-pagina';
 import { useNotifications } from '@/contexts/notification-context';
 import { CheckCircle, AlertTriangle, Clock, X, Menu } from 'lucide-react';
 import { cerrarSesion, useSesion } from '@/lib/sesion-cliente';
+import { verificarReloj } from '@/lib/reloj-cliente';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -19,34 +21,32 @@ interface TimeToast {
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<TimeToast | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const timeChecked = useRef(false);
   const router = useRouter();
+  const pathname = usePathname();
   const { addNotification } = useNotifications();
 
   const { sesion } = useSesion();
+  const isAuthenticated = !!sesion;
 
   useEffect(() => {
-    if (sesion === undefined) return;
-    if (sesion === null) {
-      cerrarSesion().finally(() => router.push('/'));
-      return;
-    }
-    setIsAuthenticated(true);
-    setLoading(false);
+    if (sesion === null) cerrarSesion().finally(() => router.push('/'));
   }, [sesion, router]);
 
+  // El layout persiste entre pantallas: se revisa en cada cambio de ruta.
   useEffect(() => {
     if (!isAuthenticated) return;
     if (new URLSearchParams(window.location.search).get('sinpermiso') !== '1') return;
-    setToast({ type: 'error', title: 'Sin permiso', message: 'Su rol no tiene acceso a esa pantalla.' });
-    setTimeout(() => setToastVisible(true), 100);
     router.replace(window.location.pathname);
-  }, [isAuthenticated, router]);
+    const t = setTimeout(() => {
+      setToast({ type: 'error', title: 'Sin permiso', message: 'Su rol no tiene acceso a esa pantalla.' });
+      setToastVisible(true);
+    }, 100);
+    return () => clearTimeout(t);
+  }, [isAuthenticated, pathname, router]);
 
   // Verificar hora solo UNA vez por sesión (no en cada cambio de módulo)
   useEffect(() => {
@@ -58,65 +58,32 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     timeChecked.current = true;
     sessionStorage.setItem('time_verified', 'true');
 
-    const verifyTime = async () => {
-      try {
-        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const response = await fetch(`/api/server-time?timezone=${encodeURIComponent(userTimezone)}`);
-        const data = await response.json();
-
-        if (!data.success) {
-          throw new Error('No se pudo verificar la hora');
-        }
-
-        const clientNow = new Date();
-        const diffMs = Math.abs(clientNow.getTime() - data.serverTime.timestamp);
-        const diffMinutes = Math.round(diffMs / 60000);
-
-        if (diffMinutes <= data.maxToleranceMinutes) {
-          // Hora correcta - toast verde que desaparece + notificación
-          setToast({
-            type: 'success',
-            title: 'Hora verificada',
-            message: `Zona horaria: ${userTimezone.replace(/_/g, ' ')}`,
-            details: data.serverTime.formatted
-          });
-          addNotification({
-            type: 'success',
-            title: 'Verificación de hora',
-            message: `Hora del sistema verificada correctamente (${userTimezone.replace(/_/g, ' ')})`
-          });
-        } else {
-          // Hora incorrecta - toast amarillo que NO desaparece + notificación
-          setToast({
-            type: 'warning',
-            title: 'Hora desincronizada',
-            message: `Diferencia de ${diffMinutes} minutos detectada`,
-            details: `Hora oficial: ${data.serverTime.formatted}`
-          });
-          addNotification({
-            type: 'warning',
-            title: 'Hora desincronizada',
-            message: `La hora de su equipo difiere ${diffMinutes} minutos de la hora oficial. Sincronice su reloj.`
-          });
-        }
-      } catch {
+    // Con la hora correcta no se avisa nada: solo el desfase o el error merecen atención.
+    verificarReloj().then((estado) => {
+      if (estado && Math.abs(estado.minutos) <= estado.tolerancia) return;
+      if (estado) {
+        const minutos = Math.abs(estado.minutos);
         setToast({
-          type: 'error',
-          title: 'Error de verificación',
-          message: 'No se pudo verificar la hora del sistema'
+          type: 'warning',
+          title: 'Hora desincronizada',
+          message: `Diferencia de ${minutos} minutos detectada`,
+          details: `Hora oficial: ${estado.referencia}`,
         });
+        addNotification({
+          type: 'warning',
+          title: 'Hora desincronizada',
+          message: `La hora de su equipo difiere ${minutos} minutos de la hora oficial. Sincronice su reloj.`,
+        });
+      } else {
+        setToast({ type: 'error', title: 'Error de verificación', message: 'No se pudo verificar la hora del sistema' });
         addNotification({
           type: 'error',
           title: 'Error de verificación',
-          message: 'No se pudo verificar la hora. Verifique su conexión a internet.'
+          message: 'No se pudo verificar la hora. Verifique su conexión a internet.',
         });
       }
-
-      // Mostrar toast con animación
       setTimeout(() => setToastVisible(true), 100);
-    };
-
-    verifyTime();
+    });
   }, [isAuthenticated, addNotification]);
 
   // Auto-ocultar toast después de 4 segundos solo si es éxito
@@ -135,21 +102,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     setTimeout(() => setToast(null), 300);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-primary">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
@@ -166,7 +118,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <span className="text-sm font-semibold text-primary">Taller Web</span>
         </div>
         <div className="p-6 space-y-6 min-h-full">
-          {children}
+          {isAuthenticated ? children : <EsqueletoPagina />}
         </div>
       </main>
 

@@ -1,8 +1,8 @@
 'use client';
+import { BarraPantalla } from '@/components/barra-pantalla';
 // app/dashboard/inventario/nuevo/page.tsx
 import { avisar } from '@/components/ui/avisos';
 
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,8 +14,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, AlertTriangle, X } from 'lucide-react';
 import Link from 'next/link';
-import { NotificationDropdown } from '@/components/notification-dropdown';
-import { UserDropdown } from '@/components/user-dropdown';
 import { useNotifications } from '@/contexts/notification-context';
 
 interface CategoriaNueva {
@@ -476,21 +474,11 @@ export default function NuevoProductoPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white dark:from-surface-deep dark:via-surface-deep dark:to-surface-deep p-6">
         <div className="space-y-6">
         {/* Navbar superior tipo Figma */}
-        <div className="rounded-xl border border-sky-200 dark:border-primary/30 bg-gradient-to-r from-white to-sky-50/50 dark:from-background dark:to-background px-5 py-3 flex items-center justify-between gap-4 shadow-[0_8px_24px_rgba(14,136,201,0.08)] dark:shadow-[0_0_25px_rgba(15,23,42,0.9)]">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Inventario</span>
-            <span className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-            <span className="text-sm tracking-[0.18em] uppercase text-slate-700 dark:text-slate-200">Nuevo Producto</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <NotificationDropdown />
-            <UserDropdown />
-          </div>
-        </div>
+        <BarraPantalla modulo="Inventario" titulo="Nuevo producto" />
 
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -509,14 +497,7 @@ export default function NuevoProductoPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-50 tracking-tight">
-                Nuevo Producto
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Complete la información del producto para registrarlo en el inventario
-              </p>
-            </div>
+            <div aria-hidden />
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -1214,6 +1195,6 @@ export default function NuevoProductoPage() {
         )}
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

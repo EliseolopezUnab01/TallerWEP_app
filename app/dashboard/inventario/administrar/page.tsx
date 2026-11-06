@@ -1,7 +1,8 @@
 'use client';
+import { BarraPantalla } from '@/components/barra-pantalla';
+import { formatoCantidad } from '@/lib/decimales';
 import { avisar, confirmar } from '@/components/ui/avisos';
 
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,12 +11,11 @@ import { Search, Edit, Trash2, Eye, Package, Filter, Plus, X, LayoutGrid, List, 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { NotificationDropdown } from '@/components/notification-dropdown';
-import { UserDropdown } from '@/components/user-dropdown';
 import { generateCatalogPDF } from '@/lib/generate-catalog-pdf';
 import { SearchFilters, filterProductos, SingleFilterType } from '@/components/search-filters';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { GloboStock, useDisponibilidad } from '@/components/ui/globo-stock';
+import { fechaLocalISO } from '@/lib/fechas';
 
 interface Producto {
   idprod: number;
@@ -470,37 +470,24 @@ export default function AdministrarProductoPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg text-slate-200">Cargando productos...</div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white dark:from-surface-deep dark:via-surface-deep dark:to-surface-deep p-6">
         <div className="space-y-6">
           {/* Navbar superior */}
-          <div className="rounded-xl border border-sky-200 dark:border-primary/30 bg-gradient-to-r from-white to-sky-50/50 dark:from-background dark:to-background px-5 py-3 flex items-center justify-between gap-4 shadow-[0_8px_24px_rgba(14,136,201,0.08)] dark:shadow-[0_0_25px_rgba(15,23,42,0.9)]">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Inventario</span>
-              <span className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-              <span className="text-sm tracking-[0.18em] uppercase text-slate-700 dark:text-slate-200">Administrar Productos</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <NotificationDropdown />
-              <UserDropdown />
-            </div>
-          </div>
+          <BarraPantalla modulo="Inventario" titulo="Administrar productos" />
 
           {/* Título y botones */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-50 tracking-tight">Administrar Inventario</h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Gestiona productos y categorías del sistema</p>
-            </div>
+            <div aria-hidden />
             <div className="flex gap-2">
               <Button 
                 variant="outline"
@@ -540,7 +527,7 @@ export default function AdministrarProductoPage() {
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `productos_${new Date().toISOString().split('T')[0]}.xlsx`;
+                    a.download = `productos_${fechaLocalISO()}.xlsx`;
                     a.click();
                     window.URL.revokeObjectURL(url);
                   } catch (error) {
@@ -745,11 +732,11 @@ export default function AdministrarProductoPage() {
                           </td>
                           <td className="py-2 px-2 text-slate-900 dark:text-slate-200 max-w-[200px] truncate">{producto.nombre}</td>
                           <td className="py-2 px-2 text-slate-300">{producto.OE}</td>
-                          <td className="py-2 px-2"><Badge variant="outline" className="text-xs">{producto.categoria_nombre || producto.idcategoria || '-'}</Badge></td>
+                          <td className="py-2 px-2"><Badge variant="outline" className="text-xs">{producto.categoria_nueva_nombre || 'Sin categoría asignada'}</Badge></td>
                           <td className="py-2 px-2">
                             <span className="inline-flex items-center gap-1.5">
                               <GloboStock idprod={producto.idprod} datos={disponibilidad[producto.idprod]} />
-                              <span className={`font-medium ${producto.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>{producto.stock_contable}</span>
+                              <span className={`font-medium ${producto.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>{formatoCantidad(producto.stock_contable)}</span>
                             </span>
                           </td>
                           <td className="py-2 px-2">
@@ -774,15 +761,18 @@ export default function AdministrarProductoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {productosFiltrados.map((producto) => (
                     <Card key={producto.idprod} className="overflow-hidden bg-white dark:bg-background border border-sky-200 dark:border-primary/20 shadow-md rounded-xl transition-all hover:shadow-xl">
-                      <div className="aspect-square relative bg-slate-100 dark:bg-slate-900">
+                      <div className={`${producto.imagen_principal ? 'aspect-square' : 'h-24'} relative bg-slate-100 dark:bg-slate-900`}>
                         {producto.imagen_principal ? (
                           <Image src={producto.imagen_principal} alt={producto.nombre} fill className="object-cover" sizes="(max-width: 768px) 100vw, 25vw" />
                         ) : (
-                          <div className="flex items-center justify-center h-full"><Package className="h-12 w-12 text-slate-600" /></div>
+                          <div className="flex h-full items-center gap-2 px-3 text-slate-400 dark:text-slate-500">
+                            <Package className="h-7 w-7 shrink-0" />
+                            <span className="text-xs">Sin imagen · #{producto.idprod}</span>
+                          </div>
                         )}
                         <Badge className={`absolute top-2 right-2 gap-1 ${producto.stock_contable > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
                           <GloboStock idprod={producto.idprod} datos={disponibilidad[producto.idprod]} className="text-white!" />
-                          {producto.stock_contable} en stock
+                          {formatoCantidad(producto.stock_contable)} en stock
                         </Badge>
                       </div>
                       <CardContent className="p-3">
@@ -1374,6 +1364,6 @@ export default function AdministrarProductoPage() {
 
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

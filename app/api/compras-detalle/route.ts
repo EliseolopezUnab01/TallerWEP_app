@@ -15,6 +15,7 @@ import {
   type LineaNormalizada,
 } from '@/lib/compras-detalle-db';
 import { topeDevolucion } from '@/lib/compras-nota';
+import { permiteDecimales } from '@/lib/configuracion';
 
 async function validarCompraBorrador(
   connection: Awaited<ReturnType<typeof connectDB>>,
@@ -187,7 +188,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const errorDestino = errorDestinoLinea(compraOk.compra, linea);
+    const errorDestino = errorDestinoLinea(compraOk.compra, linea, await permiteDecimales(connection));
     if (errorDestino) {
       await connection.end();
       return NextResponse.json({ error: errorDestino }, { status: 400 });
@@ -315,7 +316,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'La descripción es obligatoria' }, { status: 400 });
     }
 
-    const errorDestino = errorDestinoLinea(compraOk.compra, linea);
+    const errorDestino = errorDestinoLinea(compraOk.compra, linea, await permiteDecimales(connection));
     if (errorDestino) {
       await connection.end();
       return NextResponse.json({ error: errorDestino }, { status: 400 });

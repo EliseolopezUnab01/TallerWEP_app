@@ -54,6 +54,7 @@ const REGLAS_API: Regla[] = [
   { prefijo: '/api/usuarios', ver: 'usuarios.ver', editar: 'usuarios.editar' },
   { prefijo: '/api/roles', ver: 'usuarios.ver', editar: 'usuarios.editar' },
   { prefijo: '/api/empresa', ver: null, editar: 'configuracion.editar' },
+  { prefijo: '/api/configuracion-sistema', ver: null, editar: 'configuracion.editar' },
   { prefijo: '/api/costos', ver: 'costos.ver', editar: 'costos.editar' },
   { prefijo: '/api/importar-costos', ver: 'costos.ver', editar: 'costos.editar' },
   { prefijo: '/api/ajuste-precios', ver: 'precios.ver', editar: 'precios.editar' },
@@ -89,6 +90,7 @@ const REGLAS_API: Regla[] = [
 const REGLAS_PAGINA: { prefijo: string; permiso: string }[] = [
   { prefijo: '/dashboard/configuracion/usuarios', permiso: 'usuarios.ver' },
   { prefijo: '/dashboard/configuracion/empresa', permiso: 'configuracion.ver' },
+  { prefijo: '/dashboard/configuracion/sistema', permiso: 'configuracion.ver' },
   { prefijo: '/dashboard/compras/proveedores', permiso: 'catalogos.ver' },
   { prefijo: '/dashboard/compras/catalogo-contable', permiso: 'catalogos.ver' },
   { prefijo: '/dashboard/compras', permiso: 'compras.ver' },

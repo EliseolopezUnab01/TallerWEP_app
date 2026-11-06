@@ -21,6 +21,8 @@ interface NotificationContextType {
   clearAllNotifications: () => void;
 }
 
+const LIMITE = 50;
+
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
@@ -31,11 +33,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const saved = localStorage.getItem('notifications');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        setNotifications(parsed.map((n: any) => ({
-          ...n,
-          timestamp: new Date(n.timestamp)
-        })));
+        const parsed: Notification[] = JSON.parse(saved);
+        setNotifications(
+          parsed
+            .filter((n) => n.title !== 'Verificación de hora')
+            .slice(0, LIMITE)
+            .map((n) => ({ ...n, timestamp: new Date(n.timestamp) }))
+        );
       } catch (e) {
         console.error('Error parsing notifications:', e);
       }
@@ -54,7 +58,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       timestamp: new Date(),
       read: false,
     };
-    setNotifications(prev => [newNotification, ...prev]);
+    setNotifications((prev) => {
+      const repetida = prev.some((n) => !n.read && n.title === notification.title && n.message === notification.message);
+      return repetida ? prev : [newNotification, ...prev].slice(0, LIMITE);
+    });
   }, []);
 
   const markAsRead = useCallback((id: string) => {

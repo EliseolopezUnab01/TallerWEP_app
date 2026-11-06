@@ -3,7 +3,6 @@ import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle2, FilePlus2, FolderOpen } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { UI } from '@/lib/ui';
@@ -87,7 +86,7 @@ export default function IngresoCompraPage() {
   }, [atajos]);
 
   return (
-    <DashboardLayout>
+    <>
       <div
         className={`${UI.canvas} flex flex-col gap-2 lg:h-[calc(100vh-3rem)]`}
         onDragOver={(e) => {
@@ -228,6 +227,6 @@ export default function IngresoCompraPage() {
           {aviso.texto}
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

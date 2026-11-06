@@ -46,6 +46,7 @@ export async function cerrarSesion() {
   localStorage.removeItem('user');
   localStorage.removeItem('notifications');
   sessionStorage.removeItem('time_verified');
+  sessionStorage.removeItem('reloj_verificado');
 }
 
 /** Sesión del usuario: `undefined` mientras carga, `null` si no hay. */

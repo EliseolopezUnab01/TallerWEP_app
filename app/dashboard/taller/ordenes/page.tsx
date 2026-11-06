@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '@/components/dashboard-layout';
-import { NotificationDropdown } from '@/components/notification-dropdown';
-import { UserDropdown } from '@/components/user-dropdown';
+import Link from 'next/link';
+import { BarraPantalla } from '@/components/barra-pantalla';
 import { avisar } from '@/components/ui/avisos';
 import { UI } from '@/lib/ui';
 
@@ -142,19 +141,10 @@ export default function OrdenesPage() {
   const vehiculosCliente = vehiculos.filter((v) => String(v.cliente_id) === clienteId);
 
   return (
-    <DashboardLayout>
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="flex items-center justify-between border-b border-border px-4 py-2">
-          <div>
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Taller</span>
-            <h1 className="text-sm font-semibold">Órdenes de trabajo</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <NotificationDropdown />
-            <UserDropdown />
-          </div>
-        </div>
-        <div className="grid min-h-0 flex-1 gap-3 overflow-auto p-4 lg:grid-cols-[16rem_1fr]">
+    <>
+      <div className={`${UI.canvas} flex h-full min-h-0 flex-col gap-2`}>
+        <BarraPantalla modulo="Taller" titulo="Órdenes de trabajo" />
+        <div className="grid min-h-0 flex-1 gap-3 overflow-auto lg:grid-cols-[16rem_1fr]">
           <aside className={`${UI.densePanel} overflow-auto`}>
             <div className={`${UI.densePanelTitle} flex items-center justify-between`}>
               Órdenes
@@ -169,6 +159,18 @@ export default function OrdenesPage() {
             {lista.length === 0 && <p className="p-3 text-xs text-muted-foreground">No hay órdenes.</p>}
           </aside>
           <section className={`${UI.densePanel} space-y-3 p-3`}>
+            {!id && clientes.length === 0 && (
+              <p className={`${UI.note} text-xs`}>
+                Para abrir una orden, registre primero un cliente en{' '}
+                <Link href="/dashboard/taller/clientes" className="text-primary hover:underline">Taller › Clientes</Link>.
+              </p>
+            )}
+            {!id && clienteId && vehiculosCliente.length === 0 && (
+              <p className={`${UI.note} text-xs`}>
+                Este cliente no tiene vehículos. Regístrelo en{' '}
+                <Link href="/dashboard/taller/vehiculos" className="text-primary hover:underline">Taller › Vehículos</Link>.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               <label className="flex flex-col gap-1">
                 <span className={UI.denseLabel}>Cliente</span>
@@ -261,6 +263,6 @@ export default function OrdenesPage() {
           </section>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

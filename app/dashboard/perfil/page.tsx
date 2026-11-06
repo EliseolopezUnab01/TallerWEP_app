@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { Button } from '@/components/ui/button';
@@ -81,7 +80,7 @@ export default function PerfilPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className={UI.page}>
         <div className={`${UI.stack} max-w-2xl mx-auto`}>
           <div className={UI.navbar}>
@@ -170,6 +169,6 @@ export default function PerfilPage() {
           </Card>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { DashboardLayout } from '@/components/dashboard-layout';
-import { NotificationDropdown } from '@/components/notification-dropdown';
-import { UserDropdown } from '@/components/user-dropdown';
+import { BarraPantalla } from '@/components/barra-pantalla';
 import { avisar } from '@/components/ui/avisos';
 import { UI } from '@/lib/ui';
+import { fechaLocalISO } from '@/lib/fechas';
+import { formatoCantidad } from '@/lib/decimales';
+import { AVISO_ENTEROS } from '@/lib/configuracion';
+import { useConfiguracion } from '@/lib/configuracion-cliente';
 
 interface Linea {
   idprod: number;
@@ -25,12 +27,15 @@ interface Ajuste {
 
 export default function AjusteStockPage() {
   const [motivo, setMotivo] = useState('');
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fecha, setFecha] = useState(() => fechaLocalISO());
   const [busqueda, setBusqueda] = useState('');
   const [hits, setHits] = useState<{ idprod: number; nombre: string; stock_contable: number }[]>([]);
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [ajustes, setAjustes] = useState<Ajuste[]>([]);
   const [guardando, setGuardando] = useState(false);
+  const config = useConfiguracion();
+  const soloEnteros = config?.cantidades_decimales !== '1';
+  const paso = soloEnteros ? 1 : 'any';
 
   const cargar = () => {
     fetch('/api/ajustes-inventario')
@@ -63,6 +68,10 @@ export default function AjusteStockPage() {
 
   const guardar = async () => {
     if (guardando) return;
+    if (soloEnteros && lineas.some((l) => !Number.isInteger(Number(l.contable || 0)) || !Number.isInteger(Number(l.fisico || 0)))) {
+      avisar(AVISO_ENTEROS, 'error');
+      return;
+    }
     setGuardando(true);
     try {
       const res = await fetch('/api/ajustes-inventario', {
@@ -95,19 +104,10 @@ export default function AjusteStockPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="flex items-center justify-between border-b border-border px-4 py-2">
-          <div>
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Inventario</span>
-            <h1 className="text-sm font-semibold">Ajuste de inventario</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <NotificationDropdown />
-            <UserDropdown />
-          </div>
-        </div>
-        <div className="grid min-h-0 flex-1 gap-3 overflow-auto p-4 lg:grid-cols-[1fr_18rem]">
+    <>
+      <div className={`${UI.canvas} flex h-full min-h-0 flex-col gap-2`}>
+        <BarraPantalla modulo="Inventario" titulo="Ajuste de inventario" />
+        <div className="grid min-h-0 flex-1 gap-3 overflow-auto lg:grid-cols-[1fr_18rem]">
           <div className={`${UI.densePanel} p-3`}>
             <p className="mb-3 text-xs text-muted-foreground">
               Suma o resta stock. Use un número negativo para bajarlo. El alta y la importación dejan el producto en cero.{' '}
@@ -133,7 +133,7 @@ export default function AjusteStockPage() {
                   <li key={p.idprod}>
                     <button type="button" className="flex w-full justify-between px-2 py-1 text-left text-xs hover:bg-muted" onClick={() => agregar(p)}>
                       <span><span className={UI.denseMono}>{p.idprod}</span> {p.nombre}</span>
-                      <span className="text-muted-foreground">stock {p.stock_contable ?? 0}</span>
+                      <span className="text-muted-foreground">stock {formatoCantidad(p.stock_contable)}</span>
                     </button>
                   </li>
                 ))}
@@ -158,10 +158,10 @@ export default function AjusteStockPage() {
                     <tr key={l.idprod}>
                       <td className={UI.denseTd}><span className={UI.denseMono}>{l.idprod}</span> {l.nombre}</td>
                       <td className={UI.denseTd}>
-                        <input type="number" step="any" className={`${UI.denseInput} w-24 text-right`} value={l.contable} onChange={(e) => setLineas(lineas.map((x) => x.idprod === l.idprod ? { ...x, contable: e.target.value } : x))} />
+                        <input type="number" step={paso} className={`${UI.denseInput} w-24 text-right`} value={l.contable} onChange={(e) => setLineas(lineas.map((x) => x.idprod === l.idprod ? { ...x, contable: e.target.value } : x))} />
                       </td>
                       <td className={UI.denseTd}>
-                        <input type="number" step="any" className={`${UI.denseInput} w-24 text-right`} value={l.fisico} onChange={(e) => setLineas(lineas.map((x) => x.idprod === l.idprod ? { ...x, fisico: e.target.value } : x))} />
+                        <input type="number" step={paso} className={`${UI.denseInput} w-24 text-right`} value={l.fisico} onChange={(e) => setLineas(lineas.map((x) => x.idprod === l.idprod ? { ...x, fisico: e.target.value } : x))} />
                       </td>
                       <td className={UI.denseTd}>
                         <button type="button" className="text-xs text-red-600" onClick={() => setLineas(lineas.filter((x) => x.idprod !== l.idprod))}>Quitar</button>
@@ -192,6 +192,6 @@ export default function AjusteStockPage() {
           </aside>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

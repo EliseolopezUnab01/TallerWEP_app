@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Plus, Save, Search, Trash2 } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { confirmar } from '@/components/ui/avisos';
 import { UI } from '@/lib/ui';
 import {
@@ -125,7 +124,7 @@ export function CatalogoFicha({ config }: { config: ConfigCatalogo }) {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div
         className={`${UI.canvas} flex flex-col gap-2 lg:h-[calc(100vh-3rem)]`}
         onKeyDown={(e) => {
@@ -212,6 +211,6 @@ export function CatalogoFicha({ config }: { config: ConfigCatalogo }) {
         </div>
       </div>
       <Toast aviso={aviso} />
-    </DashboardLayout>
+    </>
   );
 }

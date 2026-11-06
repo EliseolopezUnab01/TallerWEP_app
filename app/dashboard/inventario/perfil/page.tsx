@@ -1,8 +1,9 @@
 'use client';
+import { BarraPantalla } from '@/components/barra-pantalla';
+import { formatoCosto, formatoCantidad } from '@/lib/decimales';
 
 import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,8 +13,6 @@ import {
   Package, Wrench, Briefcase, Settings, Edit, Save, X, Plus, Trash2, ExternalLink, Layers, Eye
 } from 'lucide-react';
 import Image from 'next/image';
-import { NotificationDropdown } from '@/components/notification-dropdown';
-import { UserDropdown } from '@/components/user-dropdown';
 import { useFloatingWindows } from '@/contexts/floating-windows-context';
 import { getCodigoCatalogo } from '@/lib/format-utils';
 import { NIVELES_PRECIO } from '@/lib/precios-niveles';
@@ -535,32 +534,22 @@ function PerfilProductoPageContent() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <>
         <div className="flex flex-col items-center justify-center h-screen bg-slate-50 dark:bg-surface-deep">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary mb-4"></div>
           <div className="text-lg text-slate-800 dark:text-slate-200">Cargando producto...</div>
           {idParam && <div className="text-sm text-slate-500 dark:text-slate-400 mt-2">ID: {idParam}</div>}
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   // Vista principal
   return (
-    <DashboardLayout>
+    <>
       <div className="min-h-screen bg-background dark:bg-surface-deep p-4">
         {/* Navbar superior */}
-        <div className="rounded-xl border border-slate-200/90 dark:border-primary/30 bg-white dark:bg-background px-5 py-3 flex items-center justify-between gap-4 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_rgba(15,23,42,0.06)] dark:shadow-[0_0_25px_rgba(15,23,42,0.9)] mb-4">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Inventario</span>
-            <span className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-            <span className="text-sm font-medium tracking-[0.18em] uppercase text-slate-800 dark:text-slate-200">Perfil del Producto</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <NotificationDropdown />
-            <UserDropdown />
-          </div>
-        </div>
+        <BarraPantalla modulo="Inventario" titulo="Perfil del producto" />
 
         {/* Layout principal de 2 columnas */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -607,10 +596,10 @@ function PerfilProductoPageContent() {
                         <p className="text-xs text-slate-500 dark:text-slate-400">OE: {prod.OE || '-'}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-primary/10 text-primary border-primary/30">
-                            {(prod as any).categoria_nueva_nombre || prod.categoria_nombre || '-'}
+                            {(prod as any).categoria_nueva_nombre || 'Sin categoría'}
                           </Badge>
                           <span className={`text-[10px] font-medium ${prod.stock_contable > 0 ? 'text-emerald-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            Stock: {prod.stock_contable}
+                            Stock: {formatoCantidad(prod.stock_contable)}
                           </span>
                         </div>
                       </div>
@@ -691,12 +680,12 @@ function PerfilProductoPageContent() {
                     <div>
                       <span className="text-slate-500">Stock:</span>
                       <span className={`ml-1 ${productoPreview.stock_contable > 0 ? 'text-emerald-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {productoPreview.stock_contable}
+                        {formatoCantidad(productoPreview.stock_contable)}
                       </span>
                     </div>
                     <div>
                       <span className="text-slate-500">Costo:</span>
-                      <span className="text-slate-800 dark:text-slate-300 ml-1">${productoPreview.costo || '0'}</span>
+                      <span className="text-slate-800 dark:text-slate-300 ml-1">${formatoCosto(productoPreview.costo)}</span>
                     </div>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 italic">Doble click en lista para ver perfil completo</p>
@@ -808,7 +797,7 @@ function PerfilProductoPageContent() {
                       <div className="p-4">
                         <div className="text-xs text-slate-500 dark:text-slate-400 uppercase">Stock</div>
                         <div className={`flex items-center gap-2 text-2xl font-bold ${producto.stock_contable > 0 ? 'text-emerald-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {producto.stock_contable}
+                          {formatoCantidad(producto.stock_contable)}
                           <GloboStock idprod={producto.idprod} />
                         </div>
                       </div>
@@ -839,7 +828,7 @@ function PerfilProductoPageContent() {
                       <Badge variant="outline" className="mt-1 bg-primary/10 text-primary border-primary/30">
                         {(producto as any).categoria_nueva_nombre 
                           ? `${(producto as any).idcategoria_nuevo} - ${(producto as any).categoria_nueva_nombre}` 
-                          : producto.categoria_nombre || '-'}
+                          : producto.categoria_nombre || 'Sin categoría asignada'}
                       </Badge>
                     </div>
 
@@ -866,7 +855,7 @@ function PerfilProductoPageContent() {
                     {/* Costo */}
                     <div className="p-4">
                       <div className="text-xs text-slate-500 dark:text-slate-400 uppercase">Costo</div>
-                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">${producto.costo || '0.00'}</div>
+                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">${formatoCosto(producto.costo)}</div>
                     </div>
                   </div>
                 </div>
@@ -990,7 +979,7 @@ function PerfilProductoPageContent() {
                       <div className="p-4">
                         <div className="text-xs text-slate-500 dark:text-slate-400 uppercase">Stock</div>
                         <div className={`text-2xl font-bold ${productoPreview.stock_contable > 0 ? 'text-emerald-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {productoPreview.stock_contable}
+                          {formatoCantidad(productoPreview.stock_contable)}
                         </div>
                       </div>
                     </div>
@@ -1011,14 +1000,14 @@ function PerfilProductoPageContent() {
                     <div className="p-4 border-b border-slate-200 dark:border-secondary">
                       <div className="text-xs text-slate-500 dark:text-slate-400 uppercase">Categoría</div>
                       <Badge className="mt-1 bg-primary/20 text-primary border-primary/40">
-                        {productoPreview.categoria_nombre || productoPreview.idcategoria || '-'}
+                        {productoPreview.categoria_nombre || 'Sin categoría asignada'}
                       </Badge>
                     </div>
 
                     {/* Costo */}
                     <div className="p-4">
                       <div className="text-xs text-slate-500 dark:text-slate-400 uppercase">Costo</div>
-                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">${productoPreview.costo || '0.00'}</div>
+                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">${formatoCosto(productoPreview.costo)}</div>
                     </div>
                   </div>
                 </div>
@@ -1057,19 +1046,19 @@ function PerfilProductoPageContent() {
         </div>
 
       </div>
-    </DashboardLayout>
+    </>
   );
 }
 
 export default function PerfilProductoPage() {
   return (
     <Suspense fallback={
-      <DashboardLayout>
+      <>
         <div className="flex flex-col items-center justify-center h-screen bg-slate-50 dark:bg-surface-deep">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary mb-4"></div>
           <div className="text-lg text-slate-800 dark:text-slate-200">Cargando...</div>
         </div>
-      </DashboardLayout>
+      </>
     }>
       <PerfilProductoPageContent />
     </Suspense>

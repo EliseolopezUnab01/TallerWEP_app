@@ -3,7 +3,6 @@ import { confirmar } from '@/components/ui/avisos';
 
 import { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, FilePlus2, Save, Search, Trash2 } from 'lucide-react';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { NotificationDropdown } from '@/components/notification-dropdown';
 import { UserDropdown } from '@/components/user-dropdown';
 import { UI } from '@/lib/ui';
@@ -146,7 +145,7 @@ export default function ProcesosPage() {
   const sugerido = detalle?.resumen.sugerido;
 
   return (
-    <DashboardLayout>
+    <>
       <div className={`${UI.canvas} flex flex-col gap-2 lg:h-[calc(100vh-3rem)]`}>
         <div className={`${UI.navbar} shrink-0`}>
           <div className="flex items-center gap-3">
@@ -388,6 +387,6 @@ export default function ProcesosPage() {
           {aviso.texto}
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

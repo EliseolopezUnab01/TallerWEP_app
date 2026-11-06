@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
+import { fechaLocalISO } from '@/lib/fechas';
 import * as XLSX from 'xlsx';
 
 export async function GET(request: NextRequest) {
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
     // Crear respuesta con el archivo
     const response = new NextResponse(excelBuffer);
     response.headers.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    response.headers.set('Content-Disposition', `attachment; filename="productos_${new Date().toISOString().split('T')[0]}.xlsx"`);
+    response.headers.set('Content-Disposition', `attachment; filename="productos_${fechaLocalISO()}.xlsx"`);
     
     return response;
 

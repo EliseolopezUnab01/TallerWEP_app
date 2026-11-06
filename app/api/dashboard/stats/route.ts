@@ -45,6 +45,21 @@ export async function GET() {
       /* */
     }
 
+    const ordenes = { PROCESO: 0, ESPERA: 0, FINALIZADA: 0, CANCELADA: 0, abiertas: 0 };
+    try {
+      const [filas]: any = await connection.execute(
+        `SELECT estado, COUNT(*) AS total FROM ordenes_trabajo
+          WHERE estado IN ('PROCESO','ESPERA') OR COALESCE(fecha_final, fecha_inicial) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+          GROUP BY estado`
+      );
+      for (const f of filas) {
+        if (f.estado in ordenes) ordenes[f.estado as keyof typeof ordenes] = Number(f.total);
+      }
+      ordenes.abiertas = ordenes.PROCESO + ordenes.ESPERA;
+    } catch {
+      /* tabla de órdenes puede no existir en BD antigua */
+    }
+
     const [categorias]: any = await connection.execute(`
       SELECT
         COALESCE(cn.nombre, 'Sin categoría') AS nombre,
@@ -61,17 +76,18 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       inventario: {
-        total: inv.total_productos || 0,
-        stockOk: inv.stock_ok || 0,
-        stockBajo: inv.stock_bajo || 0,
-        stockCero: inv.stock_cero || 0,
-        stockNegativo: inv.stock_negativo || 0,
+        total: Number(inv.total_productos) || 0,
+        stockOk: Number(inv.stock_ok) || 0,
+        stockBajo: Number(inv.stock_bajo) || 0,
+        stockCero: Number(inv.stock_cero) || 0,
+        stockNegativo: Number(inv.stock_negativo) || 0,
       },
       proveedores: {
-        total: prov.total || 0,
-        activos: prov.activos || 0,
+        total: Number(prov.total) || 0,
+        activos: Number(prov.activos) || 0,
       },
-      compras,
+      compras: { borradores: Number(compras.borradores) || 0, lineas: Number(compras.lineas) || 0 },
+      ordenes,
       catalogo: { rubrosActivos: rubros },
       categorias: categorias.map((c: { nombre: string; cantidad: number }) => ({
         nombre: c.nombre,

@@ -1,9 +1,10 @@
 'use client';
+import { formatoCosto, formatoCantidad } from '@/lib/decimales';
+import { UI } from '@/lib/ui';
 import { avisar } from '@/components/ui/avisos';
 
 import { useState, useEffect, Suspense, useRef, useCallback, memo, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,6 +57,11 @@ interface Producto {
   imagen_principal?: string;
   imagenes?: string[];
   codigo_jerarquico?: string | number;
+}
+
+/** La base guarda 8 decimales; el campo editable muestra solo los significativos. */
+function costoLegible<T extends { costo?: unknown }>(p: T): T {
+  return p.costo == null || p.costo === '' ? p : { ...p, costo: String(Number(p.costo)) };
 }
 
 function EditarProductoContent() {
@@ -224,7 +230,7 @@ function EditarProductoContent() {
     if (!idParam || producto?.idprod === Number(idParam)) return;
     let vigente = true;
     const abrir = (found: any) => {
-      setProducto(found);
+      setProducto(costoLegible(found));
       setIsEditing(true);
       const idx = productosFiltrados.findIndex(p => p.idprod === Number(idParam));
       if (idx >= 0) setSelectedIndex(idx);
@@ -306,7 +312,7 @@ function EditarProductoContent() {
   const handleEditProduct = (idprod: number) => {
     const prod = allProductos.find(p => p.idprod === idprod) as any;
     if (prod) {
-      setProducto(prod);
+      setProducto(costoLegible(prod));
       setIsEditing(true);
       setCurrentImageIndex(0);
       setNewImages([]);
@@ -564,30 +570,30 @@ function EditarProductoContent() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <>
         <div className="flex flex-col items-center justify-center h-screen bg-slate-50 dark:bg-surface-deep">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary mb-4"></div>
           {idParam && <p className="text-slate-400">Cargando producto...</p>}
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout>
+    <>
       <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white dark:from-surface-deep dark:via-surface-deep dark:to-surface-deep p-6">
         <div className="space-y-4">
         {/* Navbar */}
-        <div className="rounded-xl border border-sky-200 dark:border-primary/30 bg-gradient-to-r from-white to-sky-50/50 dark:from-background dark:to-background px-5 py-3 flex items-center justify-between gap-4 shadow-[0_8px_24px_rgba(14,136,201,0.08)] dark:shadow-[0_0_25px_rgba(15,23,42,0.9)]">
+        <div className={UI.navbar}>
           <div className="flex items-center gap-3">
             {isEditing && (
-              <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="text-slate-400 hover:text-slate-200">
+              <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             )}
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Inventario</span>
-            <span className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-            <span className="text-sm tracking-[0.18em] uppercase text-slate-700 dark:text-slate-200">
+            <span className={UI.navLabel}>Inventario</span>
+            <span className={UI.navDivider} />
+            <span className={UI.navTitle}>
               {isEditing ? 'Editar Producto' : 'Seleccionar Producto'}
             </span>
           </div>
@@ -779,10 +785,10 @@ function EditarProductoContent() {
                         <p className="text-xs text-slate-500 dark:text-slate-400">OE: {prod.OE || '-'}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-primary/10 text-primary border-primary/30">
-                            {(prod as any).categoria_nueva_nombre || prod.categoria_nombre || '-'}
+                            {(prod as any).categoria_nueva_nombre || 'Sin categoría'}
                           </Badge>
                           <span className={`text-[10px] font-medium ${prod.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            Stock: {prod.stock_contable}
+                            Stock: {formatoCantidad(prod.stock_contable)}
                           </span>
                         </div>
                       </div>
@@ -832,12 +838,12 @@ function EditarProductoContent() {
                     <div>
                       <span className="text-slate-800 dark:text-slate-500">Stock:</span>
                       <span className={`ml-1 ${productoPreview.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {productoPreview.stock_contable}
+                        {formatoCantidad(productoPreview.stock_contable)}
                       </span>
                     </div>
                     <div>
                       <span className="text-slate-800 dark:text-slate-500">Costo:</span>
-                      <span className="text-slate-300 ml-1">${productoPreview.costo || '0'}</span>
+                      <span className="text-slate-300 ml-1">${formatoCosto(productoPreview.costo)}</span>
                     </div>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 italic">Doble click para editar</p>
@@ -1116,7 +1122,7 @@ function EditarProductoContent() {
                       </div>
                       <div className="space-y-2">
                         <Label>Costo</Label>
-                        <Input type="number" step="0.01" value={producto.costo || ''} onChange={(e) => updateProductField('costo', e.target.value)}
+                        <Input type="number" step="0.0001" value={producto.costo || ''} onChange={(e) => updateProductField('costo', e.target.value)}
                           className="bg-white dark:bg-slate-950/80 border-slate-300 dark:border-slate-700/40 text-slate-800 dark:text-slate-100" />
                       </div>
                       <div className="space-y-2">
@@ -1216,7 +1222,7 @@ function EditarProductoContent() {
                             <div className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-3">
                               <p className="text-xs text-slate-500 dark:text-slate-400">Stock</p>
                               <p className={`text-lg font-bold ${productoPreview.stock_contable > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {productoPreview.stock_contable}
+                                {formatoCantidad(productoPreview.stock_contable)}
                               </p>
                             </div>
                           </div>
@@ -1230,11 +1236,11 @@ function EditarProductoContent() {
                           </div>
                           <div className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-3">
                             <p className="text-xs text-slate-500 dark:text-slate-400">Categoría</p>
-                            <Badge variant="outline">{productoPreview.categoria_nombre || productoPreview.idcategoria || '-'}</Badge>
+                            <Badge variant="outline">{productoPreview.categoria_nombre || 'Sin categoría asignada'}</Badge>
                           </div>
                           <div className="bg-slate-100 dark:bg-slate-900/50 rounded-lg p-3">
                             <p className="text-xs text-slate-500 dark:text-slate-400">Costo</p>
-                            <p className="text-lg font-bold text-emerald-400">${productoPreview.costo || '0.00'}</p>
+                            <p className="text-lg font-bold text-emerald-400">${formatoCosto(productoPreview.costo)}</p>
                           </div>
                         </div>
                       </div>
@@ -1462,18 +1468,18 @@ function EditarProductoContent() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }
 
 export default function EditarProductoPage() {
   return (
     <Suspense fallback={
-      <DashboardLayout>
+      <>
         <div className="flex items-center justify-center h-screen">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
         </div>
-      </DashboardLayout>
+      </>
     }>
       <EditarProductoContent />
     </Suspense>

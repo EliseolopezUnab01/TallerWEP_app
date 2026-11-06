@@ -1,13 +1,11 @@
 'use client';
+import { BarraPantalla } from '@/components/barra-pantalla';
 
-import { DashboardLayout } from '@/components/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, RefreshCw, Download, DollarSign } from 'lucide-react';
 import { useState, useRef } from 'react';
-import { NotificationDropdown } from '@/components/notification-dropdown';
-import { UserDropdown } from '@/components/user-dropdown';
 
 interface PreviewData {
   headers: string[];
@@ -133,21 +131,11 @@ REF-003,95.00,90.00,95.00,12.35,FAC-002,2026-02-20`;
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-white dark:from-surface-deep dark:via-surface-deep dark:to-surface-deep p-6">
         <div className="space-y-6">
         {/* Navbar superior */}
-        <div className="rounded-xl border border-sky-200 dark:border-primary/30 bg-gradient-to-r from-white to-sky-50/50 dark:from-background dark:to-background px-5 py-3 flex items-center justify-between gap-4 shadow-[0_8px_24px_rgba(14,136,201,0.08)] dark:shadow-[0_0_25px_rgba(15,23,42,0.9)]">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Inventario</span>
-            <span className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
-            <span className="text-sm tracking-[0.18em] uppercase text-slate-700 dark:text-slate-200">Importar Costos</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <NotificationDropdown />
-            <UserDropdown />
-          </div>
-        </div>
+        <BarraPantalla modulo="Inventario" titulo="Importar costos" />
 
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -395,6 +383,6 @@ REF-003,95.00,90.00,95.00,12.35,FAC-002,2026-02-20`;
         </Card>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }
